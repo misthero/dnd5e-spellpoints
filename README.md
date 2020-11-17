@@ -18,3 +18,6 @@ You are ready to go now spells cast by characters will use spell points instead 
 - Configurable spell cost in spell points if you use any homebrew system.
 - Optionally you can enable a varian rule that allow players to keep casting even without spellpoints using their own life (see this great system: https://www.drivethrurpg.com/product/272967/Advanced-Magic--Spell-Points-System-5e)
 - Configurable healt loss for casting using the Gritty High Magic Variant
+
+### Incompatibility
+none at the moment but please let me know if any.
