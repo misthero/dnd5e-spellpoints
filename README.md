@@ -15,7 +15,7 @@
 You are ready to go, now spells cast by player's characters will use spell points instead of slots.
 
 
-**Notice** slots won't disappear from character sheets, but they will always stay full as long as this module is enabled.
+**Notice**: Slots won't disappear from character sheets, but they will always stay full as long as this module is enabled.
 
 ## Features
 - Configurable resource name
