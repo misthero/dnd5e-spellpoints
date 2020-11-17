@@ -4,7 +4,7 @@
  This module use the optional rules found on DMG to allow character to cast spells using a resource named "Spell Points"
  
 ## Installation Instructions
-- Copy into the module installer inside foundry when it asks for the manifest.
+- Copy "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json" into the module installer inside foundry when it asks for the manifest.
 - Launch your world go to settings -> module settings and enable the module `dnd5e-spellpoints`.
 - Choose the name of the resource to use as Spell Points (default "Spell Points") you can change the name in module settings.
 - Create a new resource with the name "Spell Points" on every character sheet, if any of your player need more resources you can use the module https://github.com/ardittristan/5eSheet-resourcesPlus/tree/master
