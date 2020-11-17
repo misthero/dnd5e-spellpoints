@@ -32,7 +32,7 @@ Hooks.on('init', () => {
       hint: "How much spellpoints should a level " + i + " spell cost",
       scope: "world",
       config: true,
-      default: ,
+      default: defaultSpellPointCosts[i],
       type: Number,
     });
   }
