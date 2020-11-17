@@ -1,7 +1,7 @@
 # dnd5e-spellpoints
- FoundryVTT module for Spell Point System in D&D 5e
+ FoundryVTT module for Spell Point System in D&D5e
  
- This module use the optional ruels found on DMG to allow character to cast spells using a resource named "Spell Points"
+ This module use the optional rules found on DMG to allow character to cast spells using a resource named "Spell Points"
  
 ## Installation Instructions
 - Copy into the module installer inside foundry when it asks for the manifest.
