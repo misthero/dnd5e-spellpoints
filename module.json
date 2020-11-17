@@ -1,0 +1,22 @@
+{
+    "name": "dnd5e-spellpoints",
+    "title": "DnD5e Spell Points",
+    "description": "Test Module for spellpoints.",
+    "version": "1.0.0",
+    "system": ["dnd5e"],
+    "authors": [
+      {
+        "name": "misthero",
+        "url": "https://github.com/misthero"
+      }
+    ],
+    "scripts": [
+        "/scripts/dnd5e-spellpoints.js"
+    ],
+    "socket": true,
+    "url": "https://github.com/me",
+    "manifest": "https://github.com/me",
+    "download": "https://github.com/me",
+    "minimumCoreVersion": "0.6.6",
+    "compatibleCoreVersion": "0.7.8"
+}
