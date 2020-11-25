@@ -1,4 +1,4 @@
-# D&D5e Spell Points
+# Advanced Magic - Spell Points System 5e
  FoundryVTT module for Spell Point System in D&D5e
  
  **Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!**
