@@ -1,22 +1,42 @@
 {
     "name": "dnd5e-spellpoints",
-    "title": "DnD5e Spell Points",
-    "description": "FoundryVTT module for Spell Point System in D&D5e. This module use the optional rules found on DMG to allow character to cast spells using a resource named 'Spell Points'",
-    "version": "1.0.2",
+    "title": "Advanced Magic - Spell Points System 5e",
+    "description": "FoundryVTT module for Spell Points System in D&D5e. This module use the optional rules found on DMG to allow character to cast spells using a resource named 'Spell Points'",
+    "version": "1.0.3",
+    "minimumCoreVersion": "0.7.6",
+    "compatibleCoreVersion": "0.7.7",
+    "url": "https://github.com/misthero/dnd5e-spellpoints",
+    "manifest": "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json",
+    "download": "https://github.com/misthero/dnd5e-spellpoints/archive/main.zip",
     "system": ["dnd5e"],
+    "includes": [
+        "./assets/**",
+        "./lang/**",
+        "./scripts/**",
+        "./styles/**",
+        "./templates/**",
+        "./module.json"
+    ],
     "authors": [
       {
         "name": "misthero",
         "url": "https://github.com/misthero"
       }
     ],
-    "scripts": [
-        "/scripts/dnd5e-spellpoints.js"
+    "esmodules": [
+        "./scripts/dnd5e-spellpoints.js"
     ],
-    "socket": true,
-    "url": "https://github.com/misthero/dnd5e-spellpoints",
-    "manifest": "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json",
-    "download": "https://github.com/misthero/dnd5e-spellpoints/archive/main.zip",
-    "minimumCoreVersion": "0.7.6",
-    "compatibleCoreVersion": "0.7.7"
+    "styles": ["css/styles.css"],
+    "languages": [
+      {
+        "lang": "en",
+        "name": "English",
+        "path": "lang/en.json"
+      },
+      {
+        "lang": "it",
+        "name": "Italiano",
+        "path": "lang/it.json"
+      }
+    ]
 }
