@@ -71,10 +71,8 @@ class SpellPoints {
     /** do nothing if module is not active **/ 
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
       return update;
-    
-    
+
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
-    console.log("ACTOR:",actor);
     if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
       return update;
 
@@ -96,11 +94,21 @@ class SpellPoints {
       return {};
     }
     
-    /** find the spell level just cast */
-    const spellLvlNames = ["pact","spell1", "spell2", "spell3", "spell4", "spell5", "spell6", "spell7", "spell8", "spell9"];
-    let spellLvlIndex = spellLvlNames.findIndex(name => { return getProperty(update, "data.spells." + name) });
+    /** check if is pact magic **/
+    let isPact = false;
+    if (getProperty(update, "data.spells.pact") !== undefined) {
+      isPact = true;
+    } 
     
+    
+     /** find the spell level just cast */
+    const spellLvlNames = ["spell1", "spell2", "spell3", "spell4", "spell5", "spell6", "spell7", "spell8", "spell9", "pact"];
+    let spellLvlIndex = spellLvlNames.findIndex(name => { return getProperty(update, "data.spells." + name) });
+
     let spellLvl = spellLvlIndex + 1;
+    if (isPact)
+      spellLvl = actor.data.data.spells.pact.level;
+    
     //** slot calculation **/
     const origSlots = actor.data.data.spells;
     const preCastSlotCount = getProperty(origSlots, spellLvlNames[spellLvlIndex] + ".value");
@@ -108,7 +116,7 @@ class SpellPoints {
     let maxSlots = getProperty(origSlots, spellLvlNames[spellLvlIndex] + ".max");
     
     let slotCost = preCastSlotCount - postCastSlotCount;
-    
+
     /** restore slots to the max **/
     if (typeof maxSlots === undefined) {
       maxSlots = 1;
@@ -118,8 +126,8 @@ class SpellPoints {
         
     const maxSpellPoints = actor.data.data.resources[spellPointResource.key].max;
     const actualSpellPoints = actor.data.data.resources[spellPointResource.key].value;
-    /* get spell cost in spellpoints */
-    console.log(spellPointResource);
+   
+   /* get spell cost in spellpoints */
     const spellPointCost = this.settings.spellPointsCosts[spellLvl];
     
     /** update spellpoints **/
