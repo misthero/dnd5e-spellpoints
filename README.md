@@ -33,7 +33,7 @@ None at the moment but please let me know if any.
 
 ## CHANGELOG
 
-1.0.0 First release
-1.0.1 Bug fixes
-1.0.2 Automatic spell points calculation, localization added, better code.
-1.1.0 New Mixed Mode option to have both slots and Spell Points characters in same game.
+- 1.0.0 First release
+- 1.0.1 Bug fixes
+- 1.0.2 Automatic spell points calculation, localization added, better code.
+- 1.1.0 New Mixed Mode option to have both slots and Spell Points characters in same game.
