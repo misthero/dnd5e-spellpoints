@@ -1,4 +1,4 @@
-# Advanced Magic - Spell Points System 5e
+# D&D5e Spell Points
  FoundryVTT module for Spell Point System in D&D5e
  
  **Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!**
@@ -10,7 +10,7 @@
 - Launch your world go to settings -> module settings and enable the module `dnd5e-spellpoints`.
 - Choose the name of the resource to use as Spell Points (default "Spell Points") you can change the name in module settings.
 - Create a new resource with the name "Spell Points" on every character sheet. (Hint: if any of your player need more resources you can use the module https://github.com/ardittristan/5eSheet-resourcesPlus/tree/master)
-- The module will calculate Spell Points automatically when you add a new class item or level up your class (only offical rules supported, if you are using hombrew rules you should disable the automatic mode.
+- The module doesn't calculate spellpoints per class/character level right now, the players (or GM) will have to enter that number manully.
 
 You are ready to go, now spells cast by player's characters will use spell points instead of slots.
 
@@ -29,9 +29,3 @@ You are ready to go, now spells cast by player's characters will use spell point
 
 ### Incompatibility
 None at the moment but please let me know if any.
-
-## CHANGELOG
-
-1.0.0 First release
-1.0.1 Bug fixes
-1.0.2 Automatic spell points calculation, localization added, better code.

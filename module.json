@@ -2,7 +2,7 @@
     "name": "dnd5e-spellpoints",
     "title": "Advanced Magic - Spell Points System 5e",
     "description": "FoundryVTT module for Spell Points System in D&D5e. This module use the optional rules found on DMG to allow character to cast spells using a resource named 'Spell Points'",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "minimumCoreVersion": "0.7.6",
     "compatibleCoreVersion": "0.7.7",
     "url": "https://github.com/misthero/dnd5e-spellpoints",

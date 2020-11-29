@@ -1,13 +1,37 @@
 .spError {
-    text-align: center;
-    color: #b50e0e;
-    padding: 5px;
-    background: #0001;
-    border-radius: 3px;
-    -webkit-font-smoothing: subpixel-antialiased;
-    border: 1px solid;
-    margin: 5px 0;
-    font-weight: 500;
-    letter-spacing: 0.6px;
-    box-shadow: 0 1px 1px #0003;
+  text-align: center;
+  color: #b50e0e;
+  padding: 5px;
+  background: #0001;
+  border-radius: 3px;
+  -webkit-font-smoothing: subpixel-antialiased;
+  border: 1px solid;
+  margin: 5px 0;
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  box-shadow: 0 1px 1px #0003;
+}
+
+.spEnable {
+  flex:0 0 25px;
+  
+}
+.spEnable > label {
+  cursor:pointer;
+}
+.hidden {
+  visibility:hidden;
+  width:0 !important;
+  height:0 !important;
+  overflow:hidden;
+  position:absolute; 
+}
+
+input.spEnableInput.hidden + .spEnableCheck:before {
+  content:"\f111";
+  font-weight:100;
+}
+input.spEnableInput.hidden:checked + .spEnableCheck:before {
+  content:"\f00c";
+  font-weight:600;
 }

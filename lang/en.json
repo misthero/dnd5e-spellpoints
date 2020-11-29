@@ -5,6 +5,8 @@
   "dnd5e-spellpoints.form-title": "Spell Points Configuration",
   "dnd5e-spellpoints.resourceLabel": "Spell Points Resource",
   "dnd5e-spellpoints.resourceNote": "This is the name of the resource on Player Character Sheet that represents the spell points (default: Spell Points).",
+  "dnd5e-spellpoints.mixedLabel": "Enable Mixed Mode",
+  "dnd5e-spellpoints.mixedMode": "With Mixed Mode enabled every character will get the option to enable Spell Points directly in the character sheet.",
   "dnd5e-spellpoints.autoLabel": "Enable Automatic spell points calculation",
   "dnd5e-spellpoints.autoNote": "Enable this settings if you want the module do the math for you every time a Player Character advance in a Class Level or gain a new Class",
   "dnd5e-spellpoints.formulaLabel": "Automatic spell points calculation formula",
@@ -24,6 +26,14 @@
   "dnd5e-spellpoints.enableVariantNote": "Enabling this Player's Characters will be able to continue casting spell once they run out of spell points using their own life at increased cost (see Advanced Magic System)",
   "dnd5e-spellpoints.spLifeCostLabel": "HP Cost multiplier (Gritty Variant)",
   "dnd5e-spellpoints.spLifeCostNote": "How many Hit Points Maximum a character will lose casting a spell with his own life. This is a multiplier. ex: if set to 2 a character casting a Spell with a cost of 2 spell points will lose 4 hp max. (default:2)",
+  "dnd5e-spellpoints.use-spellpoints": "This character uses Spell Points",
+  "dnd5e-spellpoints.createNewResource": "Please create a new resource named {SpellPoints}",
+  "dnd5e-spellpoints.actorNoSP": "{ActorName} doesn't have any resource named {SpellPoints}",
+  "dnd5e-spellpoints.castedLifeDead": "{ActorName} casted using his last Hit Points Maximum reducing it to 0 and DIED permanently!",
+  "dnd5e-spellpoints.castedLife": "{ActorName} casted using his own life losing {hpMaxLost} Maximum Hit Points",
+  "dnd5e-spellpoints.notEnoughSp": "{ActorName} doesn't have enough {SpellPoints} to cast this spell.",
+  "dnd5e-spellpoints.pleaseCreate": "Please create a resource named: '{SpellPoints}' to cast this spell.",
+  "dnd5e-spellpoints.youNotEnough": "You don't have enough '{SpellPoints}' to cast this spell.",
   "dnd5e-spellpoints.save": "Save",
   "dnd5e-spellpoints.reset": "Reset"
 }

@@ -31,7 +31,8 @@ class SpellPoints {
       spellPointsByLevel: {1:4,2:6,3:14,4:17,5:27,6:32,7:38,8:44,9:57,10:64,11:73,12:73,13:83,14:83,15:94,16:94,17:107,18:114,19:123,20:133},
       spellPointsCosts: {1:2,2:3,3:5,4:6,5:7,6:9,7:10,8:11,9:13},
       spEnableVariant: false,
-      spLifeCost: 2
+      spLifeCost: 2,
+      spMixedMode: false,
     };
   }
   
@@ -41,6 +42,16 @@ class SpellPoints {
   
   static isActorCharacter(actor){
     return getProperty(actor, "data.type") == "character";
+  }
+  
+  static isMixedActorSpellPointEnabled(actor){
+    console.log(actor);
+    if (actor.flags.dnd5espellpoints !== undefined) {
+      if (actor.flags.dnd5espellpoints.enabled !== undefined ){
+        return actor.flags.dnd5espellpoints.enabled
+      }
+    }
+    return false;
   }
   
   /** check what resource is spellpoints on this actor **/
@@ -56,10 +67,17 @@ class SpellPoints {
   }
   
   static castSpell(actor, update) {
-      /** do nothing if module is not active **/
+    console.log('Cast Spell',actor, update);
+    /** do nothing if module is not active **/ 
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
       return update;
     
+    
+    /* if mixedMode active Check if SpellPoints is enabled for this actor */
+    console.log("ACTOR:",actor);
+    if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
+      return update;
+
     let spell = getProperty(update, "data.spells");
     if (!spell || spell === undefined)
       return update;
@@ -70,15 +88,16 @@ class SpellPoints {
     /** not found any resource for spellpoints ? **/
     if (!spellPointResource) {
       ChatMessage.create({
-        content: "<i style='color:red;'>"+actor.data.name+" doesn't have any resource named '"+this.settings.spResource+"'.</i>",
+        content: "<i style='color:red;'>" + game.i18n.format("dnd5e-spellpoints.actorNoSP", {ActorName: actor.data.name, SpellPoints: this.settings.spResource }) + "</i>",
         speaker: ChatMessage.getSpeaker({ alias: actor.data.name })
       });
-      ui.notifications.error("Please create a new resource and name it: '"+this.settings.spResource+"'");
+      game.i18n.format("dnd5e-spellpoints.createNewResource", this.settings.spResource);
+      ui.notifications.error(game.i18n.format("dnd5e-spellpoints.createNewResource", { SpellPoints : this.settings.spResource }));
       return {};
     }
     
     /** find the spell level just cast */
-    const spellLvlNames = ["spell1", "spell2", "spell3", "spell4", "spell5", "spell6", "spell7", "spell8", "spell9"];
+    const spellLvlNames = ["pact","spell1", "spell2", "spell3", "spell4", "spell5", "spell6", "spell7", "spell8", "spell9"];
     let spellLvlIndex = spellLvlNames.findIndex(name => { return getProperty(update, "data.spells." + name) });
     
     let spellLvl = spellLvlIndex + 1;
@@ -86,13 +105,17 @@ class SpellPoints {
     const origSlots = actor.data.data.spells;
     const preCastSlotCount = getProperty(origSlots, spellLvlNames[spellLvlIndex] + ".value");
     const postCastSlotCount = getProperty(update, "data.spells." + spellLvlNames[spellLvlIndex] + ".value");
-    const maxSlots = getProperty(origSlots, spellLvlNames[spellLvlIndex] + ".max");
+    let maxSlots = getProperty(origSlots, spellLvlNames[spellLvlIndex] + ".max");
     
     let slotCost = preCastSlotCount - postCastSlotCount;
     
     /** restore slots to the max **/
+    if (typeof maxSlots === undefined) {
+      maxSlots = 1;
+      update.data.spells[spellLvlNames[spellLvlIndex]].max = maxSlots;
+    }
     update.data.spells[spellLvlNames[spellLvlIndex]].value = maxSlots;
-    
+        
     const maxSpellPoints = actor.data.data.resources[spellPointResource.key].max;
     const actualSpellPoints = actor.data.data.resources[spellPointResource.key].value;
     /* get spell cost in spellpoints */
@@ -116,18 +139,12 @@ class SpellPoints {
           hpMaxActual = 0;
         const newMaxHP = hpMaxActual - hpMaxLost;
         
-        console.log({spellPointCost});
-        console.log(SpellPoints.settings.spLifeCost);
-        console.log({hpMaxLost});
-        console.log({hpActual});
-        console.log({hpMaxActual});
-        console.log({newMaxHP});
-        
         if (hpMaxFull + newMaxHP <= 0) { //character is permanently dead
           // 3 death saves failed and 0 hp 
           update.data.attributes = {'death':{'failure':3}, 'hp':{'tempmax':-hpMaxFull,'value':0}}; 
           ChatMessage.create({
-            content: "<i style='color:red;'>"+actor.data.name+" casted using his own life and Died Permanently!</i>",
+            content: "<i style='color:red;'>"+game.i18n.format("dnd5e-spellpoints.castedLifeDead", { ActorName : actor.data.name })+"</i>",
+            
             speaker: ChatMessage.getSpeaker({ alias: actor.data.name })
           });
         } else {
@@ -136,18 +153,19 @@ class SpellPoints {
             update.data.attributes = mergeObject(update.data.attributes,{'hp':{'value': hpMaxFull + newMaxHP}});
           }
           ChatMessage.create({
-            content: "<i style='color:red;'>"+actor.data.name+" casted using his own life losing " + hpMaxLost + " HP Maximum.</i>",
+            content: "<i style='color:red;'>"+game.i18n.format("dnd5e-spellpoints.castedLife", { ActorName : actor.data.name, hpMaxLost: hpMaxLost })+"</i>",
             speaker: ChatMessage.getSpeaker({ alias: actor.data.name })
           });
         }
       } else { 
         ChatMessage.create({
-          content: "<i style='color:red;'>"+actor.data.name+" doesn't have enough '"+this.settings.spResource+"' to cast this spell.</i>",
+          
+          content: "<i style='color:red;'>"+game.i18n.format("dnd5e-spellpoints.notEnoughSp", { ActorName : actor.data.name, SpellPoints: this.settings.spResource })+"</i>",
           speaker: ChatMessage.getSpeaker({ alias: actor.data.name })
         });
       }
     }
-    console.log({update});
+    
     update.data.resources = {
       [spellPointResource.key] : spellPointResource.values
     };
@@ -157,6 +175,16 @@ class SpellPoints {
   
   static checkDialogSpellPoints(dialog, html, formData){
     if (!SpellPoints.isModuleActive())
+      return;
+    
+    let actor = getProperty(dialog, "item.options.actor");
+    
+    /** check if actor is a player character **/
+    if(!this.isActorCharacter(actor))
+      return;
+    
+    /* if mixedMode active Check if SpellPoints is enabled for this actor */
+    if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
       return;
   
     /** check if this is a spell **/
@@ -170,17 +198,13 @@ class SpellPoints {
     
     if (!isSpell)
       return;
-    
-    /** check if actor is a player character **/
-    let actor = getProperty(dialog, "item.options.actor");
-    if(!this.isActorCharacter(actor))
-      return;
-    
+
     /** get spellpoints **/
     let spellPointResource = SpellPoints.getSpellPointsResource(actor);
     if (!spellPointResource) {
       // this actor has no spell point resource what to do?
-      $('#ability-use-form', html).append('<div class="spError">Please create a resource named: <b>' + this.settings.spResource + '</b> to cast this spell.</div>');
+      const messageCreate = game.i18n.format("dnd5e-spellpoints.pleaseCreate", {SpellPoints: this.settings.spResource });
+      $('#ability-use-form', html).append('<div class="spError">'+messageCreate+'</div>');
       return;
     }
     const maxSpellPoints = actor.data.data.resources[spellPointResource.key].max;
@@ -189,7 +213,8 @@ class SpellPoints {
     let spellPointCost = this.settings.spellPointsCosts[baseSpellLvl];
     
     if (actualSpellPoints - spellPointCost < 0) {
-      $('#ability-use-form', html).append('<div class="spError">You have not enough <b>' + this.settings.spResource + '</b> to cast this spell.</div>');
+      const messageNotEnough = game.i18n.format("dnd5e-spellpoints.youNotEnough", {SpellPoints: this.settings.spResource });
+      $('#ability-use-form', html).append('<div class="spError">'+messageNotEnough+'</div>');
     }
 
     let copyButton = $('.dialog-button', html).clone();
@@ -200,7 +225,8 @@ class SpellPoints {
     html.on('click','.dialog-button.copy', function(e){
       /** if consumeSlot we ignore cost, go on and cast or if variant active **/
       if (!$('input[name="consumeSlot"]',html).prop('checked') 
-          || SpellPoints.settings.spEnableVariant) {
+        || SpellPoints.settings.spEnableVariant) {
+        console.log('Variantactive');    
         $('.dialog-button.original', html).trigger( "click" );
       } else if ($('select[name="level"]', html).length > 0) {
         let spellLvl = $('select[name="level"]', html).val();
@@ -224,6 +250,25 @@ class SpellPoints {
   static calculateSpellPoints(actor, item, actionString) {
     if (!this.isModuleActive() || !this.isActorCharacter(actor))
       return;
+    
+    /* if mixedMode active Check if SpellPoints is enabled for this actor */
+    if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor))
+      return;
+    
+   /* let updateActor = {[`data.skills.sha`] : {
+      ability: "int",
+      bonus: 0,
+      mod: 0,
+      passive: 0,
+      prof: 0,
+      total: 0,
+      value: 0,
+      label: "Shadow"
+    }};
+      actor.update(updateActor); */
+    if (!this.settings.spAutoSpellpoints) {
+      return;
+    }
     /* updating or dropping a class item */
     if (getProperty(item, 'type') !== 'class')
       return;
@@ -257,8 +302,7 @@ class SpellPoints {
       ui.notifications.error("SPELLPOINTS: Cannot find resource '" + this.settings.spResource + "' on " + actorName + " character sheet!");
       return;
     }
-    ui.notifications.info("SPELLPOINTS: Found resource '" + this.settings.spResource + "' on " + actorName + " character sheet! Your spellpoint Maximum have been updated.");
-    
+
     let SpellPointsMax = 0;
     
     for (let c of actorClasses){
@@ -281,9 +325,34 @@ class SpellPoints {
       }
     }
     if (SpellPointsMax > 0) {
-      let updateActor = {[`data.resources.${spellPointResource.key}.max`] : SpellPointsMax}; ;
+      let updateActor = {[`data.resources.${spellPointResource.key}.max`] : SpellPointsMax};
       actor.update(updateActor);
+      ui.notifications.info("SPELLPOINTS: Found resource '" + this.settings.spResource + "' on " + actorName + " character sheet! Your Maximum "+ this.settings.spResource +" have been updated.");
     }
+  }
+  
+  /**
+  * mixed Mode add a button to spell sheet 
+  * 
+  **/
+  
+  static mixedMode(app, html, data){
+    console.log(data)
+    if (!this.isModuleActive() || !this.settings.spMixedMode || data.actor.type != "character") {
+      return;
+    }
+    
+    let checked = "";
+    if (SpellPoints.isMixedActorSpellPointEnabled(data.actor)) {
+      checked = "checked";
+    }
+    let html_checkbox = '<div class="spEnable flexrow "><label><i class="fas fa-magic"></i>&nbsp;';
+    html_checkbox += game.i18n.localize('dnd5e-spellpoints.use-spellpoints');
+    
+    html_checkbox += '<input name="flags.dnd5espellpoints.enabled" '+checked+' class="spEnableInput hidden" type="checkbox" value="1">';
+    html_checkbox += ' <i class="spEnableCheck fas"></i>';
+    html_checkbox += '</label></div>';
+    $('.tab.spellbook', html).prepend(html_checkbox);
   }
   
 } /** END SpellPoint Class **/
@@ -335,7 +404,7 @@ Hooks.on('init', () => {
   /** should spellpoints be enabled */
   game.settings.register(MODULE_NAME, "spEnableSpellpoints", {
     name: "Enable Spell Points system",
-    hint: "Enables or disables spellpoints for casting spells, this will override the slot cost for player tokens.",
+    hint: "Enables or disables spellpoints     for casting spells, this will override the slot cost for player tokens.",
     scope: "world",
     config: true,
     default: false,
@@ -383,3 +452,6 @@ Hooks.on("updateOwnedItem", async (actor, item, update, diff, userId) => {
 Hooks.on("createOwnedItem", async (actor, item, options, userId) => {
   SpellPoints.calculateSpellPoints(actor, item, 'create');
 })
+Hooks.on(`renderActorSheet5e`, (app, html, data) => {
+  SpellPoints.mixedMode(app, html, data);
+});
