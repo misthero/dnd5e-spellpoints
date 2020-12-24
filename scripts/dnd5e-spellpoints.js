@@ -46,9 +46,11 @@ class SpellPoints {
   
   static isMixedActorSpellPointEnabled(actor){
     console.log(actor);
-    if (actor.flags.dnd5espellpoints !== undefined) {
-      if (actor.flags.dnd5espellpoints.enabled !== undefined ){
-        return actor.flags.dnd5espellpoints.enabled
+    if (actor.flags !== undefined) {
+      if (actor.flags.dnd5espellpoints !== undefined) {
+        if (actor.flags.dnd5espellpoints.enabled !== undefined ){
+          return actor.flags.dnd5espellpoints.enabled
+        }
       }
     }
     return false;
@@ -71,10 +73,14 @@ class SpellPoints {
     /** do nothing if module is not active **/ 
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
       return update;
+    
+    console.log(MODULE_NAME, 'active, is actor');
 
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
     if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
       return update;
+    
+     console.log(MODULE_NAME, '!spMixedMode, isMixedActorSpellPointEnabled');
 
     let spell = getProperty(update, "data.spells");
     if (!spell || spell === undefined)
@@ -191,6 +197,8 @@ class SpellPoints {
     if(!this.isActorCharacter(actor))
       return;
     
+    console.log(MODULE_NAME,'checkDialogSpellPoints', actor, dialog, html, formData);
+    
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
     if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
       return;
@@ -199,6 +207,8 @@ class SpellPoints {
     let isSpell = false;
     if ( dialog.item.data.type === "spell" )
       isSpell = true;
+    
+    console.log(MODULE_NAME,'is spell');
     
     const spell = dialog.item.data;
     // spell level can change later if casting it with a greater slot, baseSpellLvl is the default
@@ -234,11 +244,13 @@ class SpellPoints {
       /** if consumeSlot we ignore cost, go on and cast or if variant active **/
       if (!$('input[name="consumeSlot"]',html).prop('checked') 
         || SpellPoints.settings.spEnableVariant) {
-        console.log('Variantactive');    
+        console.log(MODULE_NAME,'Variantactive');    
         $('.dialog-button.original', html).trigger( "click" );
       } else if ($('select[name="level"]', html).length > 0) {
         let spellLvl = $('select[name="level"]', html).val();
+        console.log(MODULE_NAME,'spellLvl',spellLvl);
         spellPointCost = SpellPoints.settings.spellPointsCosts[spellLvl];
+        console.log(MODULE_NAME,'spellPointCost',spellPointCost);
         if (actualSpellPoints - spellPointCost < 0) {
           ui.notifications.error("You don't have enough: '" + SpellPoints.settings.spResource + "' to cast this spell");
           dialog.close();
@@ -259,24 +271,18 @@ class SpellPoints {
     if (!this.isModuleActive() || !this.isActorCharacter(actor))
       return;
     
-    /* if mixedMode active Check if SpellPoints is enabled for this actor */
-    if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor))
-      return;
+    console.log(MODULE_NAME,'calculateSpellPoints actor',actor);
+    console.log(MODULE_NAME,'calculateSpellPoints item',item);
+    console.log(MODULE_NAME,'calculateSpellPoints actionString',actionString);
     
-   /* let updateActor = {[`data.skills.sha`] : {
-      ability: "int",
-      bonus: 0,
-      mod: 0,
-      passive: 0,
-      prof: 0,
-      total: 0,
-      value: 0,
-      label: "Shadow"
-    }};
-      actor.update(updateActor); */
     if (!this.settings.spAutoSpellpoints) {
       return;
     }
+    /* if mixedMode active Check if SpellPoints is enabled for this actor */
+    if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
+      return;
+    
+    
     /* updating or dropping a class item */
     if (getProperty(item, 'type') !== 'class')
       return;
@@ -357,7 +363,7 @@ class SpellPoints {
     let html_checkbox = '<div class="spEnable flexrow "><label><i class="fas fa-magic"></i>&nbsp;';
     html_checkbox += game.i18n.localize('dnd5e-spellpoints.use-spellpoints');
     
-    html_checkbox += '<input name="flags.dnd5espellpoints.enabled" '+checked+' class="spEnableInput hidden" type="checkbox" value="1">';
+    html_checkbox += '<input name="flags.dnd5espellpoints.enabled" '+checked+' class="spEnableInput visually-hidden" type="checkbox" value="1">';
     html_checkbox += ' <i class="spEnableCheck fas"></i>';
     html_checkbox += '</label></div>';
     $('.tab.spellbook', html).prepend(html_checkbox);
@@ -412,7 +418,7 @@ Hooks.on('init', () => {
   /** should spellpoints be enabled */
   game.settings.register(MODULE_NAME, "spEnableSpellpoints", {
     name: "Enable Spell Points system",
-    hint: "Enables or disables spellpoints     for casting spells, this will override the slot cost for player tokens.",
+    hint: "Enables or disables spellpoints for casting spells, this will override the slot cost for player tokens.",
     scope: "world",
     config: true,
     default: false,
@@ -449,17 +455,21 @@ Hooks.on("preUpdateActor", async (actor, update, options, userId) => {
 /** spell launch dialog **/
 // renderAbilityUseDialog renderApplication
 Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
+  console.log(MODULE_NAME, 'renderAbilityUseDialog');
   SpellPoints.checkDialogSpellPoints(dialog, html, formData);
 })
 
 /** attempt to calculate spellpoints on class item drop or class update**/
 // const item = actor.items.find(i => i.name === "Items Name");
 Hooks.on("updateOwnedItem", async (actor, item, update, diff, userId) => {
+  console.log(MODULE_NAME, 'updateOwnedItem');
   SpellPoints.calculateSpellPoints(actor, item, 'update');
 })
 Hooks.on("createOwnedItem", async (actor, item, options, userId) => {
+  console.log(MODULE_NAME, 'createOwnedItem');
   SpellPoints.calculateSpellPoints(actor, item, 'create');
 })
-Hooks.on(`renderActorSheet5e`, (app, html, data) => {
+Hooks.on("renderActorSheet5e", (app, html, data) => {
+  console.log(MODULE_NAME, 'renderActorSheet5e');
   SpellPoints.mixedMode(app, html, data);
 });

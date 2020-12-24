@@ -19,7 +19,7 @@
 .spEnable > label {
   cursor:pointer;
 }
-.hidden {
+.visually-hidden {
   visibility:hidden;
   width:0 !important;
   height:0 !important;

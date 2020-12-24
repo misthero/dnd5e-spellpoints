@@ -37,3 +37,4 @@ None at the moment but please let me know if any.
 - 1.0.1 Bug fixes
 - 1.0.2 Automatic spell points calculation, localization added, better code.
 - 1.1.0 New Mixed Mode option to have both slots and Spell Points characters in same game.
+- 1.1.2 Added compatibility with FVTT 0.7.8 - Fixed a css issue preventing "hidden combatant" from showing in combat tracker.
