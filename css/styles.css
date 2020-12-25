@@ -27,11 +27,11 @@
   position:absolute; 
 }
 
-input.spEnableInput.hidden + .spEnableCheck:before {
+input.spEnableInput.visually-hidden + .spEnableCheck:before {
   content:"\f111";
   font-weight:100;
 }
-input.spEnableInput.hidden:checked + .spEnableCheck:before {
+input.spEnableInput.visually-hidden:checked + .spEnableCheck:before {
   content:"\f00c";
   font-weight:600;
 }
