@@ -20,7 +20,6 @@ class SpellPoints {
   }
   /**
    * Get default settings object.
-   * @returns ChatPortraitSetting
    */
   static get defaultSettings() {
     return {
@@ -69,18 +68,13 @@ class SpellPoints {
   }
   
   static castSpell(actor, update) {
-    console.log('Cast Spell',actor, update);
     /** do nothing if module is not active **/ 
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
       return update;
-    
-    console.log(MODULE_NAME, 'active, is actor');
 
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
     if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
       return update;
-    
-     console.log(MODULE_NAME, '!spMixedMode, isMixedActorSpellPointEnabled');
 
     let spell = getProperty(update, "data.spells");
     if (!spell || spell === undefined)
@@ -173,17 +167,26 @@ class SpellPoints {
         }
       } else { 
         ChatMessage.create({
-          
           content: "<i style='color:red;'>"+game.i18n.format("dnd5e-spellpoints.notEnoughSp", { ActorName : actor.data.name, SpellPoints: this.settings.spResource })+"</i>",
           speaker: ChatMessage.getSpeaker({ alias: actor.data.name })
         });
       }
     }
-    
+	
+	ChatMessage.create({
+		content: "<i style='color:limegreen;'>"+game.i18n.format("dnd5e-spellpoints.spellUsingSpellPoints", 
+			{ 
+			ActorName : actor.data.name, 
+			SpellPoints: this.settings.spResource,
+			Points: spellPointResource.values.value
+			})+"</i>",
+		speaker: ChatMessage.getSpeaker({ alias: actor.data.name })
+	});
+	
     update.data.resources = {
-      [spellPointResource.key] : spellPointResource.values
+      [spellPointResource.key] : { 'value' : spellPointResource.values.value }
     };
-    
+
     return update;
   }
   
@@ -196,8 +199,7 @@ class SpellPoints {
     /** check if actor is a player character **/
     if(!this.isActorCharacter(actor))
       return;
-    
-    console.log(MODULE_NAME,'checkDialogSpellPoints', actor, dialog, html, formData);
+   
     
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
     if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
@@ -207,8 +209,6 @@ class SpellPoints {
     let isSpell = false;
     if ( dialog.item.data.type === "spell" )
       isSpell = true;
-    
-    console.log(MODULE_NAME,'is spell');
     
     const spell = dialog.item.data;
     // spell level can change later if casting it with a greater slot, baseSpellLvl is the default
@@ -244,13 +244,13 @@ class SpellPoints {
       /** if consumeSlot we ignore cost, go on and cast or if variant active **/
       if (!$('input[name="consumeSlot"]',html).prop('checked') 
         || SpellPoints.settings.spEnableVariant) {
-        console.log(MODULE_NAME,'Variantactive');    
+        //console.log(MODULE_NAME,'Variantactive');    
         $('.dialog-button.original', html).trigger( "click" );
       } else if ($('select[name="level"]', html).length > 0) {
         let spellLvl = $('select[name="level"]', html).val();
-        console.log(MODULE_NAME,'spellLvl',spellLvl);
+        //console.log(MODULE_NAME,'spellLvl',spellLvl);
         spellPointCost = SpellPoints.settings.spellPointsCosts[spellLvl];
-        console.log(MODULE_NAME,'spellPointCost',spellPointCost);
+        //console.log(MODULE_NAME,'spellPointCost',spellPointCost);
         if (actualSpellPoints - spellPointCost < 0) {
           ui.notifications.error("You don't have enough: '" + SpellPoints.settings.spResource + "' to cast this spell");
           dialog.close();
@@ -270,26 +270,23 @@ class SpellPoints {
   static calculateSpellPoints(actor, item, actionString) {
     if (!this.isModuleActive() || !this.isActorCharacter(actor))
       return;
-    
-    console.log(MODULE_NAME,'calculateSpellPoints actor',actor);
-    console.log(MODULE_NAME,'calculateSpellPoints item',item);
-    console.log(MODULE_NAME,'calculateSpellPoints actionString',actionString);
+   
     
     if (!this.settings.spAutoSpellpoints) {
       return;
     }
+	
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
     if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
       return;
-    
-    
+
     /* updating or dropping a class item */
     if (getProperty(item, 'type') !== 'class')
       return;
     
     const spellcasting = getProperty(item.data, 'spellcasting');
     const classLevel = getProperty(item.data, 'levels');
-    console.log({spellcasting});
+
     
     const classDroppedName = getProperty(item, 'name');
     
@@ -300,13 +297,8 @@ class SpellPoints {
       let originalName = classDroppedName;
     }
     
-    console.log(actor);
-    //const classItem = actor.items.find(i => i.name === "Ranger");
     const actorClasses = actor.items.filter(i => i.type === "class");
     const classItem = actor.items.getName(classDroppedName);
-    console.log('Dropped Class=',classDroppedName);
-    console.log('Actor Item=',classItem);
-    console.log('actorClasses=',actorClasses);
     
     let spellPointResource = this.getSpellPointsResource(actor);
     
@@ -320,7 +312,6 @@ class SpellPoints {
     let SpellPointsMax = 0;
     
     for (let c of actorClasses){
-      console.log(c);
       /* spellcasting: pact; full; half; third; artificier; none; **/
       let spellcasting = c.data.data.spellcasting;
       let level = c.data.data.levels;
@@ -351,7 +342,6 @@ class SpellPoints {
   **/
   
   static mixedMode(app, html, data){
-    console.log(data)
     if (!this.isModuleActive() || !this.settings.spMixedMode || data.actor.type != "character") {
       return;
     }
@@ -455,21 +445,21 @@ Hooks.on("preUpdateActor", async (actor, update, options, userId) => {
 /** spell launch dialog **/
 // renderAbilityUseDialog renderApplication
 Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
-  console.log(MODULE_NAME, 'renderAbilityUseDialog');
+  //console.log(MODULE_NAME, 'renderAbilityUseDialog');
   SpellPoints.checkDialogSpellPoints(dialog, html, formData);
 })
 
 /** attempt to calculate spellpoints on class item drop or class update**/
 // const item = actor.items.find(i => i.name === "Items Name");
 Hooks.on("updateOwnedItem", async (actor, item, update, diff, userId) => {
-  console.log(MODULE_NAME, 'updateOwnedItem');
+  //console.log(MODULE_NAME, 'updateOwnedItem');
   SpellPoints.calculateSpellPoints(actor, item, 'update');
 })
 Hooks.on("createOwnedItem", async (actor, item, options, userId) => {
-  console.log(MODULE_NAME, 'createOwnedItem');
+  //console.log(MODULE_NAME, 'createOwnedItem');
   SpellPoints.calculateSpellPoints(actor, item, 'create');
 })
 Hooks.on("renderActorSheet5e", (app, html, data) => {
-  console.log(MODULE_NAME, 'renderActorSheet5e');
+  //console.log(MODULE_NAME, 'renderActorSheet5e');
   SpellPoints.mixedMode(app, html, data);
 });
