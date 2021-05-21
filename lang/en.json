@@ -29,12 +29,12 @@
   "dnd5e-spellpoints.use-spellpoints": "This character uses Spell Points",
   "dnd5e-spellpoints.createNewResource": "Please create a new resource named {SpellPoints}",
   "dnd5e-spellpoints.actorNoSP": "{ActorName} doesn't have any resource named {SpellPoints}",
-  "dnd5e-spellpoints.castedLifeDead": "{ActorName} casted using his last Hit Points Maximum reducing it to 0 and DIED permanently!",
+  "dnd5e-spellpoints.castedLifeDead": "{ActorName} casted using his life, his Hit Points Maximum reached 0 and DIED permanently!",
   "dnd5e-spellpoints.castedLife": "{ActorName} casted using his own life losing {hpMaxLost} Maximum Hit Points",
   "dnd5e-spellpoints.notEnoughSp": "{ActorName} doesn't have enough {SpellPoints} to cast this spell.",
   "dnd5e-spellpoints.pleaseCreate": "Please create a resource named: '{SpellPoints}' to cast this spell.",
   "dnd5e-spellpoints.youNotEnough": "You don't have enough '{SpellPoints}' to cast this spell.",
-  "dnd5e-spellpoints.spellUsingSpellPoints": "{ActorName} casted a spell using {Points} {SpellPoints}",
+  "dnd5e-spellpoints.spellUsingSpellPoints": "{ActorName} casted a spell using {spellPointUsed} {SpellPoints}. {remainingPoints} {SpellPoints} remaining.",
   "dnd5e-spellpoints.save": "Save",
   "dnd5e-spellpoints.reset": "Reset"
 }
