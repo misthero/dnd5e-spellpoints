@@ -138,6 +138,16 @@ class SpellPoints {
     if (actualSpellPoints - spellPointCost >= 0 ) {
       /* character has enough spellpoints */
       spellPointResource.values.value = spellPointResource.values.value - spellPointCost;
+      ChatMessage.create({
+        content: "<i style='color:green;'>"+game.i18n.format("dnd5e-spellpoints.spellUsingSpellPoints", 
+          { 
+          ActorName : actor.data.name, 
+          SpellPoints: this.settings.spResource,
+          spellPointUsed: spellPointCost,
+          remainingPoints: spellPointResource.values.value
+          })+"</i>",
+        speaker: ChatMessage.getSpeaker({ alias: actor.data.name })
+      });
     } else if (actualSpellPoints - spellPointCost < 0) {
       /** check if actor can cast using HP **/
       if (this.settings.spEnableVariant) {
@@ -176,18 +186,6 @@ class SpellPoints {
           speaker: ChatMessage.getSpeaker({ alias: actor.data.name })
         });
       }
-    } else {
-    
-      ChatMessage.create({
-        content: "<i style='color:green;'>"+game.i18n.format("dnd5e-spellpoints.spellUsingSpellPoints", 
-          { 
-          ActorName : actor.data.name, 
-          SpellPoints: this.settings.spResource,
-          spellPointUsed: spellPointCost,
-          remainingPoints: spellPointResource.values.value
-          })+"</i>",
-        speaker: ChatMessage.getSpeaker({ alias: actor.data.name })
-      });
     }
 	
     update.data.resources = {
