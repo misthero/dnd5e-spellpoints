@@ -267,83 +267,9 @@ class SpellPoints {
       }
     })
   }
-  
-  /* params:
-  * actor(obj) = dnd5e actor
-  * item(obj) = the item being dropped updated
-  * action(string) = create/update
-  */
-  
-  static calculateSpellPoints(actor, item, actionString) {
-    console.log(actionString);
-    if (!this.isModuleActive() || !this.isActorCharacter(actor))
-      return;
-    
-    if (!this.settings.spAutoSpellpoints) {
-      return;
-    }
-    /* if mixedMode active Check if SpellPoints is enabled for this actor */
-    if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
-      return;
-    
-    
-    /* updating or dropping a class item */
-    if (getProperty(item, 'type') !== 'class')
-      return;
-    
-    const spellcasting = getProperty(item.data, 'spellcasting');
-    const classLevel = getProperty(item.data, 'levels');
-    const classDroppedName = getProperty(item, 'name');
-    
-    // check if this is the orignal name or localized with babele
-    if (getProperty(item, 'flags.babele.translated')){
-      let originalName = getProperty(item, 'flags.babele.originalName');
-    } else {
-      let originalName = classDroppedName;
-    }
-    
-    const actorClasses = actor.items.filter(i => i.type === "class");
-    const classItem = actor.items.getName(classDroppedName);
-    
-    let spellPointResource = this.getSpellPointsResource(actor);
-    
-    const actorName = actor.data.name;
-    
-    if (!spellPointResource) {
-      ui.notifications.error("SPELLPOINTS: Cannot find resource '" + this.settings.spResource + "' on " + actorName + " character sheet!");
-      return;
-    }
-
-    let SpellPointsMax = 0;
-    
-    for (let c of actorClasses){
-      //console.log(c);
-      /* spellcasting: pact; full; half; third; artificier; none; **/
-      let spellcasting = c.data.data.spellcasting;
-      let level = c.data.data.levels;
-      switch(spellcasting) {
-        case 'full':
-          SpellPointsMax += this.settings.spellPointsByLevel[level];
-          break;
-        case 'half':
-          SpellPointsMax += this.settings.spellPointsByLevel[Math.ceil(level/2)];
-          break;
-        case 'third':
-          SpellPointsMax += this.settings.spellPointsByLevel[Math.ceil(level/3)];
-          break;
-        default:
-          SpellPointsMax += 0;
-      }
-    }
-    if (SpellPointsMax > 0) {
-      let updateActor = {[`data.resources.${spellPointResource.key}.max`] : SpellPointsMax};
-      actor.update(updateActor);
-      ui.notifications.info("SPELLPOINTS: Found resource '" + this.settings.spResource + "' on " + actorName + " character sheet! Your Maximum "+ this.settings.spResource +" have been updated.");
-    }
-    return actor;
-  }
-  
-  static calculateSpellPoints2(actor, ownedItem, updates, isDifferent, itemId) {
+   
+  /** Spell Points Automatic Calculation on class level update or new class */
+  static calculateSpellPoints(actor, ownedItem, updates, isDifferent, itemId) {
     //debugger
     //const updatedItem = mergeObject(ownedItem, updates, { overwrite: true, inplace: false });
     //Hooks.once("updateOwnedItem", async () => {
@@ -426,7 +352,6 @@ class SpellPoints {
         actor.update(updateActor);
         ui.notifications.info("SPELLPOINTS: Found resource '" + SpellPoints.settings.spResource + "' on " + actorName + " character sheet! Your Maximum "+ SpellPoints.settings.spResource +" have been updated.");
       }
-    //});
     return true;
   }
   
@@ -539,16 +464,9 @@ Hooks.on('init', () => {
     }
 	}
   
-  console.log('betterRollActive1:',_betterRollsActive);
-  console.log('betterRollActive2:',game.modules.get('betterrolls5e')?.active);
-  
-  /*game.settings.register(MODULE_NAME, "_betterRollsActive", {
-    name: "Spell Points Settings",
-    scope: "world",
-    type: Boolean,
-    config: false,
-    default: _betterRollsActive
-  });*/
+  //console.log('betterRollActive1:',_betterRollsActive);
+  //console.log('betterRollActive2:',game.modules.get('betterrolls5e')?.active);
+
 });
 
 // collate all preUpdateActor hooked functions into a single hook call
@@ -563,23 +481,9 @@ Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
   SpellPoints.checkDialogSpellPoints(dialog, html, formData);
 })
 
-/** attempt to calculate spellpoints on class item drop or class update**/
-// const item = actor.items.find(i => i.name === "Items Name");
-/*Hooks.on("preUpdateOwnedItem", async (actor, item, update, diff, userId) => {
-  //console.log(MODULE_NAME, 'updateOwnedItem');
-  SpellPoints.calculateSpellPoints(actor, item, 'update');
-})*/
+Hooks.on("preUpdateOwnedItem", SpellPoints.calculateSpellPoints);
+Hooks.on("createOwnedItem", SpellPoints.calculateSpellPoints);
 
-
-
-Hooks.on("preUpdateOwnedItem", SpellPoints.calculateSpellPoints2);
-Hooks.on("createOwnedItem", SpellPoints.calculateSpellPoints2);
-
-
-/*Hooks.on("createOwnedItem", async (actor, item, options, userId) => {
-  //console.log(MODULE_NAME, 'createOwnedItem');
-  SpellPoints.calculateSpellPoints(actor, item, 'create');
-})*/
 Hooks.on("renderActorSheet5e", (app, html, data) => {
   //console.log(MODULE_NAME, 'renderActorSheet5e');
   SpellPoints.mixedMode(app, html, data);
