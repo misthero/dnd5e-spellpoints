@@ -1,9 +1,12 @@
 # Advanced Magic - Spell Points System 5e
- FoundryVTT module for Spell Point System in D&D5e
+FoundryVTT module for Spell Point System in D&D5e
  
- **Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!**
+**Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!**
  
- This module use the optional rules found on DMG to allow character to cast spells using a resource named "Spell Points"
+This module use the optional rules found on DMG to allow character to cast spells using a resource named "Spell Points"
+ 
+## Changelog
+https://github.com/misthero/dnd5e-spellpoints/blob/0.8x/CHANGELOG.md
  
 ## Installation Instructions
 - Copy "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json" into the module installer inside foundry when it asks for the manifest.
