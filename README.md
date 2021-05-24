@@ -5,6 +5,9 @@
  
  This module use the optional rules found on DMG to allow character to cast spells using a resource named "Spell Points"
  
+## Changelog
+https://github.com/misthero/dnd5e-spellpoints/blob/main/CHANGELOG.md
+ 
 ## Installation Instructions
 - Copy "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json" into the module installer inside foundry when it asks for the manifest.
 - Launch your world go to settings -> module settings and enable the module `dnd5e-spellpoints`.
