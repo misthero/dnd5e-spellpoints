@@ -267,10 +267,14 @@ class SpellPoints {
   }
    
   /** Spell Points Automatic Calculation on class level update or new class */
-  static calculateSpellPoints(actor, ownedItem, updates, isDifferent, itemId) {
+  static calculateSpellPoints(item, updates, isDifferent) {
     //debugger
     //const updatedItem = mergeObject(ownedItem, updates, { overwrite: true, inplace: false });
     //Hooks.once("updateOwnedItem", async () => {
+      console.log('item:',item, 'updates:',updates, 'isDifferent:',isDifferent)
+      
+      const actor = item.parent;
+      
       if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
       return true;
     
@@ -282,7 +286,7 @@ class SpellPoints {
         return true;
 
       /* updating or dropping a class item */
-      if (getProperty(ownedItem, 'type') !== 'class')
+      if (item.type !== 'class')
         return true;
       
       /* not an update? **/
@@ -290,17 +294,17 @@ class SpellPoints {
       let changedClassID = null;
       let levelUpdated = false;
       if (getProperty(updates.data, 'levels')) {
-        const oldClassLevel = getProperty(ownedItem.data, 'levels');
+        const oldClassLevel = getProperty(item.data, 'levels');
         changedClassLevel = getProperty(updates.data, 'levels');
-        changedClassID =  getProperty(ownedItem, '_id');
+        changedClassID =  getProperty(item.data, '_id');
         levelUpdated = true;
       }
-      
-      const classDroppedName = getProperty(ownedItem, 'name');
+
+      const classDroppedName = getProperty(item, 'name');
       
       // check if this is the orignal name or localized with babele
-      if (getProperty(ownedItem, 'flags.babele.translated')){
-        let originalName = getProperty(ownedItem, 'flags.babele.originalName');
+      if (getProperty(item, 'flags.babele.translated')){
+        let originalName = getProperty(item, 'flags.babele.originalName');
       } else {
         let originalName = classDroppedName;
       }
@@ -321,9 +325,12 @@ class SpellPoints {
       // check for multiclasses 
       const actorClasses = actor.items.filter(i => i.type === "class");
       
+      console.log('classes', actorClasses);
+      console.log('ACTORE:',actor);
+      
       for (let c of actorClasses){
         /* spellcasting: pact; full; half; third; artificier; none; **/
-        let spellcasting = c.data.data.spellcasting;
+        let spellcasting = c.data.data.spellcasting.progression;
         let level = c.data.data.levels;
         
         // get updated class new level
@@ -345,6 +352,8 @@ class SpellPoints {
         }
 
       }
+      
+      console.log('NEWSPELLPOINTMAX:',SpellPointsMax);
       if (SpellPointsMax > 0) {
         let updateActor = {[`data.resources.${spellPointResource.key}.max`] : SpellPointsMax};
         actor.update(updateActor);
@@ -479,8 +488,8 @@ Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
   SpellPoints.checkDialogSpellPoints(dialog, html, formData);
 })
 
-Hooks.on("preUpdateOwnedItem", SpellPoints.calculateSpellPoints);
-Hooks.on("createOwnedItem", SpellPoints.calculateSpellPoints);
+Hooks.on("preUpdateItem", SpellPoints.calculateSpellPoints);
+Hooks.on("preCreateItem", SpellPoints.calculateSpellPoints);
 
 Hooks.on("renderActorSheet5e", (app, html, data) => {
   //console.log(MODULE_NAME, 'renderActorSheet5e');
