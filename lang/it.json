@@ -36,6 +36,7 @@
   "dnd5e-spellpoints.notEnoughSp": "{ActorName} non ha abbastanza {SpellPoints} per lanciare l'incantesimo.",
   "dnd5e-spellpoints.pleaseCreate": "Per favore crea una risorsa con il nome esatto: '{SpellPoints}' per lanciare questo incantesimo.",
   "dnd5e-spellpoints.youNotEnough": "Non hai abbastanza '{SpellPoints}' per lanciare l'incantesimo.",
+  "dnd5e-spellpoints.spellCost": "Costa {amount} {SpellPoints}",
   "dnd5e-spellpoints.spellUsingSpellPoints": "{ActorName} ha utilizzato {spellPointUsed} {SpellPoints}. Gli rimangono {remainingPoints} {SpellPoints}.",
   "dnd5e-spellpoints.save": "Salva",
   "dnd5e-spellpoints.reset": "Ripristina"

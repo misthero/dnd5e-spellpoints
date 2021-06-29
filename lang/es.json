@@ -34,6 +34,7 @@
   "dnd5e-spellpoints.notEnoughSp": "{ActorName} no tiene suficientes {SpellPoints} para lanzar este conjuro.",
   "dnd5e-spellpoints.pleaseCreate": "Por favor, crea un recurso llamado: '{SpellPoints}' para lanzar este conjuro.",
   "dnd5e-spellpoints.youNotEnough": "No tienes suficientes '{SpellPoints}' para lanzar este conjuro.",
+  "dnd5e-spellpoints.spellCost": "Cuesta {amount} {SpellPoints}",
   "dnd5e-spellpoints.spellUsingSpellPoints": "{ActorName} ha lanzado un conjuro usando {spellPointUsed} {SpellPoints}. Le quedan {remainingPoints} {SpellPoints}.",
   "dnd5e-spellpoints.save": "Guardar",
   "dnd5e-spellpoints.reset": "Reiniciar"
