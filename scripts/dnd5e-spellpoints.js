@@ -199,7 +199,7 @@ class SpellPoints {
     if (!SpellPoints.isModuleActive())
       return;
     
-    let actor = getProperty(dialog, "item.options.actor");
+    let actor = getProperty(dialog, "item.actor");
     
     /** check if actor is a player character **/
     if(!this.isActorCharacter(actor))
@@ -233,6 +233,19 @@ class SpellPoints {
       $('#ability-use-form', html).append('<div class="spError">'+messageCreate+'</div>');
       return;
     }
+
+    // Declare settings as a separate variable because jQuery overrides `this` when in an each() block
+    let settings = this.settings;
+
+    /** Replace list of spell slots with list of point costs **/
+    $('select[name="level"] option', html).each(function() {
+      let level = $(this).val();
+      let cost = settings.spellPointsCosts[level];
+      let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", {amount: cost, SpellPoints: settings.spResource})})`
+      $(this).text(newText);
+    })
+
+    /** Calculate spell point cost and warn user if they have none left */
     const maxSpellPoints = actor.data.data.resources[spellPointResource.key].max;
     const actualSpellPoints = actor.data.data.resources[spellPointResource.key].value;
 
