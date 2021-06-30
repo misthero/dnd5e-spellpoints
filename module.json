@@ -7,7 +7,7 @@
     "compatibleCoreVersion": "0.8.7",
     "url": "https://github.com/misthero/dnd5e-spellpoints",
     "manifest": "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json",
-    "download": "https://github.com/misthero/dnd5e-spellpoints/archive/0.8x.zip",
+    "download": "https://github.com/misthero/dnd5e-spellpoints/archive/refs/heads/main.zip",
     "system": ["dnd5e"],
     "includes": [
         "./assets/**",
