@@ -1,9 +1,15 @@
+> This branch is not maintained anymore, it will stay here for anyone still on FVTT version 0.7.x
+
+_____________________
+
 # Advanced Magic - Spell Points System 5e
  FoundryVTT module for Spell Point System in D&D5e
  
  **Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!**
  
  This module use the optional rules found on DMG to allow character to cast spells using a resource named "Spell Points"
+ 
+
  
 ## Changelog
 https://github.com/misthero/dnd5e-spellpoints/blob/0.7.x/CHANGELOG.md
