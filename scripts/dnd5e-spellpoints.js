@@ -187,10 +187,10 @@ class SpellPoints {
         });
       }
     }
-	
-    update.data.resources = {
-      [spellPointResource.key] : { 'value' : spellPointResource.values.value }
-    };
+    if (typeof update.data.resources === 'undefined'){
+      update.data.resources = {};
+    }
+    update.data.resources[spellPointResource.key] = { 'value' : spellPointResource.values.value };
     
     return update;
   }
