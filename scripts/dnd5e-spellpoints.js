@@ -390,8 +390,13 @@ class SpellPoints {
     if (SpellPoints.isMixedActorSpellPointEnabled(data.actor)) {
       checked = "checked";
     }
-    let html_checkbox = '<div class="spEnable flexrow "><label><i class="fas fa-magic"></i>&nbsp;';
-    html_checkbox += game.i18n.localize('dnd5e-spellpoints.use-spellpoints');
+    
+    let spellPointUseOnSheetLabel = game.i18n.localize('dnd5e-spellpoints.use-spellpoints');
+    
+    let html_checkbox = '<div class="spEnable flexrow ">';
+    html_checkbox += '<div class="no-edit"><i class="fas fa-magic"></i> ' + spellPointUseOnSheetLabel + '</div>';
+    html_checkbox += '<label class="edit-allowed"><i class="fas fa-magic"></i>&nbsp;';
+    html_checkbox += spellPointUseOnSheetLabel;
     
     html_checkbox += '<input name="flags.dnd5espellpoints.enabled" '+checked+' class="spEnableInput visually-hidden" type="checkbox" value="1">';
     html_checkbox += ' <i class="spEnableCheck fas"></i>';
