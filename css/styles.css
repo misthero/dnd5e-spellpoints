@@ -36,8 +36,11 @@ input.spEnableInput.visually-hidden:checked + .spEnableCheck:before {
   font-weight:600;
 }
 
-
 .spEnable .no-edit {
+  display:none;
+}
+
+.tidy5e-sheet .spEnable .no-edit {
     opacity: 0.5;
     cursor: not-allowed;
     display: inline-block;
@@ -45,6 +48,6 @@ input.spEnableInput.visually-hidden:checked + .spEnableCheck:before {
     white-space: nowrap;
     font-style: italic;
 }
-.allow-edit .spEnable .no-edit {display:none;}
-.spEnable .edit-allowed { display:none;}
-.allow-edit .spEnable .edit-allowed { display:block;}
+.tidy5e-sheet.allow-edit .spEnable .no-edit {display:none;}
+.tidy5e-sheet .spEnable .edit-allowed { display:none;}
+.tidy5e-sheet.allow-edit .spEnable .edit-allowed { display:block;}
