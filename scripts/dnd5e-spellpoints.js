@@ -27,13 +27,44 @@ class SpellPoints {
       spEnableSpellpoints: false,
       spResource: 'Spell Points',
       spAutoSpellpoints: false,
+      spFormula: 'DMG',
+      spellPointsByLevel: {1:4,2:6,3:14,4:17,5:27,6:32,7:38,8:44,9:57,10:64,11:73,12:73,13:83,14:83,15:94,16:94,17:107,18:114,19:123,20:133},
+      spellPointsCosts: {1:2,2:3,3:5,4:6,5:7,6:9,7:10,8:11,9:13},
+      spEnableVariant: false,
+      spLifeCost: 2,
+      spMixedMode: false,
+      isCustom: "false",
       spCustomFormulaBase: '0',
       spCustomFormulaSlotMultiplier: '1',
-      spellPointsCosts: {1:'2', 2:'3', 3:'5', 4:'6', 5:'7', 6:'9', 7:'10', 8:'11', 9:'13'},
-      spEnableVariant: false,
-      spLifeCost: '2',
-      spMixedMode: false,
     };
+  }
+
+  /**
+   * Get a map of formulas to override values specific to those formulas.
+   */
+  static get formulas() {
+    return {
+      DMG: {
+        isCustom: "false",
+        spellPointsByLevel: {1:4,2:6,3:14,4:17,5:27,6:32,7:38,8:44,9:57,10:64,11:73,12:73,13:83,14:83,15:94,16:94,17:107,18:114,19:123,20:133},
+        spellPointsCosts: {1:'2',2:'3',3:'5',4:'6',5:'7',6:'9',7:'10',8:'11',9:'13'}
+      },
+      CUSTOM: {
+        isCustom: "true"
+      },
+      DMG_CUSTOM: {
+        isCustom: "true",
+        spCustomFormulaBase: '0',
+        spCustomFormulaSlotMultiplier: '1',
+        spellPointsCosts: {1:'2',2:'3',3:'5',4:'6',5:'7',6:'9',7:'10',8:'11',9:'13'}
+      },
+      AM_CUSTOM: {
+        isCustom: "true",
+        spCustomFormulaBase: 'ceil((1*@spells.spell1.max + 2*@spells.spell2.max + 3*@spells.spell3.max + 4*@spells.spell4.max + 5*@spells.spell5.max + 6*@spells.spell6.max + 7*@spells.spell7.max + 8*@spells.spell8.max + 9*@spells.spell9.max) / 2) + @attributes.spelldc - 8 - @attributes.prof',
+        spCustomFormulaSlotMultiplier: '0',
+        spellPointsCosts: {1:'1',2:'2',3:'3',4:'4',5:'5',6:'12',7:'14',8:'24',9:'27'}
+      }
+    }
   }
 
   static isModuleActive(){
@@ -63,12 +94,12 @@ class SpellPoints {
   /**
    * Evaluates the given formula with the given actors data. Uses FoundryVTT's Roll
    * to make this evaluation.
-   * @param {string} formula The rollable string formula to evaluate.
+   * @param {string|number} formula The rollable formula to evaluate.
    * @param {object} actor The actor used for variables.
    * @return {number} The result of the formula.
    */
   static withActorData(formula, actor) {
-    const r = new Roll(formula, actor.data.data);
+    const r = new Roll(formula.toString(), actor.data.data);
     r.evaluate();
     return r.total;
   }
@@ -281,7 +312,6 @@ class SpellPoints {
         $('.dialog-button.original', html).trigger( "click" );
       } else if ($('select[name="level"]', html).length > 0) {
         let spellLvl = $('select[name="level"]', html).val();
-        // spellPointCost = SpellPoints.settings.spellPointsCosts[spellLvl]; TESTING IF THIS IS NEEDED
         if (actualSpellPoints - spellPointCost < 0) {
           ui.notifications.error("You don't have enough: '" + SpellPoints.settings.spResource + "' to cast this spell");
           dialog.close();
@@ -290,6 +320,110 @@ class SpellPoints {
         }
       }
     })
+  }
+
+  /**
+   * Calculates the maximum spell points for an actor based on custom formulas.
+   * @param {object} actor The actor used for variables.
+   * @return {number} The calculated maximum spell points.
+   */
+  static _calculateSpellPointsCustom(actor){
+    let SpellPointsMax = SpellPoints.withActorData(SpellPoints.settings.spCustomFormulaBase, actor);
+
+    let hasSpellSlots = false;
+    let spellPointsFromSlots = 0;
+    for (let [slotLvlTxt, slot] of Object.entries(actor.data.data.spells)) {
+      let slotLvl;
+      if (slotLvlTxt == 'pact') {
+        slotLvl = slot.level;
+      } else {
+        slotLvl = parseInt(slotLvlTxt.replace(/\D/g, ''));
+      }
+
+      if(slotLvl == 0) {
+        continue;
+      }
+
+      spellPointsFromSlots += slot.max * SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[slotLvl], actor);
+      if (slot.max > 0) {
+        hasSpellSlots = true;
+      }
+    }
+
+    if (!hasSpellSlots) {
+      return 0;
+    }
+
+    SpellPointsMax += spellPointsFromSlots * SpellPoints.withActorData(SpellPoints.settings.spCustomFormulaSlotMultiplier, actor);
+
+    return SpellPointsMax;
+  }
+
+  /**
+   * Calculates the maximum spell points for an actor based on a fixed map of
+   * Spell Level to maximum spell points.
+   * @param {object} item The class item of the actor.
+   * @param {object} updates The details of how the class item was udpated.
+   * @param {object} actor The actor used for variables.
+   * @return {number} The calculated maximum spell points.
+   */
+  static _calculateSpellPointsFixed(item, updates, actor){
+    /* not an update? **/
+    let changedClassLevel = null;
+    let changedClassID = null;
+    let levelUpdated = false;
+    if (getProperty(updates.data, 'levels')) {
+      const oldClassLevel = getProperty(item.data, 'levels');
+      changedClassLevel = getProperty(updates.data, 'levels');
+      changedClassID =  getProperty(item.data, '_id');
+      levelUpdated = true;
+    }
+
+    const classDroppedName = getProperty(item, 'name');
+
+    // check if this is the orignal name or localized with babele
+    if (getProperty(item, 'flags.babele.translated')){
+      let originalName = getProperty(item, 'flags.babele.originalName');
+    } else {
+      let originalName = classDroppedName;
+    }
+
+    const classItem = actor.items.getName(classDroppedName);
+
+    let SpellPointsMax = 0;
+
+    // check for multiclasses
+    const actorClasses = actor.items.filter(i => i.type === "class");
+
+    console.log('classes', actorClasses);
+    console.log('ACTORE:',actor);
+
+    for (let c of actorClasses){
+      /* spellcasting: pact; full; half; third; artificier; none; **/
+      let spellcasting = c.data.data.spellcasting.progression;
+      let level = c.data.data.levels;
+
+      // get updated class new level
+      if (levelUpdated && c.data._id == changedClassID)
+        level = changedClassLevel;
+
+      switch(spellcasting) {
+        case 'full':
+          SpellPointsMax += parseInt(SpellPoints.settings.spellPointsByLevel[level]);
+          break;
+        case 'half':
+          SpellPointsMax += parseInt(SpellPoints.settings.spellPointsByLevel[Math.ceil(level/2)]);
+          break;
+        case 'third':
+          SpellPointsMax += parseInt(SpellPoints.settings.spellPointsByLevel[Math.ceil(level/3)]);
+          break;
+        default:
+          SpellPointsMax += 0;
+      }
+
+    }
+
+    return SpellPointsMax
   }
 
   /** Spell Points Automatic Calculation on class level update or new class */
@@ -324,30 +458,8 @@ class SpellPoints {
         return true;
       }
 
-      let SpellPointsMax = SpellPoints.withActorData(SpellPoints.settings.spCustomFormulaBase, actor);
-
-      let hasSpellSlots = false;
-      let spellPointsFromSlots = 0;
-      for (let [slotLvlTxt, slot] of Object.entries(actor.data.data.spells)) {
-        let slotLvl;
-        if (slotLvlTxt == 'pact') {
-          slotLvl = slot.level
-        } else {
-          console.log(slotLvlTxt)
-          slotLvl = parseInt(slotLvlTxt.replace(/\D/g, ''))
-        }
-
-        if(slotLvl == 0) {
-          continue
-        }
-
-        spellPointsFromSlots += slot.max * SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[slotLvl], actor);
-        if (slot.max > 0)
-          hasSpellSlots = true
-      }
-
-      SpellPointsMax += spellPointsFromSlots * SpellPoints.withActorData(SpellPoints.settings.spCustomFormulaSlotMultiplier, actor);
-
+      const isCustom = SpellPoints.settings.isCustom.toString().toLowerCase() == 'true';
+      const SpellPointsMax = isCustom ? SpellPoints._calculateSpellPointsCustom(actor) : SpellPoints._calculateSpellPointsFixed(item, updates, actor)
 
       console.log('NEWSPELLPOINTMAX:',SpellPointsMax);
       if (SpellPointsMax > 0) {
@@ -403,19 +515,38 @@ class SpellPointsForm extends FormApplication {
     });
   }
 
+  /**
+   * Get the data used for filling out the Form. This is composed of the following
+   * in order of priority
+   *   1) Settings defined by the user
+   *   2) Default settings
+   *   3) The available formulas
+   */
   getData(options) {
-    return this.reset ? SpellPoints.defaultSettings : mergeObject(
-                                                        SpellPoints.defaultSettings,
-                                                        game.settings.get(
-                                                          MODULE_NAME,
-                                                          'settings'
-                                                        )
-                                                      );
+    return mergeObject({
+      spFormulas: Object.fromEntries(
+        Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)])
+      )
+    }, this.reset ? SpellPoints.defaultSettings :
+      mergeObject(SpellPoints.defaultSettings, game.settings.get(MODULE_NAME, 'settings')));
   }
 
   onReset() {
     this.reset = true;
     this.render();
+  }
+
+  /**
+   * Edits the visiblity of html elements within the Form based on whether the
+   * current formula is a custom formula.
+   * @param {boolean} isCustom A boolean flag that marks if the current formula is a custom formula.
+   */
+  setCustomOnlyVisibility(isCustom) {
+    const displayValue = isCustom ? 'block' : 'none';
+    const customElements = this.element[0].querySelectorAll('.spell-points-custom-only')
+    for (let elementIndex = 0, customElement; customElement = customElements[elementIndex]; elementIndex++) {
+      customElement.style.display = displayValue;
+    }
   }
 
   _updateObject(event, formData) {
@@ -427,6 +558,34 @@ class SpellPointsForm extends FormApplication {
   activateListeners(html) {
     super.activateListeners(html);
     html.find('button[name="reset"]').click(this.onReset.bind(this));
+  }
+
+  /**
+   * Method executed whenever an input is changed within the Form. This method
+   * watches only for changes in the spFormula select box. When a different
+   * formula is selected, it will overwrite all fields specified by that formula.
+   * The visiblity of custom formulas is also set based on if the new formula is
+   * a custom formula.
+   * @param {object} event The data detailing the change in the form.
+   */
+  _onChangeInput(event){
+    const input_name = event.originalEvent.path[0].name;
+    if (input_name == "spFormula") {
+      const input_value = event.originalEvent.path[0].value;
+      const formulaOverrides = SpellPoints.formulas[input_value]
+      const isCustom = (formulaOverrides.isCustom || "").toString().toLowerCase() == "true"
+      for (let elementName in formulaOverrides) {
+        if (formulaOverrides[elementName] instanceof Object) {
+          for (let elementSubName in formulaOverrides[elementName]) {
+            super.element[0].querySelector(`[name='${elementName}.${elementSubName}']`).value = formulaOverrides[elementName][elementSubName];
+          }
+        } else {
+          super.element[0].querySelector(`[name='${elementName}']`).value = formulaOverrides[elementName];
+        }
+      }
+
+      this.setCustomOnlyVisibility(isCustom)
+    }
   }
 } /** end SpellPointForm **/
 
@@ -495,3 +654,13 @@ Hooks.on("renderActorSheet5e", (app, html, data) => {
   //console.log(MODULE_NAME, 'renderActorSheet5e');
   SpellPoints.mixedMode(app, html, data);
 });
+
+/**
+  * Hook that is triggered after the SpellPointsForm has been rendered. This
+  * sets the visiblity of the custom formula fields based on if the current
+  * formula is a custom formula.
+  */
+Hooks.on('renderSpellPointsForm', (spellPointsForm, html, data) => {
+  const isCustom = (data.isCustom || "").toString().toLowerCase() == "true"
+  spellPointsForm.setCustomOnlyVisibility(isCustom)
+})

@@ -30,7 +30,7 @@ You are ready to go, now spells cast by player's characters will use spell point
     - Health Penalty Multiplier (See **[Advanced Magic - Spell Point System 5e!](https://www.drivethrurpg.com/product/272967/Advanced-Magic--Spell-Points-System-5e)** for more information).
 - Optionally you can enable a variant rule to allow players to keep casting even when they run out of spellpoints using their own life with terrible consequences if you are using the **[Advanced Magic - Spell Point System 5e!](https://www.drivethrurpg.com/product/272967/Advanced-Magic--Spell-Points-System-5e)** available as "Pay what you Want" on DriveThruRPG.
 
-## Example Max Spell Points Formulas
+## Example Custom Formulas
 
 ### DMG
 By the DMG, a character will always have enough spell points to create the spell slots they would normally have. This can be calculated by starting with `0` and  adding up the spell point cost of every slot they would normally have, multiplying it by `1`.
@@ -75,6 +75,22 @@ Spell Point Multiplier
 ```
 0
 ```
+
+## Making Your Own Formula
+
+Create a macro with the following script:
+```js
+console.log(actor.data.data)
+```
+
+While selecting a token, execute the macro. Then, look at the console. This will tell you all the data that is available to you when writing a formula.
+
+You can test out a formula by rolling it in chat while selecting a token. The following formula would determine the largest modifier which are typically used for spell casting, and it would roll it in chat.
+```
+/roll { @abilities.wis.mod,  @abilities.int.mod,  @abilities.cha.mod}kh
+```
+
+It is also possible to add a module or create your own module that edits or adds information to `actor.data.data`. This new information will be available to the formulas with no concerns over compatibility.
 
 
 ## To do
