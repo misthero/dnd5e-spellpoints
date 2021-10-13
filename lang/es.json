@@ -15,6 +15,9 @@
   "dnd5e-spellpoints.AMLinkLabel": "Página web de la Dungeon Masters Guild",
   "dnd5e-spellpoints.DMG": "Guía del Dungeon Master",
   "dnd5e-spellpoints.AM": "Magia Avanzada (regla casera)",
+  "dnd5e-spellpoints.CUSTOM": "Fórmula Personalizada",
+  "dnd5e-spellpoints.DMG_CUSTOM": "Guía del Dungeon Master (Personalizado)",
+  "dnd5e-spellpoints.AM_CUSTOM": "Magia Avanzada (Personalizado)",
   "dnd5e-spellpoints.spellPointsCostsTitle": "Coste en Puntos de Conjuro",
   "dnd5e-spellpoints.costLabel": "Coste en Puntos de Conjuro para espacios de nivel {slotLevel}.",
   "dnd5e-spellpoints.spellPointsCostsNote": "No necesitas cambiar los costes si estás usando las normas por defecto del DMG (pág. 288).",
@@ -37,5 +40,10 @@
   "dnd5e-spellpoints.spellCost": "Cuesta {amount} {SpellPoints}",
   "dnd5e-spellpoints.spellUsingSpellPoints": "{ActorName} ha lanzado un conjuro usando {spellPointUsed} {SpellPoints}. Le quedan {remainingPoints} {SpellPoints}.",
   "dnd5e-spellpoints.save": "Guardar",
-  "dnd5e-spellpoints.reset": "Reiniciar"
+  "dnd5e-spellpoints.reset": "Reiniciar",
+  "dnd5e-spellpoints.spellPointsFormula": "Fórmula de Puntos Máximos de Hechizos",
+  "dnd5e-spellpoints.formulaBaseLabel": "Fórmula Base",
+  "dnd5e-spellpoints.formulaSlotLabel": "Fórmula de Ranura",
+  "dnd5e-spellpoints.formulaBaseNote": "La fórmula base se agrega si el personaje tiene al menos un espacio para hechizos.",
+  "dnd5e-spellpoints.formulaSlotNote": "La fórmula de la tragamonedas multiplica los costos totales de Puntos de Hechizo de las tragamonedas que tendría el personaje."
 }

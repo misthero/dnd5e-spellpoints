@@ -15,6 +15,9 @@
   "dnd5e-spellpoints.AMLinkLabel": "Dungeon Masters Guild Website",
   "dnd5e-spellpoints.DMG": "Dungeon Master Guide",
   "dnd5e-spellpoints.AM": "Advanced Magic (homebrew)",
+  "dnd5e-spellpoints.CUSTOM": "Custom Formula",
+  "dnd5e-spellpoints.DMG_CUSTOM": "Dungeon Master Guide (Custom)",
+  "dnd5e-spellpoints.AM_CUSTOM": "Advanced Magic (Custom)",
   "dnd5e-spellpoints.spellPointsCostsTitle": "Spell Point costs",
   "dnd5e-spellpoints.costLabel": "Spell Points cost for Level {slotLevel} slots.",
   "dnd5e-spellpoints.spellPointsCostsNote": "You don't need to change the spell point costs if you are using the default spellpoint rules on DMG (page 288).",
@@ -37,5 +40,10 @@
   "dnd5e-spellpoints.spellCost": "Costs {amount} {SpellPoints}",
   "dnd5e-spellpoints.spellUsingSpellPoints": "{ActorName} cast a spell using {spellPointUsed} {SpellPoints}. {remainingPoints} {SpellPoints} remaining.",
   "dnd5e-spellpoints.save": "Save",
-  "dnd5e-spellpoints.reset": "Reset"
+  "dnd5e-spellpoints.reset": "Reset",
+  "dnd5e-spellpoints.spellPointsFormula": "Max Spell Points Formula",
+  "dnd5e-spellpoints.formulaBaseLabel": "Base Formula",
+  "dnd5e-spellpoints.formulaSlotLabel": "Slot Formula",
+  "dnd5e-spellpoints.formulaBaseNote": "The base formula is added if the character has at least one spell slot.",
+  "dnd5e-spellpoints.formulaSlotNote": "The slot formula multiplies the total Spell Point costs of the slots that the character would have."
 }

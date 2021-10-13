@@ -2,18 +2,27 @@
   <h2>{{localize "dnd5e-spellpoints.poptitle"}}</h2>
   <form autocomplete="off" class="dnd5e-spellpoints">
 
+    <div class="form-group spell-points-hidden">
+        <input type="text" name="isCustom" data-dtype="string" value="{{ isCustom }}"/>
+    </div>
+    {{#each spellPointsByLevel as |cost level|}}
+    <div class="form-group spell-points-hidden">
+        <textarea name="spellPointsByLevel.{{level}}">{{ cost }}</textarea>
+    </div>
+    {{/each}}
+
     <div class="form-group">
       <label>{{localize "dnd5e-spellpoints.resourceLabel"}}</label>
       <input type="text" name="spResource" data-dtype="string" value="{{ spResource }}"/>
       <p class="notes">{{localize "dnd5e-spellpoints.resourceNote"}}</p>
     </div>
-    
+
     <div class="form-group">
       <label>{{localize "dnd5e-spellpoints.mixedLabel"}}</label>
       <input type="checkbox" name="spMixedMode" data-dtype="Boolean" {{checked spMixedMode}}/>
       <p class="notes">{{localize "dnd5e-spellpoints.mixedMode"}}</p>
     </div>
-      
+
     <div class="form-group">
       <label>{{localize "dnd5e-spellpoints.autoLabel"}}</label>
       <input type="checkbox" name="spAutoSpellpoints" data-dtype="Boolean" {{checked spAutoSpellpoints}}/>
@@ -36,12 +45,27 @@
     <p><b>{{localize "dnd5e-spellpoints.spellPointsCostsTitle"}}</b></p>
     {{#each spellPointsCosts as |cost level|}}
     <div class="form-group">
-      <label>{{ spFormat "dnd5e-spellpoints.costLabel" slotLevel=level }}</label>
-      <input style="flex:0.2;text-align:right;" max="999" min="0" size="3" name="spellPointsCosts.{{level}}" value="{{ cost }}" type="number" data-dtype="number"/>
+        <div><label>{{ spFormat "dnd5e-spellpoints.costLabel" slotLevel=level }}</label></div>
+        <div><textarea class="spellPoints" rows="1" name="spellPointsCosts.{{level}}">{{ cost }}</textarea></div>
     </div>
     {{/each}}
-    <p>{{localize "dnd5e-spellpoints.spellPointsCostsNote"}}</p>
-    
+    <p class="notes">{{localize "dnd5e-spellpoints.spellPointsCostsNote"}}</p>
+    <div class="spell-points-custom-only">
+      <hr>
+      <p><b>{{localize "dnd5e-spellpoints.spellPointsFormula"}}</b></p>
+      <div class="form-group spell-points-custom-only">
+        <div><label>{{localize "dnd5e-spellpoints.formulaBaseLabel"}}</label></div>
+        <div><textarea class="spellPoints" rows="1" name="spCustomFormulaBase">{{ spCustomFormulaBase }}</textarea></div>
+        <p class="notes">{{localize "dnd5e-spellpoints.formulaBaseNote"}}</p>
+      </div>
+
+      <div class="form-group spell-points-custom-only">
+        <div><label>{{localize "dnd5e-spellpoints.formulaSlotLabel"}}</label></div>
+        <div><textarea class="spellPoints" rows="1" name="spCustomFormulaSlotMultiplier">{{ spCustomFormulaSlotMultiplier }}</textarea></div>
+        <p class="notes">{{localize "dnd5e-spellpoints.formulaSlotNote"}}</p>
+      </div>
+    </div>
+
     <hr>
     <p><b>{{localize "dnd5e-spellpoints.AMTitle"}}</b></p>
     <p class="notes">{{localize "dnd5e-spellpoints.AMNotes"}}</p>
@@ -52,13 +76,13 @@
       <p class="notes">{{localize "dnd5e-spellpoints.enableVariantNote"}}</p>
     </div>
     <div class="form-group">
-      <label>{{localize "dnd5e-spellpoints.spLifeCostLabel"}}</label>
-      <input style="flex:0.2;text-align:right;" max="999" min="0" size="3" type="number" data-dtype="number" name="spLifeCost" value="{{ spLifeCost }}"/>
+      <div><label>{{localize "dnd5e-spellpoints.spLifeCostLabel"}}</label></div>
+      <div><textarea class="spellPoints" rows="1" name="spLifeCost">{{ spLifeCost }}</textarea></div>
       <p class="notes">{{localize "dnd5e-spellpoints.spLifeCostNote"}}</p>
     </div>
 
     <hr>
-    
+
     <div class="form-group" style="margin: 10px;">
       <button type="submit" name="submit">
         <i class="fas fa-save"></i> {{localize "dnd5e-spellpoints.save"}}

@@ -15,6 +15,9 @@
   "dnd5e-spellpoints.AMLinkLabel": "sito Dungeon Masters Guild",
   "dnd5e-spellpoints.DMG": "Guida del Dungeon Master",
   "dnd5e-spellpoints.AM": "Advanced Magic (homebrew)",
+  "dnd5e-spellpoints.CUSTOM": "Formula Personalizzata",
+  "dnd5e-spellpoints.DMG_CUSTOM": "Guida del Dungeon Master (Personalizzato)",
+  "dnd5e-spellpoints.AM_CUSTOM": "Advanced Magic (Personalizzato)",
   "dnd5e-spellpoints.spellPointsCostsTitle": "Costo dei Punti Magia",
   "dnd5e-spellpoints.costLabel": "Costo in Punti Magia per uno Slot di livello {slotLevel}.",
   "dnd5e-spellpoints.spellPointsCostsNote": "Non è necessario cambiare i costi preimpostati se stai utilizzando le regola della DMG (pag. 288).",
@@ -39,5 +42,10 @@
   "dnd5e-spellpoints.spellCost": "Costa {amount} {SpellPoints}",
   "dnd5e-spellpoints.spellUsingSpellPoints": "{ActorName} ha utilizzato {spellPointUsed} {SpellPoints}. Gli rimangono {remainingPoints} {SpellPoints}.",
   "dnd5e-spellpoints.save": "Salva",
-  "dnd5e-spellpoints.reset": "Ripristina"
+  "dnd5e-spellpoints.reset": "Ripristina",
+  "dnd5e-spellpoints.spellPointsFormula": "Formula di Punti Incantesimo Massimi",
+  "dnd5e-spellpoints.formulaBaseLabel": "Formula di Base",
+  "dnd5e-spellpoints.formulaSlotLabel": "Formula di Slot",
+  "dnd5e-spellpoints.formulaBaseNote": "La formula base viene aggiunta se il personaggio ha almeno uno slot incantesimo.",
+  "dnd5e-spellpoints.formulaSlotNote": "La formula dello slot moltiplica i costi totali in punti incantesimo degli slot che il personaggio avrebbe."
 }

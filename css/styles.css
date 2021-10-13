@@ -14,7 +14,7 @@
 
 .spEnable {
   flex:0 0 25px;
-  
+
 }
 .spEnable > label {
   cursor:pointer;
@@ -24,7 +24,7 @@
   width:0 !important;
   height:0 !important;
   overflow:hidden;
-  position:absolute; 
+  position:absolute;
 }
 
 input.spEnableInput.visually-hidden + .spEnableCheck:before {
@@ -51,3 +51,12 @@ input.spEnableInput.visually-hidden:checked + .spEnableCheck:before {
 .tidy5e-sheet.allow-edit .spEnable .no-edit {display:none;}
 .tidy5e-sheet .spEnable .edit-allowed { display:none;}
 .tidy5e-sheet.allow-edit .spEnable .edit-allowed { display:block;}
+
+textarea.spellPoints {
+  width: 100%;
+  resize: none;
+}
+
+div.spell-points-hidden {
+  display:none;
+}
