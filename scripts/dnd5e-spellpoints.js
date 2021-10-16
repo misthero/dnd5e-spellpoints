@@ -361,7 +361,9 @@ class SpellPoints {
 
   /**
    * Calculates the maximum spell points for an actor based on a fixed map of
-   * Spell Level to maximum spell points.
+   * spellcasting level to maximum spell points. Builds up a total spellcasting
+   * level based on the level of each spellcasting class according to
+   * Multiclassing rules.
    * @param {object} item The class item of the actor.
    * @param {object} updates The details of how the class item was udpated.
    * @param {object} actor The actor used for variables.
@@ -397,6 +399,13 @@ class SpellPoints {
 
     console.log('classes', actorClasses);
     console.log('ACTORE:',actor);
+    let spellcastingClassCount = 0;
+    const spellcastingLevels = {
+      full: [],
+      half: [],
+      artificer: [],
+      third: []
+    }
 
     for (let c of actorClasses){
       /* spellcasting: pact; full; half; third; artificier; none; **/
@@ -407,23 +416,27 @@ class SpellPoints {
       if (levelUpdated && c.data._id == changedClassID)
         level = changedClassLevel;
 
-      switch(spellcasting) {
-        case 'full':
-          SpellPointsMax += parseInt(SpellPoints.settings.spellPointsByLevel[level]);
-          break;
-        case 'half':
-          SpellPointsMax += parseInt(SpellPoints.settings.spellPointsByLevel[Math.ceil(level/2)]);
-          break;
-        case 'third':
-          SpellPointsMax += parseInt(SpellPoints.settings.spellPointsByLevel[Math.ceil(level/3)]);
-          break;
-        default:
-          SpellPointsMax += 0;
+      if (spellcastingLevels[spellcasting] != undefined) {
+        spellcastingLevels[spellcasting].push(level);
+        spellcastingClassCount++;
       }
 
     }
 
-    return SpellPointsMax
+    let totalSpellcastingLevel = 0
+    totalSpellcastingLevel += spellcastingLevels['full'].reduce((sum, level) => sum + level, 0)
+    totalSpellcastingLevel += spellcastingLevels['artificer'].reduce((sum, level) => sum + Math.ceil(level/2), 0);
+    // Half and third casters only round up if they do not multiclass into other spellcasting classes and if they
+    // have enough levels to obtain the spellcasting feature.
+    if (spellcastingClassCount == 1 && (spellcastingLevels['half'][0] >= 2 || spellcastingLevels['third'][0] >= 3)) {
+      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => sum + Math.ceil(level/2), 0);
+      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => sum + Math.ceil(level/3), 0);
+    } else {
+      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => sum + Math.floor(level/2), 0);
+      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => sum + Math.floor(level/3), 0);
+    }
+
+    return parseInt(SpellPoints.settings.spellPointsByLevel[totalSpellcastingLevel]) || 0
   }
 
   /** Spell Points Automatic Calculation on class level update or new class */
