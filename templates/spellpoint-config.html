@@ -41,6 +41,19 @@
       <p class="notes">{{localize "dnd5e-spellpoints.formulaNote"}}</p>
       <!-- <p class="notes">{{localize "dnd5e-spellpoints.formulaNote2"}} <a href="https://www.dmsguild.com/product/272967/Advanced-Magic--Spell-Points-System-5e">{{localize "dnd5e-spellpoints.AMLinkLabel"}}</a></p> -->
     </div>
+    
+    <div class="form-group">
+      <label>{{localize "dnd5e-spellpoints.warlockUseSpLabel"}}</label>
+      <input type="checkbox" name="warlockUseSp" data-dtype="Boolean" {{checked warlockUseSp}}/>
+      <p class="notes">{{localize "dnd5e-spellpoints.warlockUseSpNote"}}</p>
+    </div>
+    
+    <div class="form-group">
+      <label>{{localize "dnd5e-spellpoints.chatMessagePrivateLabel"}}</label>
+      <input type="checkbox" name="chatMessagePrivate" data-dtype="Boolean" {{checked chatMessagePrivate}}/>
+      <p class="notes">{{localize "dnd5e-spellpoints.chatMessagePrivateNote"}}</p>
+    </div>
+    
     <hr>
     <p><b>{{localize "dnd5e-spellpoints.spellPointsCostsTitle"}}</b></p>
     {{#each spellPointsCosts as |cost level|}}

@@ -8,3 +8,7 @@
 - 1.2.5 Bugfix: Restored mixed mode checkbox on certain character sheets
 - 1.3.0 Add a new options to the formula selection box. The new options allow custom formulas defined at runtime for calculating spell point costs and maximum spell points. Custom formulas are hidden from configuration whenever a non-custom formula is selected. Selecting a formula will override options within the configuration window.
 - 1.3.1 Compatibility fixes for FVTT 0.9x
+- 1.3.5 Fix Warlock pact casting. 
+  - New option for including or excluding Warlocks from spellpoint usage. 
+  - Moved the mixed mode enable Spell Point on character sheet to Features tab instead of Spells Tab.
+  - New global option to hide chat message about how many spell points are being used to other players (GM excluded)
