@@ -125,7 +125,8 @@ class SpellPoints {
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
     if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
       return update;
-
+    
+    /** check if this is a spell casting **/
     let spell = getProperty(update, "data.spells");
     if (!spell || spell === undefined)
       return update;
@@ -182,19 +183,20 @@ class SpellPoints {
     const maxSpellPoints = actor.data.data.resources[spellPointResource.key].max;
     const actualSpellPoints = actor.data.data.resources[spellPointResource.key].value;
 
-   /* get spell cost in spellpoints */
+    /* get spell cost in spellpoints */
     const spellPointCost = this.withActorData(this.settings.spellPointsCosts[spellLvl], actor);
+    
+    /** check if message should be visible to all or just player+gm */
+    let SpeakTo = [];
+    if (this.settings.chatMessagePrivate){
+      SpeakTo = game.users.filter(u => u.isGM);
+    }
 
     /** update spellpoints **/
     if (actualSpellPoints - spellPointCost >= 0 ) {
       /* character has enough spellpoints */
       spellPointResource.values.value = spellPointResource.values.value - spellPointCost;
-      
-      let SpeakTo = [];
-      if (this.settings.chatMessagePrivate){
-        SpeakTo = game.users.filter(u => u.isGM);
-      }
-      
+
       ChatMessage.create({
         content: "<i style='color:green;'>"+game.i18n.format("dnd5e-spellpoints.spellUsingSpellPoints",
           {
