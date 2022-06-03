@@ -100,7 +100,9 @@ class SpellPoints {
    * @return {number} The result of the formula.
    */
   static withActorData(formula, actor) {
-    const r = new Roll(formula.toString(), actor.data.data);
+    let dataObject = actor.getRollData();
+    dataObject.flags = actor.data.flags;
+    const r = new Roll(formula.toString(), dataObject);
     r.evaluate({async: false});
     return r.total;
   }
