@@ -12,3 +12,4 @@
   - New option for including or excluding Warlocks from spellpoint usage. 
   - Moved the mixed mode enable Spell Point on character sheet to Features tab instead of Spells Tab.
   - New global option to hide chat message about how many spell points are being used to other players (GM excluded)
+- 1.3.6 Multiclassing Max Spell Points fix
