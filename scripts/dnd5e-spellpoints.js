@@ -123,13 +123,14 @@ class SpellPoints {
     /** do nothing if module is not active **/
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
       return update;
-
+    
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
     if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
       return update;
     
     /** check if this is a spell casting **/
     let spell = getProperty(update, "data.spells");
+    
     if (!spell || spell === undefined)
       return update;
 
@@ -152,12 +153,12 @@ class SpellPoints {
     if (getProperty(update, "data.spells.pact") !== undefined) {
       isPact = true;
     }
-
+    
      /** find the spell level just cast */
     const spellLvlNames = ["spell1", "spell2", "spell3", "spell4", "spell5", "spell6", "spell7", "spell8", "spell9", "pact"];
     let spellLvlIndex = spellLvlNames.findIndex(name => { return getProperty(update, "data.spells." + name) });
-
     let spellLvl = spellLvlIndex + 1;
+    
     if (isPact) {
       // Pact magic
       if (this.settings.warlockUseSp) {
@@ -270,24 +271,23 @@ class SpellPoints {
   static checkDialogSpellPoints(dialog, html, formData){
     if (!SpellPoints.isModuleActive())
       return;
-
+    
     let actor = getProperty(dialog, "item.actor");
-
+    
     /** check if actor is a player character **/
     if(!this.isActorCharacter(actor))
       return;
-
-    //console.log(MODULE_NAME,'checkDialogSpellPoints', actor, dialog, html, formData);
-
+    
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
     if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
       return;
+    
     
     /** check if this is a spell **/
     let isSpell = false;
     if ( getProperty(dialog, "item.type") === "spell" )
       isSpell = true;
-
+    
     const spell = dialog.item.data;
     const preparation = spell.data.preparation; //prepared,pact,always,atwill,innate
     // spell level can change later if casting it with a greater slot, baseSpellLvl is the default
@@ -311,10 +311,15 @@ class SpellPoints {
     /** Replace list of spell slots with list of point costs **/
     $('select[name="level"] option', html).each(function() {
       let selectValue =  $(this).val();
-      if (selectValue != 'pact') {
-        let level = $(this).val();
-        let cost = settings.spellPointsCosts[level];
-        let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", {amount: cost, SpellPoints: settings.spResource})})`
+      let level = 0
+      if (selectValue == 'pact' && settings.warlockUseSp) {
+        level = actor.data.data.spells.pact.level;
+      } else {
+        level = selectValue;
+      }
+      let cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
+      let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", {amount: cost, SpellPoints: settings.spResource})})`
+      if (selectValue != 'pact' || settings.warlockUseSp) {
         $(this).text(newText);
       }
     })
@@ -322,9 +327,9 @@ class SpellPoints {
     /** Calculate spell point cost and warn user if they have none left */
     const maxSpellPoints = actor.data.data.resources[spellPointResource.key].max;
     const actualSpellPoints = actor.data.data.resources[spellPointResource.key].value;
-
+    
     let spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor);
-
+    
     if (actualSpellPoints - spellPointCost < 0) {
       const messageNotEnough = game.i18n.format("dnd5e-spellpoints.youNotEnough", {SpellPoints: this.settings.spResource });
       $('#ability-use-form', html).append('<div class="spError">'+messageNotEnough+'</div>');
@@ -468,11 +473,6 @@ class SpellPoints {
 
   /** Spell Points Automatic Calculation on class level update or new class */
   static calculateSpellPoints(item, updates, isDifferent) {
-    //debugger
-    //const updatedItem = mergeObject(ownedItem, updates, { overwrite: true, inplace: false });
-    //Hooks.once("updateOwnedItem", async () => {
-    //console.log('item:',item, 'updates:',updates, 'isDifferent:',isDifferent)
-
       const actor = item.parent;
 
       if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
@@ -515,7 +515,6 @@ class SpellPoints {
   **/
 
   static mixedMode(app, html, data){
-    //console.log(data)
     if (!this.isModuleActive() || !this.settings.spMixedMode || data.actor.type != "character") {
       return;
     }
@@ -630,6 +629,7 @@ class SpellPointsForm extends FormApplication {
 
 Hooks.on('init', () => {
   console.log('SpellPoints init');
+  
   /** should spellpoints be enabled */
   game.settings.register(MODULE_NAME, "spEnableSpellpoints", {
     name: "Enable Spell Points system",
@@ -657,8 +657,8 @@ Hooks.on('init', () => {
     scope: "world",
     default: SpellPointsForm.defaultSettings,
     type: Object,
-    config: false,
-    onChange: (x) => window.location.reload()
+    config: false
+    //onChange: (x) => window.location.reload()
   });
 
   let _betterRollsActive = false;
@@ -680,9 +680,7 @@ Hooks.on("preUpdateActor", async (actor, update, options, userId) => {
 });
 
 /** spell launch dialog **/
-// renderAbilityUseDialog renderApplication
 Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
-  //console.log(MODULE_NAME, 'renderAbilityUseDialog');
   SpellPoints.checkDialogSpellPoints(dialog, html, formData);
 })
 
@@ -690,7 +688,6 @@ Hooks.on("updateItem", SpellPoints.calculateSpellPoints);
 Hooks.on("createItem", SpellPoints.calculateSpellPoints);
 
 Hooks.on("renderActorSheet5e", (app, html, data) => {
-  //console.log(MODULE_NAME, 'renderActorSheet5e');
   SpellPoints.mixedMode(app, html, data);
 });
 
