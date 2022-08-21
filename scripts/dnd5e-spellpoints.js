@@ -37,7 +37,7 @@ class SpellPoints {
       spMixedMode: false,
       isCustom: "false",
       spCustomFormulaBase: '0',
-      spCustomFormulaSlotMultiplier: '1',
+      spCustomFormulaSlotMultiplier: '1'
     };
   }
 
@@ -78,7 +78,7 @@ class SpellPoints {
   }
 
   static isActorCharacter(actor){
-    return getProperty(actor, "data.type") == "character";
+    return getProperty(actor, "type") == "character";
   }
 
   static isMixedActorSpellPointEnabled(actor){
@@ -101,7 +101,7 @@ class SpellPoints {
    */
   static withActorData(formula, actor) {
     let dataObject = actor.getRollData();
-    dataObject.flags = actor.data.flags;
+    dataObject.flags = actor.flags;
     const r = new Roll(formula.toString(), dataObject);
     r.evaluate({async: false});
     return r.total;
@@ -109,7 +109,7 @@ class SpellPoints {
 
   /** check what resource is spellpoints on this actor **/
   static getSpellPointsResource(actor) {
-    let _resources = getProperty(actor, "data.data.resources");
+    let _resources = getProperty(actor, "system.resources");
     for (let r in _resources) {
       if (_resources[r].label == this.settings.spResource) {
         return {'values'  : _resources[r],'key'     : r};
@@ -125,23 +125,23 @@ class SpellPoints {
       return update;
     
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
-    if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
+    if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor))
       return update;
     
     /** check if this is a spell casting **/
-    let spell = getProperty(update, "data.spells");
+    let spell = getProperty(update, "system.spells");
     
     if (!spell || spell === undefined)
       return update;
 
-    let hp = getProperty(update, "data.attributes.hp.value");
+    let hp = getProperty(update, "system.attributes.hp.value");
     let spellPointResource = SpellPoints.getSpellPointsResource(actor);
 
     /** not found any resource for spellpoints ? **/
     if (!spellPointResource) {
       ChatMessage.create({
-        content: "<i style='color:red;'>" + game.i18n.format("dnd5e-spellpoints.actorNoSP", {ActorName: actor.data.name, SpellPoints: this.settings.spResource }) + "</i>",
-        speaker: ChatMessage.getSpeaker({ alias: actor.data.name })
+        content: "<i style='color:red;'>" + game.i18n.format("dnd5e-spellpoints.actorNoSP", {ActorName: actor.name, SpellPoints: this.settings.spResource }) + "</i>",
+        speaker: ChatMessage.getSpeaker({ alias: actor.name })
       });
       game.i18n.format("dnd5e-spellpoints.createNewResource", this.settings.spResource);
       ui.notifications.error(game.i18n.format("dnd5e-spellpoints.createNewResource", { SpellPoints : this.settings.spResource }));
@@ -150,28 +150,28 @@ class SpellPoints {
 
     /** check if is pact magic **/
     let isPact = false;
-    if (getProperty(update, "data.spells.pact") !== undefined) {
+    if (getProperty(update, "system.spells.pact") !== undefined) {
       isPact = true;
     }
     
      /** find the spell level just cast */
     const spellLvlNames = ["spell1", "spell2", "spell3", "spell4", "spell5", "spell6", "spell7", "spell8", "spell9", "pact"];
-    let spellLvlIndex = spellLvlNames.findIndex(name => { return getProperty(update, "data.spells." + name) });
+    let spellLvlIndex = spellLvlNames.findIndex(name => { return getProperty(update, "system.spells." + name) });
     let spellLvl = spellLvlIndex + 1;
     
     if (isPact) {
       // Pact magic
       if (this.settings.warlockUseSp) {
-        spellLvl = actor.data.data.spells.pact.level;
+        spellLvl = actor.system.spells.pact.level;
       } else {
         return update;
       }
     }
     
     //** slot calculation **/
-    const origSlots = actor.data.data.spells;
+    const origSlots = actor.system.spells;
     const preCastSlotCount = getProperty(origSlots, spellLvlNames[spellLvlIndex] + ".value");
-    const postCastSlotCount = getProperty(update, "data.spells." + spellLvlNames[spellLvlIndex] + ".value");
+    const postCastSlotCount = getProperty(update, "system.spells." + spellLvlNames[spellLvlIndex] + ".value");
     let maxSlots = getProperty(origSlots, spellLvlNames[spellLvlIndex] + ".max");
 
     let slotCost = preCastSlotCount - postCastSlotCount;
@@ -179,12 +179,12 @@ class SpellPoints {
     /** restore slots to the max **/
     if (typeof maxSlots === undefined) {
       maxSlots = 1;
-      update.data.spells[spellLvlNames[spellLvlIndex]].max = maxSlots;
+      update.system.spells[spellLvlNames[spellLvlIndex]].max = maxSlots;
     }
-    update.data.spells[spellLvlNames[spellLvlIndex]].value = maxSlots;
+    update.system.spells[spellLvlNames[spellLvlIndex]].value = maxSlots;
 
-    const maxSpellPoints = actor.data.data.resources[spellPointResource.key].max;
-    const actualSpellPoints = actor.data.data.resources[spellPointResource.key].value;
+    const maxSpellPoints = actor.system.resources[spellPointResource.key].max;
+    const actualSpellPoints = actor.system.resources[spellPointResource.key].value;
 
     /* get spell cost in spellpoints */
     const spellPointCost = this.withActorData(this.settings.spellPointsCosts[spellLvl], actor);
@@ -203,12 +203,12 @@ class SpellPoints {
       ChatMessage.create({
         content: "<i style='color:green;'>"+game.i18n.format("dnd5e-spellpoints.spellUsingSpellPoints",
           {
-          ActorName : actor.data.name,
+          ActorName : actor.name,
           SpellPoints: this.settings.spResource,
           spellPointUsed: spellPointCost,
           remainingPoints: spellPointResource.values.value
           })+"</i>",
-        speaker: ChatMessage.getSpeaker({ alias: actor.data.name }),
+        speaker: ChatMessage.getSpeaker({ alias: actor.name }),
         isContentVisible : false,
         isAuthor :true,
         whisper : SpeakTo
@@ -219,9 +219,9 @@ class SpellPoints {
         // spell point resource is 0 but character can still cast.
         spellPointResource.values.value = 0;
         const hpMaxLost = spellPointCost * SpellPoints.withActorData(SpellPoints.settings.spLifeCost, actor);
-        const hpActual = actor.data.data.attributes.hp.value;
-        let hpTempMaxActual = actor.data.data.attributes.hp.tempmax;
-        const hpMaxFull = actor.data.data.attributes.hp.max;
+        const hpActual = actor.system.attributes.hp.value;
+        let hpTempMaxActual = actor.system.attributes.hp.tempmax;
+        const hpMaxFull = actor.system.attributes.hp.max;
         if (!hpTempMaxActual)
           hpTempMaxActual = 0;
         const newTempMaxHP = hpTempMaxActual - hpMaxLost;
@@ -229,22 +229,22 @@ class SpellPoints {
 
         if (hpMaxFull + newTempMaxHP <= 0) { //character is permanently dead
           // 3 death saves failed and 0 hp
-          update.data.attributes = {'death':{'failure':3}, 'hp':{'tempmax':-hpMaxFull,'value':0}};
+          update.system.attributes = {'death':{'failure':3}, 'hp':{'tempmax':-hpMaxFull,'value':0}};
           ChatMessage.create({
-            content: "<i style='color:red;'>"+game.i18n.format("dnd5e-spellpoints.castedLifeDead", { ActorName : actor.data.name })+"</i>",
-            speaker: ChatMessage.getSpeaker({ alias: actor.data.name }),
+            content: "<i style='color:red;'>"+game.i18n.format("dnd5e-spellpoints.castedLifeDead", { ActorName : actor.name })+"</i>",
+            speaker: ChatMessage.getSpeaker({ alias: actor.name }),
             isContentVisible : false,
             isAuthor :true,
             whisper : SpeakTo
           });
         } else {
-          update.data.attributes = {'hp':{'tempmax':newTempMaxHP}};// hp max reduction
+          update.system.attributes = {'hp':{'tempmax':newTempMaxHP}};// hp max reduction
           if (hpActual > newMaxHP) { // a character cannot have more hp than his maximum
-            update.data.attributes = mergeObject(update.data.attributes,{'hp':{'value': newMaxHP}});
+            update.system.attributes = mergeObject(update.system.attributes,{'hp':{'value': newMaxHP}});
           }
           ChatMessage.create({
-            content: "<i style='color:red;'>"+game.i18n.format("dnd5e-spellpoints.castedLife", { ActorName : actor.data.name, hpMaxLost: hpMaxLost })+"</i>",
-            speaker: ChatMessage.getSpeaker({ alias: actor.data.name }),
+            content: "<i style='color:red;'>"+game.i18n.format("dnd5e-spellpoints.castedLife", { ActorName : actor.name, hpMaxLost: hpMaxLost })+"</i>",
+            speaker: ChatMessage.getSpeaker({ alias: actor.name }),
             isContentVisible : false,
             isAuthor :true,
             whisper : SpeakTo
@@ -252,18 +252,18 @@ class SpellPoints {
         }
       } else {
         ChatMessage.create({
-          content: "<i style='color:red;'>"+game.i18n.format("dnd5e-spellpoints.notEnoughSp", { ActorName : actor.data.name, SpellPoints: this.settings.spResource })+"</i>",
-          speaker: ChatMessage.getSpeaker({ alias: actor.data.name }),
+          content: "<i style='color:red;'>"+game.i18n.format("dnd5e-spellpoints.notEnoughSp", { ActorName : actor.name, SpellPoints: this.settings.spResource })+"</i>",
+          speaker: ChatMessage.getSpeaker({ alias: actor.name }),
           isContentVisible : false,
           isAuthor :true,
           whisper : SpeakTo
         });
       }
     }
-    if (typeof update.data.resources === 'undefined'){
-      update.data.resources = {};
+    if (typeof update.system.resources === 'undefined'){
+      update.system.resources = {};
     }
-    update.data.resources[spellPointResource.key] = { 'value' : spellPointResource.values.value };
+    update.system.resources[spellPointResource.key] = { 'value' : spellPointResource.values.value };
 
     return update;
   }
@@ -272,29 +272,26 @@ class SpellPoints {
     if (!SpellPoints.isModuleActive())
       return;
     
-    let actor = getProperty(dialog, "item.actor");
-    
     /** check if actor is a player character **/
+    let actor = getProperty(dialog, "item.actor");
     if(!this.isActorCharacter(actor))
       return;
     
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
-    if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
+    if (this.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor))
       return;
     
     
     /** check if this is a spell **/
-    let isSpell = false;
-    if ( getProperty(dialog, "item.type") === "spell" )
-      isSpell = true;
-    
-    const spell = dialog.item.data;
-    const preparation = spell.data.preparation; //prepared,pact,always,atwill,innate
-    // spell level can change later if casting it with a greater slot, baseSpellLvl is the default
-    const baseSpellLvl = spell.data.level;
-
-    if (!isSpell)
+    if ( getProperty(dialog, "item.type") !== "spell" )
       return;
+    
+    const spell = dialog.item.system;
+
+    const preparation = spell.preparation; //prepared,pact,always,atwill,innate
+    // spell level can change later if casting it with a greater slot, baseSpellLvl is the default
+    const baseSpellLvl = spell.level;
+      
 
     /** get spellpoints **/
     let spellPointResource = SpellPoints.getSpellPointsResource(actor);
@@ -307,26 +304,36 @@ class SpellPoints {
 
     // Declare settings as a separate variable because jQuery overrides `this` when in an each() block
     let settings = this.settings;
-
+    
+    let level = 'none';
+    
     /** Replace list of spell slots with list of point costs **/
     $('select[name="level"] option', html).each(function() {
       let selectValue =  $(this).val();
-      let level = 0
-      if (selectValue == 'pact' && settings.warlockUseSp) {
-        level = actor.data.data.spells.pact.level;
+      
+      if (selectValue == 'pact') {
+        if (settings.warlockUseSp) {
+          level = actor.system.spells.pact.level;
+        } else {
+          return;
+        }
       } else {
         level = selectValue;
       }
+      
       let cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
       let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", {amount: cost, SpellPoints: settings.spResource})})`
       if (selectValue != 'pact' || settings.warlockUseSp) {
         $(this).text(newText);
       }
     })
+    
+    if (level == 'none')
+      return;
 
     /** Calculate spell point cost and warn user if they have none left */
-    const maxSpellPoints = actor.data.data.resources[spellPointResource.key].max;
-    const actualSpellPoints = actor.data.data.resources[spellPointResource.key].value;
+    const maxSpellPoints = actor.system.resources[spellPointResource.key].max;
+    const actualSpellPoints = actor.system.resources[spellPointResource.key].value;
     
     let spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor);
     
@@ -366,7 +373,7 @@ class SpellPoints {
 
     let hasSpellSlots = false;
     let spellPointsFromSlots = 0;
-    for (let [slotLvlTxt, slot] of Object.entries(actor.data.data.spells)) {
+    for (let [slotLvlTxt, slot] of Object.entries(actor.system.spells)) {
       let slotLvl;
       if (slotLvlTxt == 'pact') {
         slotLvl = slot.level;
@@ -482,7 +489,7 @@ class SpellPoints {
         return true;
       }
       /* if mixedMode active Check if SpellPoints is enabled for this actor */
-      if (SpellPoints.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor.data))
+      if (SpellPoints.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor))
         return true;
 
       /* updating or dropping a class item */
@@ -561,12 +568,13 @@ class SpellPointsForm extends FormApplication {
    *   3) The available formulas
    */
   getData(options) {
-    return mergeObject({
-      spFormulas: Object.fromEntries(
-        Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)])
-      )
-    }, this.reset ? SpellPoints.defaultSettings :
-      mergeObject(SpellPoints.defaultSettings, game.settings.get(MODULE_NAME, 'settings')));
+    let data = mergeObject(
+      {spFormulas: Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]))
+      }, 
+      this.reset ? mergeObject(SpellPoints.defaultSettings,{requireSave:true}) : mergeObject(SpellPoints.settings, {requireSave:false})
+    );
+    this.reset = false;
+    return data;
   }
 
   onReset() {
@@ -622,13 +630,13 @@ class SpellPointsForm extends FormApplication {
         }
       }
 
-      this.setCustomOnlyVisibility(isCustom)
+      this.setCustomOnlyVisibility(isCustom);
     }
   }
 } /** end SpellPointForm **/
 
 Hooks.on('init', () => {
-  console.log('SpellPoints init');
+  //console.log('SpellPoints init');
   
   /** should spellpoints be enabled */
   game.settings.register(MODULE_NAME, "spEnableSpellpoints", {
@@ -638,9 +646,9 @@ Hooks.on('init', () => {
     config: true,
     default: false,
     type: Boolean,
-    onChange: spEnableSpellpoints => {
+    /*onChange: spEnableSpellpoints => {
       window.location.reload();
-    }
+    }*/
   });
 
   game.settings.registerMenu(MODULE_NAME, MODULE_NAME, {
@@ -655,9 +663,9 @@ Hooks.on('init', () => {
   game.settings.register(MODULE_NAME, "settings", {
     name: "Spell Points Settings",
     scope: "world",
-    default: SpellPointsForm.defaultSettings,
+    default: SpellPoints.defaultSettings,
     type: Object,
-    config: false
+    config: false,
     //onChange: (x) => window.location.reload()
   });
 
@@ -668,9 +676,6 @@ Hooks.on('init', () => {
       break;
     }
 	}
-
-  //console.log('betterRollActive1:',_betterRollsActive);
-  //console.log('betterRollActive2:',game.modules.get('betterrolls5e')?.active);
 
 });
 
