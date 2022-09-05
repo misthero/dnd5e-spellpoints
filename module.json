@@ -6,8 +6,8 @@
     "minimumCoreVersion": "0.8.3",
     "compatibleCoreVersion": "9.269",
     "url": "https://github.com/misthero/dnd5e-spellpoints",
-    "manifest": "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json",
-    "download": "https://github.com/misthero/dnd5e-spellpoints/archive/refs/heads/main.zip",
+    "manifest": "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/FVTT-V9/module.json",
+    "download": "https://github.com/misthero/dnd5e-spellpoints/archive/refs/heads/FVTT-V9.zip",
     "system": ["dnd5e"],
     "includes": [
         "./assets/**",

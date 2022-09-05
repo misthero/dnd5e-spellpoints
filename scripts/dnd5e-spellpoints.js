@@ -622,7 +622,7 @@ class SpellPointsForm extends FormApplication {
         }
       }
 
-      this.setCustomOnlyVisibility(isCustom)
+      this.setCustomOnlyVisibility(isCustom);
     }
   }
 } /** end SpellPointForm **/
