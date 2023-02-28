@@ -1,47 +1,59 @@
 {
-    "id": "dnd5e-spellpoints",
-    "title": "Advanced Magic - Spell Points System 5e",
-    "description": "FoundryVTT module for Spell Points System in D&D5e. This module use the optional rules found on DMG to allow character to cast spells using a resource named 'Spell Points'",
-    "version": "1.4.0",
-    "compatibility": {
-        "minimum": 10,
-        "verified": "10.284",
-        "maximum" : 10
-    },
-    "url": "https://github.com/misthero/dnd5e-spellpoints",
-    "manifest": "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json",
-    "download": "https://github.com/misthero/dnd5e-spellpoints/archive/refs/heads/main.zip",
-    "system": ["dnd5e"],
-    "includes": [
-        "./assets/**",
-        "./lang/**",
-        "./scripts/**",
-        "./styles/**",
-        "./templates/**",
-        "./module.json"
-    ],
-    "authors": [{
-        "name": "misthero",
-        "url": "https://github.com/misthero"
-    }],
-    "esmodules": [
-        "./scripts/dnd5e-spellpoints.js"
-    ],
-    "styles": ["css/styles.css"],
-    "languages": [{
-            "lang": "en",
-            "name": "English",
-            "path": "lang/en.json"
-        },
-        {
-            "lang": "it",
-            "name": "Italiano",
-            "path": "lang/it.json"
-        },
-        {
-            "lang": "es",
-            "name": "Español",
-            "path": "lang/es.json"
+  "id": "dnd5e-spellpoints",
+  "title": "Advanced Magic - Spell Points System 5e",
+  "description": "FoundryVTT module for Spell Points System in D&amp;D5e. This module use the optional rules found on DMG to allow character to cast spells using a resource named 'Spell Points'",
+  "version": "1.4.1",
+  "compatibility": {
+    "minimum": "10",
+    "maximum": "10",
+    "verified": "10.291"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "manifest": "https://raw.githubusercontent.com/foundryvtt/dnd5e/master/system.json",
+        "compatibility": {
+          "verified": "2.0.3"
         }
+      }
     ]
+  },
+  "url": "https://github.com/misthero/dnd5e-spellpoints",
+  "manifest": "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json",
+  "download": "https://github.com/misthero/dnd5e-spellpoints/archive/refs/heads/main.zip",
+  "authors": [
+    {
+      "name": "misthero",
+      "url": "https://github.com/misthero",
+      "flags": {}
+    }
+  ],
+  "esmodules": [
+    "scripts/dnd5e-spellpoints.js"
+  ],
+  "styles": [
+    "css/styles.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json",
+      "flags": {}
+    },
+    {
+      "lang": "it",
+      "name": "Italiano",
+      "path": "lang/it.json",
+      "flags": {}
+    },
+    {
+      "lang": "es",
+      "name": "Español",
+      "path": "lang/es.json",
+      "flags": {}
+    }
+  ]
 }

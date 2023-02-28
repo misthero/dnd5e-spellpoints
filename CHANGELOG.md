@@ -14,3 +14,4 @@
   - New global option to hide chat message about how many spell points are being used to other players (GM excluded)
 - 1.3.6 Multiclassing Max Spell Points fix
 - 1.3.7 Data object for formulas now includes flags object
+- 1.4.1 Improved compatibility with DnD5e system, v.2.1.5+
