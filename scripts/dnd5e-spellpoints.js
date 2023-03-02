@@ -656,7 +656,7 @@ class SpellPointsForm extends FormApplication {
     console.log('event', event);
     const input_name = event.originalEvent.target.name
     if (input_name == "spFormula") {
-      const input_value = event.originalEvent.path[0].value;
+      const input_value = event.originalEvent.target.value;
       const formulaOverrides = SpellPoints.formulas[input_value]
       const isCustom = (formulaOverrides.isCustom || "").toString().toLowerCase() == "true"
       for (let elementName in formulaOverrides) {

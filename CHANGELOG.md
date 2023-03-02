@@ -15,3 +15,4 @@
 - 1.3.6 Multiclassing Max Spell Points fix
 - 1.3.7 Data object for formulas now includes flags object
 - 1.4.1 Improved compatibility with DnD5e system, v.2.1.5+
+- 1.4.2 Minor settings bugfix
