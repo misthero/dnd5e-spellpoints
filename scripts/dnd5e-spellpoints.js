@@ -150,7 +150,6 @@ class SpellPoints {
     if (typeof spell.pact != 'undefined' && !settings.spMixedMode && !settings.warlockUseSp)
       return update;
 
-    let hp = getProperty(update, "system.attributes.hp.value");
     let spellPointResource = SpellPoints.getSpellPointsResource(actor);
 
     /** not found any resource for spellpoints ? **/
@@ -186,11 +185,7 @@ class SpellPoints {
 
     //** slot calculation **/
     const origSlots = actor.system.spells;
-    const preCastSlotCount = getProperty(origSlots, spellLvlNames[spellLvlIndex] + ".value");
-    const postCastSlotCount = getProperty(update, "system.spells." + spellLvlNames[spellLvlIndex] + ".value");
     let maxSlots = getProperty(origSlots, spellLvlNames[spellLvlIndex] + ".max");
-
-    let slotCost = preCastSlotCount - postCastSlotCount;
 
     /** restore slots to the max **/
     if (typeof maxSlots === undefined) {
@@ -199,7 +194,10 @@ class SpellPoints {
     }
     update.system.spells[spellLvlNames[spellLvlIndex]].value = maxSlots;
 
-    const actualSpellPoints = actor.system.resources[spellPointResource.key].value;
+    let actualSpellPoints = 0;
+    if (actor.system.resources[spellPointResource.key].hasOwnProperty("value")) {
+      actualSpellPoints = actor.system.resources[spellPointResource.key].value;
+    }
 
     /* get spell cost in spellpoints */
     const spellPointCost = this.withActorData(this.settings.spellPointsCosts[spellLvl], actor);
@@ -377,6 +375,7 @@ class SpellPoints {
       /** if not consumeSlot we ignore cost, go on and cast or if variant active **/
       if (!$('input[name="consumeSpellSlot"]', html).prop('checked') || SpellPoints.settings.spEnableVariant) {
         $('.dialog-button.original', html).trigger("click");
+
       } else if ($('select[name="consumeSpellLevel"]', html).length > 0) {
         if (missing_points) {
           ui.notifications.error("You don't have enough: '" + SpellPoints.settings.spResource + "' to cast this spell");
@@ -653,7 +652,6 @@ class SpellPointsForm extends FormApplication {
    * @param {object} event The data detailing the change in the form.
    */
   _onChangeInput(event) {
-    console.log('event', event);
     const input_name = event.originalEvent.target.name
     if (input_name == "spFormula") {
       const input_value = event.originalEvent.target.value;
