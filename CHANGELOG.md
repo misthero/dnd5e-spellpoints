@@ -16,5 +16,5 @@
 - 1.3.7 Data object for formulas now includes flags object
 - 1.4.1 Improved compatibility with DnD5e system, v.2.1.5+
 - 1.4.2 Minor settings bugfix
-- 1.4.2 bugfix resource value undefined when should be 0 in new dnd5e system
+- 1.4.3 bugfix resource value undefined when should be 0 in new dnd5e system
 - 1.4.4 remove deprecated code, code refactor.
