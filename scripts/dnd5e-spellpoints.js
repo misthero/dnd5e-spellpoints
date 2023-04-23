@@ -355,7 +355,6 @@ class SpellPoints {
       return;
 
     /** Calculate spell point cost and warn user if they have none left */
-    const maxSpellPoints = actor.system.resources[spellPointResource.key].max;
     const actualSpellPoints = actor.system.resources[spellPointResource.key].value;
     let spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor);
     const missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - spellPointCost < 0);
@@ -439,26 +438,12 @@ class SpellPoints {
     let changedClassLevel = null;
     let changedClassID = null;
     let levelUpdated = false;
-    if (getProperty(updates.data, 'levels')) {
-      const oldClassLevel = getProperty(item.data, 'levels');
-      changedClassLevel = getProperty(updates.data, 'levels');
-      changedClassID = getProperty(item.data, '_id');
+
+    if (getProperty(updates.system, 'levels')) {
+      changedClassLevel = getProperty(updates.system, 'levels');
+      changedClassID = getProperty(item, '_id');
       levelUpdated = true;
     }
-
-    const classDroppedName = getProperty(item, 'name');
-
-    // check if this is the orignal name or localized with babele
-    if (getProperty(item, 'flags.babele.translated')) {
-      let originalName = getProperty(item, 'flags.babele.originalName');
-    } else {
-      let originalName = classDroppedName;
-    }
-
-    const classItem = actor.items.getName(classDroppedName);
-
-    let SpellPointsMax = 0;
-
     // check for multiclasses
     const actorClasses = actor.items.filter(i => i.type === "class");
 
@@ -472,11 +457,11 @@ class SpellPoints {
 
     for (let c of actorClasses) {
       /* spellcasting: pact; full; half; third; artificier; none; **/
-      let spellcasting = c.data.data.spellcasting.progression;
-      let level = c.data.data.levels;
+      let spellcasting = c.system.spellcasting.progression;
+      let level = c.system.levels;
 
       // get updated class new level
-      if (levelUpdated && c.data._id == changedClassID)
+      if (levelUpdated && c._id == changedClassID)
         level = changedClassLevel;
 
       if (spellcastingLevels[spellcasting] != undefined) {
@@ -527,12 +512,24 @@ class SpellPoints {
     if (item.type !== 'class')
       return true;
 
-    let spellPointResource = SpellPoints.getSpellPointsResource(actor);
+    if (!getProperty(updates.system, 'levels'))
+      return true;
 
-    const actorName = actor.data.name;
+    let spellPointResource = SpellPoints.getSpellPointsResource(actor);
+    const actorName = actor.name;
+
+    let SpeakTo = game.users.filter(u => u.isGM);
+    let message = '';
 
     if (!spellPointResource) {
-      ui.notifications.error("SPELLPOINTS: Cannot find resource '" + SpellPoints.settings.spResource + "' on " + actorName + " character sheet!");
+      message = "SPELLPOINTS: Cannot find resource '" + SpellPoints.settings.spResource + "' on " + actorName + " character sheet!";
+      ChatMessage.create({
+        content: "<i style='color:red;'>" + message + "</i>",
+        speaker: ChatMessage.getSpeaker({ alias: actorName }),
+        isContentVisible: false,
+        isAuthor: true,
+        whisper: SpeakTo
+      });
       return true;
     }
 
@@ -540,9 +537,16 @@ class SpellPoints {
     const SpellPointsMax = isCustom ? SpellPoints._calculateSpellPointsCustom(actor) : SpellPoints._calculateSpellPointsFixed(item, updates, actor)
 
     if (SpellPointsMax > 0) {
-      let updateActor = { [`data.resources.${spellPointResource.key}.max`]: SpellPointsMax };
+      let updateActor = { [`system.resources.${spellPointResource.key}.max`]: SpellPointsMax };
       actor.update(updateActor);
-      ui.notifications.info("SPELLPOINTS: Found resource '" + SpellPoints.settings.spResource + "' on " + actorName + " character sheet! Your Maximum " + SpellPoints.settings.spResource + " have been updated.");
+      let message = "SPELLPOINTS: Found resource '" + SpellPoints.settings.spResource + "' on " + actorName + " character sheet! Your Maximum " + SpellPoints.settings.spResource + " have been updated.";
+      ChatMessage.create({
+        content: "<i style='color:green;'>" + message + "</i>",
+        speaker: ChatMessage.getSpeaker({ alias: actorName }),
+        isContentVisible: false,
+        isAuthor: true,
+        whisper: SpeakTo
+      });
     }
     return true;
   }
