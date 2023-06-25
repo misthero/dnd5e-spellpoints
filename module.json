@@ -5,7 +5,6 @@
   "version": "1.5.0",
   "compatibility": {
     "minimum": "10",
-    "maximum": "11",
     "verified": "11.299"
   },
   "relationships": {
@@ -31,7 +30,7 @@
     }
   ],
   "esmodules": [
-    "scripts/dnd5e-spellpoints.js"
+    "scripts/main.js"
   ],
   "styles": [
     "css/styles.css"
