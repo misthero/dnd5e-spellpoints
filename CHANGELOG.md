@@ -18,3 +18,5 @@
 - 1.4.2 Minor settings bugfix
 - 1.4.3 bugfix resource value undefined when should be 0 in new dnd5e system
 - 1.4.4 remove deprecated code, code refactor.
+- 1.5.0 First FVTT11 compatibility release
+- 1.5.1 Dnd5e 2.2+ compatibility bugfix

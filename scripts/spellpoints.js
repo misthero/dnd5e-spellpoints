@@ -1,20 +1,6 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-  function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-  return new (P || (P = Promise))(function (resolve, reject) {
-    function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-    function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-    function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-    step((generator = generator.apply(thisArg, _arguments || [])).next());
-  });
-};
+import { MODULE_NAME } from "./main.js";
 
-const MODULE_NAME = 'dnd5e-spellpoints';
-
-Handlebars.registerHelper("spFormat", (path, ...args) => {
-  return game.i18n.format(path, args[0].hash);
-});
-
-class SpellPoints {
+export class SpellPoints {
   static get settings() {
     return mergeObject(this.defaultSettings, game.settings.get(MODULE_NAME, 'settings'));
   }
@@ -129,26 +115,29 @@ class SpellPoints {
    * @returns The update object.
    */
 
-  static castSpell(actor, update) {
+  static castSpell(item, consume, options) {
+    if (!consume.consumeSpellLevel) {
+      return [item, consume, options];
+    }
+    const actor = item.actor;
     /** do nothing if module is not active **/
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
-      return update;
+      return [item, consume, options];
 
     const settings = this.settings;
 
     /* if mixedMode active Check if SpellPoints is enabled for this actor */
     if (settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor))
-      return update;
+      return [item, consume, options];
 
     /** check if this is a spell casting **/
-    let spell = getProperty(update, "system.spells");
-
-    if (!spell || spell === undefined)
-      return update;
+    if (item.type != 'spell')
+      return [item, consume, options];
 
     /** if is a pact spell, but no mixed mode and warlocks do not use spell points: do nothing */
-    if (typeof spell.pact != 'undefined' && !settings.spMixedMode && !settings.warlockUseSp)
-      return update;
+    if (item.system.preparation.mode == 'pact' && !settings.spMixedMode && !settings.warlockUseSp)
+      return [item, consume, options];
+
 
     let spellPointResource = SpellPoints.getSpellPointsResource(actor);
 
@@ -163,36 +152,8 @@ class SpellPoints {
       return {};
     }
 
-    /** check if is pact magic **/
-    let isPact = false;
-    if (getProperty(update, "system.spells.pact") !== undefined) {
-      isPact = true;
-    }
-
     /** find the spell level just cast */
-    const spellLvlNames = ["spell1", "spell2", "spell3", "spell4", "spell5", "spell6", "spell7", "spell8", "spell9", "pact"];
-    let spellLvlIndex = spellLvlNames.findIndex(name => { return getProperty(update, "system.spells." + name) });
-    let spellLvl = spellLvlIndex + 1;
-
-    if (isPact) {
-      // Pact magic
-      if (settings.warlockUseSp) {
-        spellLvl = actor.system.spells.pact.level;
-      } else {
-        return update;
-      }
-    }
-
-    //** slot calculation **/
-    const origSlots = actor.system.spells;
-    let maxSlots = getProperty(origSlots, spellLvlNames[spellLvlIndex] + ".max");
-
-    /** restore slots to the max **/
-    if (typeof maxSlots === undefined) {
-      maxSlots = 1;
-      update.system.spells[spellLvlNames[spellLvlIndex]].max = maxSlots;
-    }
-    update.system.spells[spellLvlNames[spellLvlIndex]].value = maxSlots;
+    const spellLvl = item.system.level;
 
     let actualSpellPoints = 0;
     if (actor.system.resources[spellPointResource.key].hasOwnProperty("value")) {
@@ -208,6 +169,14 @@ class SpellPoints {
       SpeakTo = game.users.filter(u => u.isGM);
     }
 
+
+    let updateActor = {
+      'system': {
+        'attributes': {},
+        'resources': {}
+      }
+    };
+    actor.update(updateActor);
     /** update spellpoints **/
     if (actualSpellPoints - spellPointCost >= 0) {
       /* character has enough spellpoints */
@@ -242,7 +211,7 @@ class SpellPoints {
 
         if (hpMaxFull + newTempMaxHP <= 0) { //character is permanently dead
           // 3 death saves failed and 0 hp
-          update.system.attributes = { 'death': { 'failure': 3 }, 'hp': { 'tempmax': -hpMaxFull, 'value': 0 } };
+          updateActor.system.attributes = { 'death': { 'failure': 3 }, 'hp': { 'tempmax': -hpMaxFull, 'value': 0 } };
           ChatMessage.create({
             content: "<i style='color:red;'>" + game.i18n.format("dnd5e-spellpoints.castedLifeDead", { ActorName: actor.name }) + "</i>",
             speaker: ChatMessage.getSpeaker({ alias: actor.name }),
@@ -251,7 +220,7 @@ class SpellPoints {
             whisper: SpeakTo
           });
         } else {
-          update.system.attributes = { 'hp': { 'tempmax': newTempMaxHP } };// hp max reduction
+          updateActor.system.attributes = { 'hp': { 'tempmax': newTempMaxHP } };// hp max reduction
           if (hpActual > newMaxHP) { // a character cannot have more hp than his maximum
             update.system.attributes = mergeObject(update.system.attributes, { 'hp': { 'value': newMaxHP } });
           }
@@ -271,14 +240,23 @@ class SpellPoints {
           isAuthor: true,
           whisper: SpeakTo
         });
+        console.log(item, consume, options);
+        consume.consumeSpellSlot = false;
+        consume.consumeSpellLevel = false;
+        consume.createMeasuredTemplate = false;
+        options.createMessage = false;
+        delete options.flags;
+        return [item, consume, options];
+
       }
     }
-    if (typeof update.system.resources === 'undefined') {
-      update.system.resources = {};
-    }
-    update.system.resources[spellPointResource.key] = { 'value': spellPointResource.values.value };
 
-    return update;
+    consume.consumeSpellLevel = false;
+    consume.consumeSpellSlot = false;
+    updateActor.system.resources[`${spellPointResource.key}`] = { value: spellPointResource.values.value };
+    actor.update(updateActor);
+
+    return [item, consume, options];
   }
 
   /**
@@ -312,8 +290,9 @@ class SpellPoints {
 
     const spell = dialog.item.system;
     const preparation = spell.preparation.mode; //prepared,pact,always,atwill,innate
+    const warlockCanCast = settings.spMixedMode || settings.warlockUseSp;
     /* if is a warlock but mixed mode is disable and warlocks cannot use spellpoints, do nothing. */
-    if (preparation == 'pact' && !settings.spMixedMode && !settings.warlockUseSp)
+    if (preparation == 'pact' && !warlockCanCast)
       return;
 
     // spell level can change later if casting it with a greater slot, baseSpellLvl is the default
@@ -330,23 +309,21 @@ class SpellPoints {
     }
 
     let level = 'none';
+    let cost = 0;
     /** Replace list of spell slots with list of spell point costs **/
     $('select[name="consumeSpellLevel"] option', html).each(function () {
       let selectValue = $(this).val();
 
-      if (selectValue == 'pact') {
-        if (settings.warlockUseSp) {
-          level = actor.system.spells.pact.level;
-        } else {
-          return;
-        }
+      if (selectValue == 'pact' && warlockCanCast) {
+        level = actor.system.spells.pact.level;
       } else {
         level = selectValue;
       }
 
-      let cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
+      cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
+
       let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", { amount: cost, SpellPoints: settings.spResource })})`
-      if (selectValue != 'pact' || settings.warlockUseSp) {
+      if ((selectValue == 'pact' && warlockCanCast) || selectValue != 'pact') {
         $(this).text(newText);
       }
     })
@@ -355,8 +332,12 @@ class SpellPoints {
       return;
 
     /** Calculate spell point cost and warn user if they have none left */
+    let spellPointCost = 0;
     const actualSpellPoints = actor.system.resources[spellPointResource.key].value;
-    let spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor);
+    if (preparation == 'pact' && warlockCanCast)
+      spellPointCost = cost;
+    else
+      spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor);
     const missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - spellPointCost < 0);
 
     if (missing_points) {
@@ -582,164 +563,6 @@ class SpellPoints {
     $('.tab.features', html).prepend(html_checkbox);
   }
 
+
+
 } /** END SpellPoint Class **/
-
-
-/**
-* SPELL POINTS APPLICATION SETTINGS FORM
-*/
-class SpellPointsForm extends FormApplication {
-  static get defaultOptions() {
-    return mergeObject(super.defaultOptions, {
-      title: game.i18n.localize('dnd5e-spellpoints.form-title'),
-      id: 'spellpoints-form',
-      template: `modules/${MODULE_NAME}/templates/spellpoint-config.html`,
-      width: 500,
-      closeOnSubmit: true
-    });
-  }
-
-  /**
-   * Get the data used for filling out the Form. This is composed of the following
-   * in order of priority
-   *   1) Settings defined by the user
-   *   2) Default settings
-   *   3) The available formulas
-   */
-  getData(options) {
-    let data = mergeObject(
-      {
-        spFormulas: Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]))
-      },
-      this.reset ? mergeObject(SpellPoints.defaultSettings, { requireSave: true }) : mergeObject(SpellPoints.settings, { requireSave: false })
-    );
-    this.reset = false;
-    return data;
-  }
-
-  onReset() {
-    this.reset = true;
-    this.render();
-  }
-
-  /**
-   * Edits the visiblity of html elements within the Form based on whether the
-   * current formula is a custom formula.
-   * @param {boolean} isCustom A boolean flag that marks if the current formula is a custom formula.
-   */
-  setCustomOnlyVisibility(isCustom) {
-    const displayValue = isCustom ? 'block' : 'none';
-    const customElements = this.element[0].querySelectorAll('.spell-points-custom-only')
-    for (let elementIndex = 0, customElement; customElement = customElements[elementIndex]; elementIndex++) {
-      customElement.style.display = displayValue;
-    }
-  }
-
-  _updateObject(event, formData) {
-    return __awaiter(this, void 0, void 0, function* () {
-      let settings = mergeObject(SpellPoints.settings, formData, { insertKeys: true, insertValues: true });
-      yield game.settings.set(MODULE_NAME, 'settings', settings);
-    });
-  }
-
-  activateListeners(html) {
-    super.activateListeners(html);
-    html.find('button[name="reset"]').click(this.onReset.bind(this));
-  }
-
-  /**
-   * Method executed whenever an input is changed within the Form. This method
-   * watches only for changes in the spFormula select box. When a different
-   * formula is selected, it will overwrite all fields specified by that formula.
-   * The visiblity of custom formulas is also set based on if the new formula is
-   * a custom formula.
-   * @param {object} event The data detailing the change in the form.
-   */
-  _onChangeInput(event) {
-    const input_name = event.originalEvent.target.name
-    if (input_name == "spFormula") {
-      const input_value = event.originalEvent.target.value;
-      const formulaOverrides = SpellPoints.formulas[input_value]
-      const isCustom = (formulaOverrides.isCustom || "").toString().toLowerCase() == "true"
-      for (let elementName in formulaOverrides) {
-        if (formulaOverrides[elementName] instanceof Object) {
-          for (let elementSubName in formulaOverrides[elementName]) {
-            super.element[0].querySelector(`[name='${elementName}.${elementSubName}']`).value = formulaOverrides[elementName][elementSubName];
-          }
-        } else {
-          super.element[0].querySelector(`[name='${elementName}']`).value = formulaOverrides[elementName];
-        }
-      }
-
-      this.setCustomOnlyVisibility(isCustom);
-    }
-  }
-} /** end SpellPointForm **/
-
-Hooks.on('init', () => {
-  //console.log('SpellPoints init');
-
-  /** should spellpoints be enabled */
-  game.settings.register(MODULE_NAME, "spEnableSpellpoints", {
-    name: "Enable Spell Points system",
-    hint: "Enables or disables spellpoints for casting spells, this will override the slot cost for player tokens.",
-    scope: "world",
-    config: true,
-    default: false,
-    type: Boolean
-  });
-
-  game.settings.registerMenu(MODULE_NAME, MODULE_NAME, {
-    name: "dnd5e-spellpoints.form",
-    label: "dnd5e-spellpoints.form-title",
-    hint: "dnd5e-spellpoints.form-hint",
-    icon: "fas fa-magic",
-    type: SpellPointsForm,
-    restricted: true
-  });
-
-  game.settings.register(MODULE_NAME, "settings", {
-    name: "Spell Points Settings",
-    scope: "world",
-    default: SpellPoints.defaultSettings,
-    type: Object,
-    config: false,
-    //onChange: (x) => window.location.reload()
-  });
-
-  let _betterRollsActive = false;
-  for (const mod of game.data.modules) {
-    if (mod.id == "betterrolls5e" && mod.active) {
-      _betterRollsActive = true;
-      break;
-    }
-  }
-
-});
-
-// collate all preUpdateActor hooked functions into a single hook call
-Hooks.on("preUpdateActor", async (actor, update, options, userId) => {
-  update = SpellPoints.castSpell(actor, update);
-});
-
-/** spell launch dialog **/
-Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
-  SpellPoints.checkDialogSpellPoints(dialog, html, formData);
-})
-
-Hooks.on("updateItem", SpellPoints.calculateSpellPoints);
-Hooks.on("createItem", SpellPoints.calculateSpellPoints);
-
-Hooks.on("renderActorSheet5e", (app, html, data) => {
-  SpellPoints.mixedMode(app, html, data);
-});
-
-/**
-  * Hook that is triggered after the SpellPointsForm has been rendered. This
-  * sets the visiblity of the custom formula fields based on if the current
-  * formula is a custom formula.
-  */
-Hooks.on('renderSpellPointsForm', (spellPointsForm, html, data) => {
-  const isCustom = (data.isCustom || "").toString().toLowerCase() == "true"
-  spellPointsForm.setCustomOnlyVisibility(isCustom)
-})
