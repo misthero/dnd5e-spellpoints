@@ -2,7 +2,7 @@
   "id": "dnd5e-spellpoints",
   "title": "Advanced Magic - Spell Points System 5e",
   "description": "FoundryVTT module for Spell Points System in D&amp;D5e. This module use the optional rules found on DMG to allow character to cast spells using a resource named 'Spell Points'",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "compatibility": {
     "minimum": "10",
     "verified": "11.302"
@@ -34,7 +34,8 @@
       "name": "misthero",
       "url": "https://github.com/misthero",
       "flags": {}
-    }
+    },
+    {"name": "Will Saunders"}
   ],
   "esmodules": [
     "scripts/main.js"

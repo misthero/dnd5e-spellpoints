@@ -20,3 +20,10 @@
 - 1.4.4 remove deprecated code, code refactor.
 - 1.5.0 First FVTT11 compatibility release
 - 1.5.1 Dnd5e 2.2+ compatibility bugfix
+- 1.6.0 Moved spell point opt in into special traits section on character sheet. 
+    - Added a global spell point modifier to increase/reduce spell points per character. 
+    - Set Spell Cast Dialog  height to auto to prevent needing to scroll when out of spell points. 
+    - Fixed bug with spell points being consumed even if 'Consume Spell Slot' button is unchecked. 
+    - Changed "Consume Spell Slot?" text to "Consume Spell Slot/Points?" to indicate usage on ability use Dialog.
+    - Added a few text entries into en.json for new placement of Spell Point Opt In.
+    - Added flag based spell point tracking. Mod now starts with Legacy Mode option disabled. To use the old way that takes up a Resource slot, enable Legacy Mode in settings.
