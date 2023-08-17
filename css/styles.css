@@ -14,10 +14,6 @@
 
 .spEnable {
     flex: 0 0 1em;
-    text-align: center;
-    padding: 0.2em;
-    opacity: 0.8;
-    vertical-align: middle;
 }
 .spEnable > label {
   cursor:pointer;

@@ -20,7 +20,7 @@ Hooks.on('init', () => {
     default: false,
     type: Boolean
   });
-
+  
   game.settings.registerMenu(MODULE_NAME, MODULE_NAME, {
     name: "dnd5e-spellpoints.form",
     label: "dnd5e-spellpoints.form-title",
@@ -47,8 +47,15 @@ Hooks.on('init', () => {
     }
   }
 
-});
+ });
 
+// Adds spell point box to Character Sheet near Initiative.
+Hooks.on('renderActorSheet5e', async(app,html,data) => {
+    // if Legacy Mode is false, then let's add a custom SP tracker to character sheet.
+    if(!SpellPoints.isLegacyMode()){
+     SpellPoints.addSpellPointTrackerToSheet(app,html,data);
+    }
+})
 /** spell launch dialog **/
 Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
   SpellPoints.checkDialogSpellPoints(dialog, html, formData);
@@ -56,11 +63,18 @@ Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
 
 Hooks.on("updateItem", SpellPoints.calculateSpellPoints);
 Hooks.on("createItem", SpellPoints.calculateSpellPoints);
-
-Hooks.on("renderActorSheet5e", (app, html, data) => {
-  SpellPoints.mixedMode(app, html, data);
+// Moved the character opt in to spell point usage to Special trait section.
+Hooks.on("renderActorSheetFlags", (app, html, data) => {
+    SpellPoints.mixedMode(app, html, data);
 });
-
+/* On rest completed, restore spell points. Only needed for non Resource tracking. */
+Hooks.on('dnd5e.restCompleted', (actor, data) => {
+   if(!SpellPoints.isLegacyMode() && data.longRest === true){
+     
+        actor.setFlag(MODULE_NAME,'current', actor.getFlag(MODULE_NAME,'max'));
+      
+   }
+});
 /**
   * Hook that is triggered after the SpellPointsForm has been rendered. This
   * sets the visiblity of the custom formula fields based on if the current
@@ -72,5 +86,7 @@ Hooks.on('renderSpellPointsForm', (spellPointsForm, html, data) => {
 })
 
 Hooks.on("dnd5e.preItemUsageConsumption", (item, consume, options, update) => {
-  SpellPoints.castSpell(item, consume, options, update);
+    if(item.type==="spell"){
+        SpellPoints.castSpell(item, consume, options, update);
+    }
 })

@@ -13,14 +13,15 @@ export class SpellPoints {
       spEnableSpellpoints: false,
       spResource: 'Spell Points',
       spAutoSpellpoints: false,
+      spLegacyMode: false,
       spFormula: 'DMG',
       warlockUseSp: false,
-      chatMessagePrivate: false,
+      chatMessagePrivate: true,
       spellPointsByLevel: { 1: 4, 2: 6, 3: 14, 4: 17, 5: 27, 6: 32, 7: 38, 8: 44, 9: 57, 10: 64, 11: 73, 12: 73, 13: 83, 14: 83, 15: 94, 16: 94, 17: 107, 18: 114, 19: 123, 20: 133 },
       spellPointsCosts: { 1: 2, 2: 3, 3: 5, 4: 6, 5: 7, 6: 9, 7: 10, 8: 11, 9: 13 },
       spEnableVariant: false,
       spLifeCost: 2,
-      spMixedMode: false,
+      spMixedMode: true,
       isCustom: "false",
       spCustomFormulaBase: '0',
       spCustomFormulaSlotMultiplier: '1'
@@ -58,9 +59,8 @@ export class SpellPoints {
   static isModuleActive() {
     return game.settings.get(MODULE_NAME, 'spEnableSpellpoints');
   }
-
-  static isModuleActive() {
-    return game.settings.get(MODULE_NAME, 'spEnableSpellpoints');
+  static isLegacyMode() {
+    return this.settings.spLegacyMode;
   }
 
   static isActorCharacter(actor) {
@@ -69,15 +69,29 @@ export class SpellPoints {
 
   static isMixedActorSpellPointEnabled(actor) {
     if (actor.flags !== undefined) {
-      if (actor.flags.dnd5espellpoints !== undefined) {
-        if (actor.flags.dnd5espellpoints.enabled !== undefined) {
-          return actor.flags.dnd5espellpoints.enabled
+      if (actor.flags['dnd5e-spellpoints'] !== undefined) {
+        if (actor.flags['dnd5e-spellpoints'].enabled !== undefined) {
+          return actor.flags['dnd5e-spellpoints'].enabled
         }
       }
     }
     return false;
   }
-
+  /**
+  * Get spell point global modifier, or return 0.
+  * 
+  * @returns Global modifier to use change spell point usage. For instance, if a homebrewed feat reduces the usage of spell points cast.
+  */
+  static getSPGlobalModifier(actor) {
+    if (actor.flags !== undefined) {
+        if (actor.flags['dnd5e-spellpoints'] !== undefined) {
+          if (actor.flags['dnd5e-spellpoints'].globalMod !== undefined) {
+            return actor.flags['dnd5e-spellpoints'].globalMod;
+          }
+        }
+      }
+      return 0;
+  }
   /**
    * Evaluates the given formula with the given actors data. Uses FoundryVTT's Roll
    * to make this evaluation.
@@ -94,13 +108,18 @@ export class SpellPoints {
   }
 
   /** check what resource is spellpoints on this actor **/
+  
   static getSpellPointsResource(actor) {
-    let _resources = getProperty(actor, "system.resources");
-    for (let r in _resources) {
-      if (_resources[r].label == this.settings.spResource) {
-        return { 'values': _resources[r], 'key': r };
-        break;
-      }
+    if(SpellPoints.isLegacyMode()){
+        let _resources = getProperty(actor, "system.resources");
+        for (let r in _resources) {
+        if (_resources[r].label == this.settings.spResource) {
+            return { 'values': _resources[r], 'key': r };
+            break;
+        }
+        }
+    }else{
+        return {current:actor.getFlag(MODULE_NAME,'current'),max:actor.getFlag(MODULE_NAME,'max')}
     }
     return false;
   }
@@ -119,6 +138,7 @@ export class SpellPoints {
     if (!consume.consumeSpellLevel) {
       return [item, consume, options];
     }
+    const isLegacyMode = SpellPoints.isLegacyMode();
     const actor = item.actor;
     /** do nothing if module is not active **/
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
@@ -130,17 +150,13 @@ export class SpellPoints {
     if (settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor))
       return [item, consume, options];
 
-    /** check if this is a spell casting **/
-    if (item.type != 'spell')
-      return [item, consume, options];
 
     /** if is a pact spell, but no mixed mode and warlocks do not use spell points: do nothing */
     if (item.system.preparation.mode == 'pact' && !settings.spMixedMode && !settings.warlockUseSp)
       return [item, consume, options];
 
-
-    let spellPointResource = SpellPoints.getSpellPointsResource(actor);
-
+    let globalMod = SpellPoints.getSPGlobalModifier(actor);
+    let spellPointResource =  SpellPoints.getSpellPointsResource(actor);
     /** not found any resource for spellpoints ? **/
     if (!spellPointResource) {
       ChatMessage.create({
@@ -156,13 +172,15 @@ export class SpellPoints {
     const spellLvl = item.system.level;
 
     let actualSpellPoints = 0;
-    if (actor.system.resources[spellPointResource.key].hasOwnProperty("value")) {
+    if (isLegacyMode && actor.system.resources[spellPointResource.key].hasOwnProperty("value")) {
       actualSpellPoints = actor.system.resources[spellPointResource.key].value;
+    }else{
+        actualSpellPoints = spellPointResource.current;
     }
-
+   
     /* get spell cost in spellpoints */
-    const spellPointCost = this.withActorData(this.settings.spellPointsCosts[spellLvl], actor);
-
+    const spellPointCost = (consume.consumeSpellSlot) ? this.withActorData(this.settings.spellPointsCosts[spellLvl], actor) + globalMod : 0;
+   
     /** check if message should be visible to all or just player+gm */
     let SpeakTo = [];
     if (this.settings.chatMessagePrivate) {
@@ -178,9 +196,13 @@ export class SpellPoints {
     };
     actor.update(updateActor);
     /** update spellpoints **/
-    if (actualSpellPoints - spellPointCost >= 0) {
+    if (actualSpellPoints - spellPointCost >= 0 ) {
       /* character has enough spellpoints */
-      spellPointResource.values.value = spellPointResource.values.value - spellPointCost;
+      //If Legacy Mode, subtract from resource, otherwise use flag.
+      if(isLegacyMode)
+        spellPointResource.values.value = spellPointResource.values.value - spellPointCost;
+      else
+        actor.setFlag(MODULE_NAME,'current',spellPointResource.current-spellPointCost);
 
       ChatMessage.create({
         content: "<i style='color:green;'>" + game.i18n.format("dnd5e-spellpoints.spellUsingSpellPoints",
@@ -188,7 +210,7 @@ export class SpellPoints {
             ActorName: actor.name,
             SpellPoints: this.settings.spResource,
             spellPointUsed: spellPointCost,
-            remainingPoints: spellPointResource.values.value
+            remainingPoints: (isLegacyMode) ? spellPointResource.values.value: spellPointResource.current-spellPointCost
           }) + "</i>",
         speaker: ChatMessage.getSpeaker({ alias: actor.name }),
         isContentVisible: false,
@@ -200,7 +222,7 @@ export class SpellPoints {
       if (this.settings.spEnableVariant) {
         // spell point resource is 0 but character can still cast.
         spellPointResource.values.value = 0;
-        const hpMaxLost = spellPointCost * SpellPoints.withActorData(SpellPoints.settings.spLifeCost, actor);
+        const hpMaxLost = (spellPointCost - globalMod) * SpellPoints.withActorData(SpellPoints.settings.spLifeCost, actor);
         const hpActual = actor.system.attributes.hp.value;
         let hpTempMaxActual = actor.system.attributes.hp.tempmax;
         const hpMaxFull = actor.system.attributes.hp.max;
@@ -253,8 +275,10 @@ export class SpellPoints {
 
     consume.consumeSpellLevel = false;
     consume.consumeSpellSlot = false;
-    updateActor.system.resources[`${spellPointResource.key}`] = { value: spellPointResource.values.value };
-    actor.update(updateActor);
+    if(isLegacyMode){
+        updateActor.system.resources[`${spellPointResource.key}`] = { value: spellPointResource.values.value };
+        actor.update(updateActor);
+    }
 
     return [item, consume, options];
   }
@@ -269,6 +293,9 @@ export class SpellPoints {
    * @returns the value of the variable `level`
    */
   static checkDialogSpellPoints(dialog, html, formData) {
+   
+    html.height("auto");
+    const isLegacyMode = SpellPoints.isLegacyMode();
     if (!SpellPoints.isModuleActive())
       return;
 
@@ -287,7 +314,7 @@ export class SpellPoints {
     /** check if this is a spell **/
     if (getProperty(dialog, "item.type") !== "spell")
       return;
-
+    const globalMod = SpellPoints.getSPGlobalModifier(actor);
     const spell = dialog.item.system;
     const preparation = spell.preparation.mode; //prepared,pact,always,atwill,innate
     const warlockCanCast = settings.spMixedMode || settings.warlockUseSp;
@@ -320,7 +347,7 @@ export class SpellPoints {
         level = selectValue;
       }
 
-      cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
+      cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor) + globalMod;
 
       let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", { amount: cost, SpellPoints: settings.spResource })})`
       if ((selectValue == 'pact' && warlockCanCast) || selectValue != 'pact') {
@@ -333,11 +360,11 @@ export class SpellPoints {
 
     /** Calculate spell point cost and warn user if they have none left */
     let spellPointCost = 0;
-    const actualSpellPoints = actor.system.resources[spellPointResource.key].value;
+    const actualSpellPoints = (isLegacyMode) ? actor.system.resources[spellPointResource.key].value:spellPointResource.current;
     if (preparation == 'pact' && warlockCanCast)
       spellPointCost = cost;
     else
-      spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor);
+      spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor)+ globalMod;
     const missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - spellPointCost < 0);
 
     if (missing_points) {
@@ -345,6 +372,7 @@ export class SpellPoints {
       $('#ability-use-form', html).append('<div class="spError">' + messageNotEnough + '</div>');
     }
 
+    $('#ability-use-form .form-group:nth-of-type(2) label')[0].childNodes[2].nodeValue = 'Consume Spell Slot\/Points?\n';
     let copyButton = $('.dialog-button', html).clone();
     $('.dialog-button', html).addClass('original').hide();
     copyButton.addClass('copy').removeClass('use').attr('data-button', '');
@@ -531,8 +559,7 @@ export class SpellPoints {
     }
     return true;
   }
-
-
+  
   /**
    * It adds a checkbox to the character sheet that allows the user to enable/disable spell points for
    * the character
@@ -542,7 +569,7 @@ export class SpellPoints {
    * @returns The return value is the html_checkbox variable.
    */
   static mixedMode(app, html, data) {
-    if (!this.isModuleActive() || !this.settings.spMixedMode || data.actor.type != "character") {
+    if (!this.isModuleActive() || !this.settings.spMixedMode) {
       return;
     }
 
@@ -550,19 +577,51 @@ export class SpellPoints {
     if (SpellPoints.isMixedActorSpellPointEnabled(data.actor)) {
       checked = "checked";
     }
-
+    let spMod = SpellPoints.getSPGlobalModifier(data.actor) || 0;
     let spellPointUseOnSheetLabel = game.i18n.localize('dnd5e-spellpoints.use-spellpoints');
 
-    let html_checkbox = '<div class="spEnable flexrow ">';
-    html_checkbox += '<div class="no-edit"><i class="fas fa-magic"></i> ' + spellPointUseOnSheetLabel + '</div>';
-    html_checkbox += '<label class="edit-allowed"><i class="fas fa-magic"></i>&nbsp;';
-    html_checkbox += spellPointUseOnSheetLabel;
-    html_checkbox += '<input name="flags.dnd5espellpoints.enabled" ' + checked + ' class="spEnableInput visually-hidden" type="checkbox" value="1">';
-    html_checkbox += ' <i class="spEnableCheck fas"></i>';
-    html_checkbox += '</label></div>';
-    $('.tab.features', html).prepend(html_checkbox);
+    let html_checkbox = '<h3 class="form-header">Spell Points</h3>';
+    html_checkbox += '<div class="form-group"><label>'+spellPointUseOnSheetLabel+'</label>';
+    html_checkbox += '<input name="flags.dnd5e-spellpoints.enabled" ' + checked + ' class="spEnableInput" type="checkbox" value="1">';
+    html_checkbox += '<p class="notes">'+game.i18n.localize('dnd5e-spellpoints.use-spellpoints-note')+'</p>';
+    html_checkbox += '</div>';
+    html_checkbox += '<div class="form-group"><label>'+game.i18n.localize('dnd5e-spellpoints.spellpoints-modifier-label') + '</label>';
+    html_checkbox += '<input type="text" name="flags.dnd5e-spellpoints.globalMod" value="'+ spMod +'" placeholder="0" data-dtype="Number">';
+    html_checkbox += '<p class="notes">'+game.i18n.localize('dnd5e-spellpoints.spellpoints-modifier-note')+'</p></div>';
+    $('.form-group:nth-of-type(1)', html).after(html_checkbox);
   }
 
+ /**
+   * Adds a tracker to character sheet instead of using one of the three Resource Boxes.
+   * 
+   * @param app - The application object.
+   * @param html - The HTML of the Actor sheet.
+   * @param data - The data object passed to the sheet.
+   * @returns The return value is the html_checkbox variable.
+   */
 
+  static addSpellPointTrackerToSheet(app,html,data){
+     console.log('addSpellPointTracker');
+     if(SpellPoints.isModuleActive() && SpellPoints.isActorCharacter(data.actor)){
+        //set or get spell point flags
+        if(typeof data.actor.getFlag(MODULE_NAME,'current') !== 'number'){
+            data.actor.setFlag(MODULE_NAME,'current', 0);
+        }
+        if(typeof data.actor.getFlag(MODULE_NAME,'max') !== 'number'){
+            data.actor.setFlag(MODULE_NAME,'max', 0);
+        }
+        $(`<li class="attribute spellpoints">
+        <h4 class="attribute-name box-title">
+            Spellpoints
+        </h4>
+    
+        <div class="attribute-value multiple">
+            <input name="flags.dnd5e-spellpoints.current" type="text" value="${data.actor.flags['dnd5e-spellpoints'].current}" placeholder="0" data-tooltip="dnd5e-spellpoints.SpellPointsCurrent" data-dtype="Number">
+            <span class="sep"> / </span>
+            <input name="flags.dnd5e-spellpoints.max" type="text" value="${data.actor.flags['dnd5e-spellpoints'].max}" placeholder="0" data-tooltip="dnd5e-spellpoints.SpellPointsMax" data-dtype="Number">
+        </div>
+    </li>`).appendTo('.header-details ul.attributes',html);
+    }
+  }
 
 } /** END SpellPoint Class **/
