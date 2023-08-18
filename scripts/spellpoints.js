@@ -77,6 +77,19 @@ export class SpellPoints {
     }
     return false;
   }
+
+  static getOverride(id, actor){
+    let overrides = actor.getFlag(MODULE_NAME,'spellOverrides');
+    if(typeof overrides[id] === 'undefined')
+        return false;
+    else
+       return overrides[id];
+  }
+  static setOverride(id,cost,actor){
+    let overrides = actor.getFlag(MODULE_NAME,'spellOverrides');
+    overrides[id]= Number(cost);
+    actor.setFlag(MODULE_NAME,'spellOverrides',overrides);
+  }
   /**
   * Get spell point global modifier, or return 0.
   * 
@@ -135,6 +148,7 @@ export class SpellPoints {
    */
 
   static castSpell(item, consume, options) {
+
     if (!consume.consumeSpellLevel) {
       return [item, consume, options];
     }
@@ -155,7 +169,13 @@ export class SpellPoints {
     if (item.system.preparation.mode == 'pact' && !settings.spMixedMode && !settings.warlockUseSp)
       return [item, consume, options];
 
-    let globalMod = SpellPoints.getSPGlobalModifier(actor);
+  
+    const override = SpellPoints.getOverride(item._id, actor);
+    
+    const globalMod = SpellPoints.getSPGlobalModifier(actor);
+    const tempMod = (typeof consume.tempMod === 'number') ? consume.tempMod : 0;
+
+    let totalMods = globalMod + tempMod;
     let spellPointResource =  SpellPoints.getSpellPointsResource(actor);
     /** not found any resource for spellpoints ? **/
     if (!spellPointResource) {
@@ -179,8 +199,16 @@ export class SpellPoints {
     }
    
     /* get spell cost in spellpoints */
-    const spellPointCost = (consume.consumeSpellSlot) ? this.withActorData(this.settings.spellPointsCosts[spellLvl], actor) + globalMod : 0;
-   
+  
+    // if override is not false, set to new cost, else use established one.
+    let spellPointCost = (override) ? override: this.withActorData(this.settings.spellPointsCosts[spellLvl], actor);
+
+    //reduce/increase cost by mods.
+    spellPointCost = spellPointCost + totalMods;
+
+     //if consume is false, then cost is 0.
+    spellPointCost = (consume.consumeSpellSlot) ? spellPointCost:0;
+
     /** check if message should be visible to all or just player+gm */
     let SpeakTo = [];
     if (this.settings.chatMessagePrivate) {
@@ -262,7 +290,6 @@ export class SpellPoints {
           isAuthor: true,
           whisper: SpeakTo
         });
-        console.log(item, consume, options);
         consume.consumeSpellSlot = false;
         consume.consumeSpellLevel = false;
         consume.createMeasuredTemplate = false;
@@ -293,7 +320,6 @@ export class SpellPoints {
    * @returns the value of the variable `level`
    */
   static checkDialogSpellPoints(dialog, html, formData) {
-   
     html.height("auto");
     const isLegacyMode = SpellPoints.isLegacyMode();
     if (!SpellPoints.isModuleActive())
@@ -314,7 +340,9 @@ export class SpellPoints {
     /** check if this is a spell **/
     if (getProperty(dialog, "item.type") !== "spell")
       return;
-    const globalMod = SpellPoints.getSPGlobalModifier(actor);
+   
+
+    
     const spell = dialog.item.system;
     const preparation = spell.preparation.mode; //prepared,pact,always,atwill,innate
     const warlockCanCast = settings.spMixedMode || settings.warlockUseSp;
@@ -334,27 +362,37 @@ export class SpellPoints {
       $('#ability-use-form', html).append('<div class="spError">' + messageCreate + '</div>');
       return;
     }
+    const globalMod = SpellPoints.getSPGlobalModifier(actor);
+   
+    let tempMod = 0;
+    
+    let override = SpellPoints.getOverride(dialog.item._id,actor);
+
+    let overrideMod = override - SpellPoints.settings.spellPointsCosts[baseSpellLvl];
+    let totalMods = globalMod + overrideMod;
 
     let level = 'none';
     let cost = 0;
     /** Replace list of spell slots with list of spell point costs **/
-    $('select[name="consumeSpellLevel"] option', html).each(function () {
-      let selectValue = $(this).val();
+    function replaceSpellDropdown(tempMod=0){
+        $('select[name="consumeSpellLevel"] option', html).each(function () {
+        let selectValue = $(this).val();
 
-      if (selectValue == 'pact' && warlockCanCast) {
-        level = actor.system.spells.pact.level;
-      } else {
-        level = selectValue;
-      }
+        if (selectValue == 'pact' && warlockCanCast) {
+            level = actor.system.spells.pact.level;
+        } else {
+            level = selectValue;
+        }
+    
+        cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor) + totalMods + tempMod;
 
-      cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor) + globalMod;
-
-      let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", { amount: cost, SpellPoints: settings.spResource })})`
-      if ((selectValue == 'pact' && warlockCanCast) || selectValue != 'pact') {
-        $(this).text(newText);
-      }
-    })
-
+        let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", { amount: cost, SpellPoints: settings.spResource })})`
+        if ((selectValue == 'pact' && warlockCanCast) || selectValue != 'pact') {
+            $(this).text(newText);
+        }
+        })
+    };
+    replaceSpellDropdown();
     if (level == 'none')
       return;
 
@@ -364,15 +402,16 @@ export class SpellPoints {
     if (preparation == 'pact' && warlockCanCast)
       spellPointCost = cost;
     else
-      spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor)+ globalMod;
+      spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor)+ totalMods;
     const missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - spellPointCost < 0);
 
     if (missing_points) {
       const messageNotEnough = game.i18n.format("dnd5e-spellpoints.youNotEnough", { SpellPoints: this.settings.spResource });
       $('#ability-use-form', html).append('<div class="spError">' + messageNotEnough + '</div>');
     }
-
+    // Change wording
     $('#ability-use-form .form-group:nth-of-type(2) label')[0].childNodes[2].nodeValue = 'Consume Spell Slot\/Points?\n';
+
     let copyButton = $('.dialog-button', html).clone();
     $('.dialog-button', html).addClass('original').hide();
     copyButton.addClass('copy').removeClass('use').attr('data-button', '');
@@ -392,6 +431,17 @@ export class SpellPoints {
           $('.dialog-button.original', html).trigger("click");
         }
       }
+    })
+
+    // Add temp mod to dialog
+    $('#ability-use-form .form-group:nth-of-type(1)', html).after(`<div class="form-group"><label>Temporary SP mod</label><input class="tempMod" style="max-width:40px;padding:0 5px" type="number" value="" name="tempMod"/></div>`)
+    $('#ability-use-form').on('blur','.tempMod',(e)=>{
+        //dialog.render();
+        if($('.tempMod').val() !== ''){
+            tempMod = Number($('.tempMod').val());
+
+            replaceSpellDropdown(tempMod);
+        }
     })
   }
 
@@ -601,7 +651,7 @@ export class SpellPoints {
    */
 
   static addSpellPointTrackerToSheet(app,html,data){
-     console.log('addSpellPointTracker');
+
      if(SpellPoints.isModuleActive() && SpellPoints.isActorCharacter(data.actor)){
         //set or get spell point flags
         if(typeof data.actor.getFlag(MODULE_NAME,'current') !== 'number'){

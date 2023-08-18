@@ -10,7 +10,7 @@ Handlebars.registerHelper("spFormat", (path, ...args) => {
 
 Hooks.on('init', () => {
   //console.log('SpellPoints init');
-
+  //CONFIG.debug.hooks = true;
   /** should spellpoints be enabled */
   game.settings.register(MODULE_NAME, "spEnableSpellpoints", {
     name: "Enable Spell Points system",
@@ -90,3 +90,28 @@ Hooks.on("dnd5e.preItemUsageConsumption", (item, consume, options, update) => {
         SpellPoints.castSpell(item, consume, options, update);
     }
 })
+
+Hooks.on('renderItemSheet5e',(app,html,data) => {
+    console.log(app, html, data);
+    
+   
+    if(data.item.type==="spell"){
+        const spell = data;
+        const actor = spell.item.actor;
+        if(SpellPoints.isModuleActive()){
+            //get spellOverrides from Actor
+           
+            let override = SpellPoints.getOverride(spell.item._id,actor);
+
+            let spellPointCost = override || SpellPoints.settings.spellPointsCosts[spell.system.level];
+
+             //Add spell point input to sheet.
+            $('.tab.details .spell-components').before(`<div class="form-group"><label>Spell Point Override</label><input class="spOverrideInput" step="1" type="number" name="spOverride" value="${spellPointCost}"></div>`);
+            html.on('blur','.spOverrideInput',(e)=>{
+                let cost = $('.spOverrideInput').val();
+                SpellPoints.setOverride(spell.data._id,cost,actor);
+              
+            })
+        }
+    }
+});

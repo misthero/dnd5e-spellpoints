@@ -59,3 +59,8 @@ textarea.spellPoints {
 div.spell-points-hidden {
   display:none;
 }
+
+.spOverrideInput{
+ max-width:30px;
+ text-align: center !important;
+}
