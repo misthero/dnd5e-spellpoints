@@ -403,10 +403,12 @@ export class SpellPoints {
       spellPointCost = cost;
     else
       spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor)+ totalMods;
-    const missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - spellPointCost < 0);
-
+   
+    let missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - (spellPointCost + tempMod) < 0);
+    console.log(spellPointCost,tempMod, missing_points)
+    const messageNotEnough = game.i18n.format("dnd5e-spellpoints.youNotEnough", { SpellPoints: this.settings.spResource });
     if (missing_points) {
-      const messageNotEnough = game.i18n.format("dnd5e-spellpoints.youNotEnough", { SpellPoints: this.settings.spResource });
+      
       $('#ability-use-form', html).append('<div class="spError">' + messageNotEnough + '</div>');
     }
     // Change wording
@@ -439,8 +441,14 @@ export class SpellPoints {
         //dialog.render();
         if($('.tempMod').val() !== ''){
             tempMod = Number($('.tempMod').val());
-
+            missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - (spellPointCost + tempMod) < 0);
+            console.log(spellPointCost,tempMod, missing_points)
             replaceSpellDropdown(tempMod);
+            if (missing_points) {
+                $('#ability-use-form', html).append('<div class="spError">' + messageNotEnough + '</div>');
+            }else{
+                $('.spError').remove();
+            }
         }
     })
   }
