@@ -92,9 +92,7 @@ Hooks.on("dnd5e.preItemUsageConsumption", (item, consume, options, update) => {
 })
 
 Hooks.on('renderItemSheet5e',(app,html,data) => {
-    console.log(app, html, data);
-    
-   
+ 
     if(data.item.type==="spell"){
         const spell = data;
         const actor = spell.item.actor;
