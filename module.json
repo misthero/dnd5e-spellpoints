@@ -28,7 +28,7 @@
 ],
   "url": "https://github.com/wsaunders1014/dnd5e-spellpoints",
   "manifest": "https://raw.githubusercontent.com/wsaunders1014/dnd5e-spellpoints/main/module.json",
-  "download": "https://github.com/wsaunders1014/dnd5e-spellpoints/archive/refs/heads/main.zip",
+  "download": "https://github.com/wsaunders1014/dnd5e-spellpoints/releases/download/1.7.0/dnd5e-spellpoints.1.7.0.zip",
   "authors": [
     {
       "name": "misthero",
