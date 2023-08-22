@@ -79,14 +79,16 @@ export class SpellPoints {
   }
 
   static getOverride(id, actor){
+   
     let overrides = actor.getFlag(MODULE_NAME,'spellOverrides');
-    if(typeof overrides[id] === 'undefined')
+    if(typeof overrides === 'undefined' || typeof overrides[id] === 'undefined')
         return false;
     else
        return overrides[id];
   }
   static setOverride(id,cost,actor){
-    let overrides = actor.getFlag(MODULE_NAME,'spellOverrides');
+    let overrides = actor.getFlag(MODULE_NAME,'spellOverrides') || {};
+    
     overrides[id]= Number(cost);
     actor.setFlag(MODULE_NAME,'spellOverrides',overrides);
   }
@@ -368,7 +370,7 @@ export class SpellPoints {
     
     let override = SpellPoints.getOverride(dialog.item._id,actor);
 
-    let overrideMod = override - SpellPoints.settings.spellPointsCosts[baseSpellLvl];
+    let overrideMod = (override !== false) ? override - SpellPoints.settings.spellPointsCosts[baseSpellLvl]: 0;
     let totalMods = globalMod + overrideMod;
 
     let level = 'none';
