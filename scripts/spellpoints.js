@@ -411,8 +411,9 @@ export class SpellPoints {
       
       $('#ability-use-form', html).append('<div class="spError">' + messageNotEnough + '</div>');
     }
+    $('#ability-use-form .form-group:nth-of-type(1)', html).after(`<div class="form-group spMod"><label>Temporary SP mod</label><input class="tempMod" style="max-width:40px;padding:0 5px" type="number" value="" name="tempMod"/></div>`)
     // Change wording
-    $('#ability-use-form .form-group:nth-of-type(2) label')[0].childNodes[2].nodeValue = 'Consume Spell Slot\/Points?\n';
+    $('#ability-use-form .form-group:nth-of-type(3) label')[0].childNodes[2].nodeValue = 'Consume Spell Slot\/Points?\n';
 
     let copyButton = $('.dialog-button', html).clone();
     $('.dialog-button', html).addClass('original').hide();
@@ -436,7 +437,7 @@ export class SpellPoints {
     })
 
     // Add temp mod to dialog
-    $('#ability-use-form .form-group:nth-of-type(1)', html).after(`<div class="form-group"><label>Temporary SP mod</label><input class="tempMod" style="max-width:40px;padding:0 5px" type="number" value="" name="tempMod"/></div>`)
+    
     $('#ability-use-form').on('blur','.tempMod',(e)=>{
         //dialog.render();
         if($('.tempMod').val() !== ''){
