@@ -2,7 +2,7 @@
   "id": "dnd5e-spellpoints",
   "title": "Advanced Magic - Spell Points System 5e",
   "description": "FoundryVTT module for Spell Points System in D&amp;D5e. This module use the optional rules found on DMG to allow character to cast spells using a resource named 'Spell Points'",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "compatibility": {
     "minimum": "10",
     "verified": "11.302"
@@ -20,15 +20,9 @@
       }
     ]
   },
-  "dependencies": [
-    {
-        "name": "lib-wrapper",
-        "type": "module"
-    }
-],
   "url": "https://github.com/wsaunders1014/dnd5e-spellpoints",
   "manifest": "https://raw.githubusercontent.com/wsaunders1014/dnd5e-spellpoints/main/module.json",
-  "download": "https://github.com/wsaunders1014/dnd5e-spellpoints/releases/download/1.7.0/dnd5e-spellpoints.1.7.0.zip",
+  "download": "https://github.com/wsaunders1014/dnd5e-spellpoints/releases/download/1.7.1/dnd5e-spellpoints.1.7.1.zip",
   "authors": [
     {
       "name": "misthero",

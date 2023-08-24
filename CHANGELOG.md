@@ -31,3 +31,9 @@
 - 1.7.0 
     - Added spell point modification box on spell items, saves to actor, so anyone with character should get same bonus. 
     - Added a temp modifier on the Spell Cast dialog. Updates in real time.
+- 1.7.1
+    - Module now calculates max Spell points in non-legacy mode the first time it adds the spell point tracker. User can still edit the value, but the will give the equivalent points as their slots.
+    - Added a spell point config similar to the hit point config. You can manually adjust your base level spell points, or calculate the max by how many spell slots you have. There's also a bonus field that will add to your base.
+    - Spell points now update on level up. The base gets recalculated. Bonus will remain if present.
+    - Added some support for Warlock spell point casting though I don't see the point. It doesn't let Warlock use spell points on lower level spells since that's counter to Warlock class, so not sure why anyone would need it.
+    

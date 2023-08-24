@@ -1,0 +1,29 @@
+<form>
+  {{#if isCharacter}}
+
+    <div class="sp-field form-group">
+      <input type="number" name="sp.base" value="{{sp.base}}"
+        placeholder="{{sp.base}}" data-tooltip="dnd5e-spellpoints.SpellPointsOverride">
+    </div>
+    <button type="button" class="spCalculate" data-action="calculate">
+    <i class="fa-solid fa-calculator"></i> {{localize "dnd5e-spellpoints.calculateTotalPointsBySlots"}}
+    </button>
+    <div class="form-group">
+      <label>{{localize "dnd5e-spellpoints.spBonusPoints"}}</label>
+      <input type="number" name="sp.bonus" value="{{sp.bonus}}">
+    </div>
+   
+
+  {{else}}
+
+     <div class="sp-field form-group">
+      <input type="number" name="sp.base" value="{{sp.base}}"
+        placeholder="{{sp.base}}" data-tooltip="dnd5e-spellpoints.SpellPointsOverride">
+    </div>
+
+  {{/if}}
+
+  <button type="submit">
+    <i class="far fa-save"></i> {{localize "Save"}}
+  </button>
+</form>

@@ -1,4 +1,5 @@
 import { MODULE_NAME } from "./main.js";
+import { SpellPointsConfig } from "./settings-form.js";
 
 export class SpellPoints {
   static get settings() {
@@ -10,7 +11,7 @@ export class SpellPoints {
    */
   static get defaultSettings() {
     return {
-      spEnableSpellpoints: false,
+      spEnableSpellpoints: true,
       spResource: 'Spell Points',
       spAutoSpellpoints: false,
       spLegacyMode: false,
@@ -66,7 +67,6 @@ export class SpellPoints {
   static isActorCharacter(actor) {
     return getProperty(actor, "type") == "character";
   }
-
   static isMixedActorSpellPointEnabled(actor) {
     if (actor.flags !== undefined) {
       if (actor.flags['dnd5e-spellpoints'] !== undefined) {
@@ -107,6 +107,30 @@ export class SpellPoints {
       }
       return 0;
   }
+
+  static initializeSpellPoints(actor){
+    if(actor.flags[MODULE_NAME].sp.hasOwnProperty('current') && actor.flags[MODULE_NAME].sp.hasOwnProperty('base') && actor.flags[MODULE_NAME].sp.hasOwnProperty('max'))
+    return;
+    
+    //Set base sp object
+    const base = (actor.classes.hasOwnProperty('warlock')) ? SpellPoints.getSpellPointsByPact(actor): SpellPoints.getSpellPointsBySlot(actor);
+    actor.setFlag(MODULE_NAME,'sp',{current:base,base:base,bonus:0, max: base});
+    actor.setFlag(MODULE_NAME,'level',actor.system.details.level);
+  }
+  static async updateMaxSP(actor,updateCurrent=false){
+    await actor.setFlag(MODULE_NAME,'sp.max', actor.flags[MODULE_NAME].sp.base + actor.flags[MODULE_NAME].sp.bonus);
+    if(updateCurrent)
+        await actor.setFlag(MODULE_NAME,'sp.current',actor.flags[MODULE_NAME].sp.max);
+  }
+  static async updateSpellPointsOnLevelUp(actor) {
+    console.log('updateSPonLevel')
+    const base = (actor.classes.hasOwnProperty('warlock')) ? SpellPoints.getSpellPointsByPact(actor): SpellPoints.getSpellPointsBySlot(actor);
+    console.log(base);
+    console.log('level',actor.system.details.level);
+    await actor.setFlag(MODULE_NAME,'level',actor.system.details.level);
+    await actor.setFlag(MODULE_NAME,'sp.base', base);
+    SpellPoints.updateMaxSP(actor,true);
+  }
   /**
    * Evaluates the given formula with the given actors data. Uses FoundryVTT's Roll
    * to make this evaluation.
@@ -134,7 +158,7 @@ export class SpellPoints {
         }
         }
     }else{
-        return {current:actor.getFlag(MODULE_NAME,'current'),max:actor.getFlag(MODULE_NAME,'max')}
+        return actor.getFlag(MODULE_NAME,'sp');
     }
     return false;
   }
@@ -232,7 +256,7 @@ export class SpellPoints {
       if(isLegacyMode)
         spellPointResource.values.value = spellPointResource.values.value - spellPointCost;
       else
-        actor.setFlag(MODULE_NAME,'current',spellPointResource.current-spellPointCost);
+        actor.setFlag(MODULE_NAME,'sp.current',spellPointResource.current-spellPointCost);
 
       ChatMessage.create({
         content: "<i style='color:green;'>" + game.i18n.format("dnd5e-spellpoints.spellUsingSpellPoints",
@@ -445,7 +469,7 @@ export class SpellPoints {
         if($('.tempMod').val() !== ''){
             tempMod = Number($('.tempMod').val());
             missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - (spellPointCost + tempMod) < 0);
-            console.log(spellPointCost,tempMod, missing_points)
+
             replaceSpellDropdown(tempMod);
             if (missing_points) {
                 $('#ability-use-form', html).append('<div class="spError">' + messageNotEnough + '</div>');
@@ -556,7 +580,26 @@ export class SpellPoints {
 
     return parseInt(SpellPoints.settings.spellPointsByLevel[totalSpellcastingLevel]) || 0
   }
-
+  static getSpellPointsBySlot(actor) {
+    let totalPoints = 0;
+    let x = actor.system.spells;
+    console.log(x);
+    //the 5e system already does all the work of figuring out what spell slots a caster should have based on mixture of 
+    //classes/levels so we're going to grab them from the hook.
+    for(let x = 1; x < 10; x++){
+        console.log(actor.system.spells['spell'+x].max)
+        totalPoints += actor.system.spells['spell'+x].max * SpellPoints.settings.spellPointsCosts[x];
+    }
+    return totalPoints;
+  }
+  static getSpellPointsByPact(actor) {
+    let totalPoints = 0;
+    let x = actor.system.spells.pact;
+    console.log(x);
+    totalPoints += SpellPoints.settings.spellPointsCosts[x.level] * x.max;
+    
+    return totalPoints;
+  }
   /**
    * If the module is active, the actor is a character, and the actor has a spell point resource, then
    * update the spell point resource's maximum value
@@ -567,7 +610,7 @@ export class SpellPoints {
    */
   static calculateSpellPoints(item, updates, isDifferent) {
     const actor = item.parent;
-
+   
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
       return true;
 
@@ -584,6 +627,9 @@ export class SpellPoints {
 
     if (!getProperty(updates.system, 'levels'))
       return true;
+
+      let oldLevel = item.system.levels;
+      let newLevel = updates.system.levels;
 
     let spellPointResource = SpellPoints.getSpellPointsResource(actor);
     const actorName = actor.name;
@@ -633,6 +679,8 @@ export class SpellPoints {
     if (!this.isModuleActive() || !this.settings.spMixedMode) {
       return;
     }
+    if(data.actor.classes.hasOwnProperty('warlock') && !SpellPoints.settings.warlockUseSp)
+        return true;
 
     let checked = "";
     if (SpellPoints.isMixedActorSpellPointEnabled(data.actor)) {
@@ -663,26 +711,33 @@ export class SpellPoints {
 
   static addSpellPointTrackerToSheet(app,html,data){
 
-     if(SpellPoints.isModuleActive() && SpellPoints.isActorCharacter(data.actor)){
+    if(!SpellPoints.isModuleActive())
+        return;
+    if (!SpellPoints.isMixedActorSpellPointEnabled(data.actor))
+        return;
         //set or get spell point flags
-        if(typeof data.actor.getFlag(MODULE_NAME,'current') !== 'number'){
-            data.actor.setFlag(MODULE_NAME,'current', 0);
-        }
-        if(typeof data.actor.getFlag(MODULE_NAME,'max') !== 'number'){
-            data.actor.setFlag(MODULE_NAME,'max', 0);
-        }
-        $(`<li class="attribute spellpoints">
+    if(data.actor.classes.hasOwnProperty('warlock') && !SpellPoints.settings.warlockUseSp)
+        return true;
+        
+    SpellPoints.initializeSpellPoints(data.actor);
+
+    $(`<li class="attribute spellpoints">
         <h4 class="attribute-name box-title">
             Spellpoints
         </h4>
-    
+        <a class="config-button" data-action="hit-points" data-tooltip="dnd5e-spellpoints.spConfig-title">
+            <i class="fas fa-cog"></i>
+        </a>
         <div class="attribute-value multiple">
-            <input name="flags.dnd5e-spellpoints.current" type="text" value="${data.actor.flags['dnd5e-spellpoints'].current}" placeholder="0" data-tooltip="dnd5e-spellpoints.SpellPointsCurrent" data-dtype="Number">
+            <input name="flags.dnd5e-spellpoints.sp.current" type="text" value="${data.actor.flags['dnd5e-spellpoints'].sp.current}" placeholder="0" data-tooltip="dnd5e-spellpoints.SpellPointsCurrent" data-dtype="Number">
             <span class="sep"> / </span>
-            <input name="flags.dnd5e-spellpoints.max" type="text" value="${data.actor.flags['dnd5e-spellpoints'].max}" placeholder="0" data-tooltip="dnd5e-spellpoints.SpellPointsMax" data-dtype="Number">
+            <span data-tooltip="dnd5e-spellpoints.SpellPointsMax">${data.actor.flags['dnd5e-spellpoints'].sp.max}</span>
         </div>
     </li>`).appendTo('.header-details ul.attributes',html);
+    html.on('click','.spellpoints .config-button', ()=>{
+        new SpellPointsConfig(data.actor).render(true);
+    })
+    
     }
-  }
 
 } /** END SpellPoint Class **/

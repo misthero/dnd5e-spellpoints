@@ -1,4 +1,4 @@
-import { SpellPointsForm } from "./settings-form.js";
+import { SpellPointsForm, SpellPointsConfig } from "./settings-form.js";
 import { SpellPoints } from "./spellpoints.js";
 
 export const MODULE_NAME = 'dnd5e-spellpoints';
@@ -52,7 +52,7 @@ Hooks.on('init', () => {
 // Adds spell point box to Character Sheet near Initiative.
 Hooks.on('renderActorSheet5e', async(app,html,data) => {
     // if Legacy Mode is false, then let's add a custom SP tracker to character sheet.
-    if(!SpellPoints.isLegacyMode()){
+    if(!SpellPoints.isLegacyMode() && SpellPoints.isModuleActive){
      SpellPoints.addSpellPointTrackerToSheet(app,html,data);
     }
 })
@@ -61,19 +61,50 @@ Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
   SpellPoints.checkDialogSpellPoints(dialog, html, formData);
 })
 
-Hooks.on("updateItem", SpellPoints.calculateSpellPoints);
-Hooks.on("createItem", SpellPoints.calculateSpellPoints);
+ Hooks.on("updateItem", (item,updates,diff)=>{
+
+    if(item.type === 'class'){
+        let actor = item.actor;
+        const newLevel = actor.system.details.level;
+        const oldLevel = actor.getFlag(MODULE_NAME,'level')
+
+         if(newLevel !== oldLevel)
+            SpellPoints.updateSpellPointsOnLevelUp(actor);
+    }
+    SpellPoints.calculateSpellPoints(item,updates,diff);
+ });
+// Hooks.on("createItem", SpellPoints.calculateSpellPoints);
+
+Hooks.on('dnd5e.advancementManagerComplete',(data)=>{
+    let actor = data.actor;
+    const newLevel = actor.system.details.level;
+    const oldLevel = actor.getFlag(MODULE_NAME,'level')
+    //console.log('compute', newLevel,oldLevel,data,actor);
+    // if(newLevel !== oldLevel)
+       // SpellPoints.updateSpellPointsOnLevelUp(actor);
+})
+
+
+Hooks.on('preUpdateActor',(actor,updates,diff)=>{
+    if(!updates.hasOwnProperty('flags'))
+        return;
+    if(updates.flags[MODULE_NAME]?.enabled){
+
+        SpellPoints.initializeSpellPoints(actor);
+    }
+})
 // Moved the character opt in to spell point usage to Special trait section.
 Hooks.on("renderActorSheetFlags", (app, html, data) => {
     SpellPoints.mixedMode(app, html, data);
 });
 /* On rest completed, restore spell points. Only needed for non Resource tracking. */
 Hooks.on('dnd5e.restCompleted', (actor, data) => {
-   if(!SpellPoints.isLegacyMode() && data.longRest === true){
-     
-        actor.setFlag(MODULE_NAME,'current', actor.getFlag(MODULE_NAME,'max'));
-      
-   }
+    if(SpellPoints.isLegacyMode()) 
+     return;
+    if( data.longRest === true)
+        actor.setFlag(MODULE_NAME,'sp.current', actor.getFlag(MODULE_NAME,'sp.max'));
+    if(data.longRest === false && actor.classes.hasOwnProperty('warlock'))
+        actor.setFlag(MODULE_NAME,'sp.current', actor.getFlag(MODULE_NAME,'sp.max'));
 });
 /**
   * Hook that is triggered after the SpellPointsForm has been rendered. This
@@ -96,20 +127,30 @@ Hooks.on('renderItemSheet5e',(app,html,data) => {
     if(data.item.type==="spell"){
         const spell = data;
         const actor = spell.item.actor;
-        if(SpellPoints.isModuleActive()){
-            //get spellOverrides from Actor
-           
-            let override = SpellPoints.getOverride(spell.item._id,actor);
+        if(!SpellPoints.isModuleActive())
+            return;
+        if(!SpellPoints.isMixedActorSpellPointEnabled(actor))
+            return;
+        if(_actor.classes.hasOwnProperty('warlock') && !SpellPoints.settings.warlockUseSp)
+        return true;
+        //get spellOverrides from Actor   
+        let override = SpellPoints.getOverride(spell.item._id,actor);
+        let spellPointCost = override || SpellPoints.settings.spellPointsCosts[spell.system.level];
 
-            let spellPointCost = override || SpellPoints.settings.spellPointsCosts[spell.system.level];
+        //Add spell point input to sheet.
+        $('.tab.details .spell-components').before(`<div class="form-group"><label>Spell Points</label><input class="spOverrideInput" step="1" type="number" name="spOverride" default-value="${spellPointCost}" placeholder="${spellPointCost}" value="${spellPointCost}"></div>`);
+        html.on('blur','.spOverrideInput',(e)=>{
+            let cost = $('.spOverrideInput').val();
 
-             //Add spell point input to sheet.
-            $('.tab.details .spell-components').before(`<div class="form-group"><label>Spell Point Override</label><input class="spOverrideInput" step="1" type="number" name="spOverride" value="${spellPointCost}"></div>`);
-            html.on('blur','.spOverrideInput',(e)=>{
-                let cost = $('.spOverrideInput').val();
-                SpellPoints.setOverride(spell.data._id,cost,actor);
-              
-            })
-        }
+            if(cost === '' || isNaN(Number(cost))){
+                cost = SpellPoints.settings.spellPointsCosts[spell.system.level];
+                $('.spOverrideInput').val(cost);
+            }else{
+                cost = Number(cost);
+            }
+            SpellPoints.setOverride(spell.data._id, cost ,actor);
+            
+            
+        })
     }
 });

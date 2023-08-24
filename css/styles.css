@@ -64,3 +64,14 @@ div.spell-points-hidden {
  max-width:30px;
  text-align: center !important;
 }
+input.spOverrideInput::placeholder {
+    opacity: 0.5;
+}
+
+#spellpoints-config .sp-field input {
+    font-size: 3em;
+    text-align: center;
+}
+.dnd5e.sheet.actor ul.attributes li.attribute .attribute-value.multiple input{
+    flex: 0 0 40%;
+}

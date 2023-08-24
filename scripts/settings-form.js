@@ -14,12 +14,67 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 /**
 * SPELL POINTS APPLICATION SETTINGS FORM
 */
+export class SpellPointsConfig extends FormApplication {
+    constructor(object, options) {
+        super(object, options);
+        this.clone = this.object.clone();
+    }
+
+    static get defaultOptions() {
+        return mergeObject(super.defaultOptions, {
+          title: game.i18n.localize('dnd5e-spellpoints.spConfig-title'),
+          id: 'spellpoints-config',
+          classes: ["dnd5e", "spell-points-config"],
+          template: `modules/${MODULE_NAME}/templates/spellpoints-config.hbs`,
+          width: 320,
+          height: "auto",
+          sheetConfig: false,
+          closeOnSubmit: true,
+         
+        });
+    }
+    getData(options) {
+        return {
+           sp: this.clone.flags[MODULE_NAME].sp,
+           isCharacter: this.object.type === "character"
+        };
+    }
+   async _updateObject(event, formData) {
+        const sp = foundry.utils.expandObject(formData).sp;
+        
+        await this.object.setFlag(MODULE_NAME,'sp', mergeObject(this.object.getFlag(MODULE_NAME,'sp'),sp));
+        
+        SpellPoints.updateMaxSP(this.object);
+    }
+    activateListeners(html) {
+        super.activateListeners(html);
+
+        html.on('click', "[data-action]", this._handleButtonClick.bind(this));
+    }
+    async _handleButtonClick(event) {
+        const clickedElement = $(event.currentTarget);
+        const action = clickedElement.data().action;
+
+        switch(action){
+            case "calculate": {
+                console.log('Calculate');
+                const baseSP = (this.object.classes.hasOwnProperty('warlock'))? SpellPoints.getSpellPointsByPact(this.object):SpellPoints.getSpellPointsBySlot(this.object);
+                $(this.form).find('.sp-field input').val(baseSP);
+                break;
+            }
+            default:{
+                break;
+            }
+        }
+
+      }
+}
 export class SpellPointsForm extends FormApplication {
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
       title: game.i18n.localize('dnd5e-spellpoints.form-title'),
       id: 'spellpoints-form',
-      template: `modules/${MODULE_NAME}/templates/spellpoint-config.html`,
+      template: `modules/${MODULE_NAME}/templates/spellpoint-settings.html`,
       width: 500,
       closeOnSubmit: true
     });
