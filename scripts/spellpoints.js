@@ -108,8 +108,8 @@ export class SpellPoints {
       return 0;
   }
 
-  static initializeSpellPoints(actor){
-    if(actor.flags[MODULE_NAME].sp.hasOwnProperty('current') && actor.flags[MODULE_NAME].sp.hasOwnProperty('base') && actor.flags[MODULE_NAME].sp.hasOwnProperty('max'))
+  static async initializeSpellPoints(actor){
+    if(actor.flags[MODULE_NAME]?.sp?.hasOwnProperty('current') && actor.flags[MODULE_NAME]?.sp?.hasOwnProperty('base') && actor.flags[MODULE_NAME]?.sp?.hasOwnProperty('max'))
     return;
     
     //Set base sp object
@@ -123,10 +123,9 @@ export class SpellPoints {
         await actor.setFlag(MODULE_NAME,'sp.current',actor.flags[MODULE_NAME].sp.max);
   }
   static async updateSpellPointsOnLevelUp(actor) {
-    console.log('updateSPonLevel')
+
     const base = (actor.classes.hasOwnProperty('warlock')) ? SpellPoints.getSpellPointsByPact(actor): SpellPoints.getSpellPointsBySlot(actor);
-    console.log(base);
-    console.log('level',actor.system.details.level);
+
     await actor.setFlag(MODULE_NAME,'level',actor.system.details.level);
     await actor.setFlag(MODULE_NAME,'sp.base', base);
     SpellPoints.updateMaxSP(actor,true);
@@ -431,7 +430,7 @@ export class SpellPoints {
       spellPointCost = SpellPoints.withActorData(SpellPoints.settings.spellPointsCosts[baseSpellLvl], actor)+ totalMods;
    
     let missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - (spellPointCost + tempMod) < 0);
-    console.log(spellPointCost,tempMod, missing_points)
+
     const messageNotEnough = game.i18n.format("dnd5e-spellpoints.youNotEnough", { SpellPoints: this.settings.spResource });
     if (missing_points) {
       
@@ -583,11 +582,10 @@ export class SpellPoints {
   static getSpellPointsBySlot(actor) {
     let totalPoints = 0;
     let x = actor.system.spells;
-    console.log(x);
+
     //the 5e system already does all the work of figuring out what spell slots a caster should have based on mixture of 
     //classes/levels so we're going to grab them from the hook.
     for(let x = 1; x < 10; x++){
-        console.log(actor.system.spells['spell'+x].max)
         totalPoints += actor.system.spells['spell'+x].max * SpellPoints.settings.spellPointsCosts[x];
     }
     return totalPoints;
@@ -595,7 +593,6 @@ export class SpellPoints {
   static getSpellPointsByPact(actor) {
     let totalPoints = 0;
     let x = actor.system.spells.pact;
-    console.log(x);
     totalPoints += SpellPoints.settings.spellPointsCosts[x.level] * x.max;
     
     return totalPoints;
@@ -709,7 +706,7 @@ export class SpellPoints {
    * @returns The return value is the html_checkbox variable.
    */
 
-  static addSpellPointTrackerToSheet(app,html,data){
+  static async addSpellPointTrackerToSheet(app,html,data){
 
     if(!SpellPoints.isModuleActive())
         return;
@@ -718,8 +715,9 @@ export class SpellPoints {
         //set or get spell point flags
     if(data.actor.classes.hasOwnProperty('warlock') && !SpellPoints.settings.warlockUseSp)
         return true;
-        
-    SpellPoints.initializeSpellPoints(data.actor);
+    
+    if(!data.actor.flags[MODULE_NAME].hasOwnProperty('sp'))
+        await SpellPoints.initializeSpellPoints(data.actor);
 
     $(`<li class="attribute spellpoints">
         <h4 class="attribute-name box-title">
