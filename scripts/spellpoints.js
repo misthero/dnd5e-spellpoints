@@ -385,7 +385,7 @@ export class SpellPoints {
         slotLvl = parseInt(slotLvlTxt.replace(/\D/g, ''));
       }
 
-      if (slotLvl == 0) {
+      if (!slotLvl || slotLvl == 0) {
         continue;
       }
 
