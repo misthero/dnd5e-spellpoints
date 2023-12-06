@@ -320,7 +320,7 @@ export class SpellPoints {
       if (selectValue == 'pact' && warlockCanCast) {
         level = actor.system.spells.pact.level;
       } else {
-        level = selectValue;
+        level = selectValue.replace('spell', '');
       }
 
       cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
