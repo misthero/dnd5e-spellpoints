@@ -115,10 +115,12 @@ export class SpellPoints {
    * @returns The update object.
    */
 
-  static castSpell(item, consume, options) {
-    if (!consume.consumeSpellLevel) {
+  static castSpell(item, consume, options, update) {
+
+    if (!consume.consumeSpellSlot) {
       return [item, consume, options];
     }
+
     const actor = item.actor;
     /** do nothing if module is not active **/
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
@@ -138,8 +140,9 @@ export class SpellPoints {
     if (item.system.preparation.mode == 'pact' && !settings.spMixedMode && !settings.warlockUseSp)
       return [item, consume, options];
 
-
     let spellPointResource = SpellPoints.getSpellPointsResource(actor);
+
+    consume.consumeSpellSlot = false;
 
     /** not found any resource for spellpoints ? **/
     if (!spellPointResource) {
@@ -222,7 +225,7 @@ export class SpellPoints {
         } else {
           updateActor.system.attributes = { 'hp': { 'tempmax': newTempMaxHP } };// hp max reduction
           if (hpActual > newMaxHP) { // a character cannot have more hp than his maximum
-            update.system.attributes = mergeObject(update.system.attributes, { 'hp': { 'value': newMaxHP } });
+            updateActor.system.attributes = mergeObject(updateActor.system.attributes, { 'hp': { 'value': newMaxHP } });
           }
           ChatMessage.create({
             content: "<i style='color:red;'>" + game.i18n.format("dnd5e-spellpoints.castedLife", { ActorName: actor.name, hpMaxLost: hpMaxLost }) + "</i>",
@@ -240,7 +243,6 @@ export class SpellPoints {
           isAuthor: true,
           whisper: SpeakTo
         });
-        console.log(item, consume, options);
         consume.consumeSpellSlot = false;
         consume.consumeSpellLevel = false;
         consume.createMeasuredTemplate = false;
@@ -310,8 +312,9 @@ export class SpellPoints {
 
     let level = 'none';
     let cost = 0;
+
     /** Replace list of spell slots with list of spell point costs **/
-    $('select[name="consumeSpellLevel"] option', html).each(function () {
+    $('select[name="slotLevel"] option', html).each(function () {
       let selectValue = $(this).val();
 
       if (selectValue == 'pact' && warlockCanCast) {
@@ -327,6 +330,12 @@ export class SpellPoints {
         $(this).text(newText);
       }
     })
+
+    let consumeInput = $('input[name="consumeSpellSlot"]', html).parent();
+    const consumeString = game.i18n.format("dnd5e-spellpoints.consumeSpellSlotInput", { SpellPoints: this.settings.spResource });
+    consumeInput.html('<input type="checkbox" name="consumeSpellSlot" checked="">' + consumeString);
+
+
 
     if (level == 'none')
       return;
@@ -356,7 +365,7 @@ export class SpellPoints {
       if (!$('input[name="consumeSpellSlot"]', html).prop('checked') || SpellPoints.settings.spEnableVariant) {
         $('.dialog-button.original', html).trigger("click");
 
-      } else if ($('select[name="consumeSpellLevel"]', html).length > 0) {
+      } else if ($('select[name="slotLevel"]', html).length > 0) {
         if (missing_points) {
           ui.notifications.error("You don't have enough: '" + SpellPoints.settings.spResource + "' to cast this spell");
           dialog.close();

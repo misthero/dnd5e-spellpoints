@@ -49,5 +49,6 @@
     "dnd5e-spellpoints.warlockUseSpLabel": "Warlocks use Spell Points",
     "dnd5e-spellpoints.warlockUseSpNote": "By default warlocks cannot use the spellpoints system, enabling this they will be able to do it like other casters.",
     "dnd5e-spellpoints.chatMessagePrivateLabel": "Private Spell Points usage messages.",
-    "dnd5e-spellpoints.chatMessagePrivateNote": "Enabling this setting the chat messages about how many Spell Points have been used, will be visible by the GM and the current player, other players will not see the message."
+    "dnd5e-spellpoints.chatMessagePrivateNote": "Enabling this setting the chat messages about how many Spell Points have been used, will be visible by the GM and the current player, other players will not see the message.",
+    "dnd5e-spellpoints.consumeSpellSlotInput": "Consume {SpellPoints}"
 }
