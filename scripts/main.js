@@ -7,30 +7,6 @@ export let dndV3 = false;
 
 CONFIG.debug.hooks = true;
 
-console.log('start');
-
-var compareVersions = function (a, b) {
-  const versionA = a.split('.').map(Number);
-  const versionB = b.split('.').map(Number);
-  console.log("SP versionA", versionA);
-
-  for (let i = 0; i < Math.max(versionA.length, versionB.length); i++) {
-    const numA = versionA[i] || 0;
-    const numB = versionB[i] || 0;
-
-    if (numA < numB) return -1;
-    if (numA > numB) return 1;
-  }
-
-  return 0;
-}
-
-console.log('SP COMP', compareVersions("2.0.5", "1.0.15"));  // returns 1
-console.log('SP COMP', compareVersions("1.2.2", "1.2.0"));   // returns 1
-console.log('SP COMP', compareVersions("1.0.5", "1.1.0"));   // returns -1
-console.log('SP COMP', compareVersions("1.0.5", "1.00.05")); // returns 0
-console.log('SP COMP', compareVersions("0.9.9.9.9.9.9", "1.0.0.0.0.0.0")); // returns -1
-
 Handlebars.registerHelper("spFormat", (path, ...args) => {
   return game.i18n.format(path, args[0].hash);
 });
@@ -38,12 +14,8 @@ Handlebars.registerHelper("spFormat", (path, ...args) => {
 Hooks.on('init', () => {
   console.log('SpellPoints init');
   if (typeof game.dnd5e.version === 'string') {
-    dndV3 = compareVersions(game.dnd5e.version, '2.99.99') == 1;
-    console.log('SP dndversion3', dndV3);
-  } else {
-    console.log('SP isundefined version');
+    dndV3 = foundry.utils.isNewerVersion(game.dnd5e.version, '2.99.99');
   }
-
 
   /** should spellpoints be enabled */
   game.settings.register(MODULE_NAME, "spEnableSpellpoints", {
@@ -89,9 +61,8 @@ Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
 })
 
 Hooks.on("updateItem", SpellPoints.calculateSpellPoints);
-Hooks.on("createItem", SpellPoints.calculateSpellPoints);
+Hooks.on("createItem", SpellPoints.calculateSpellPointsCreate);
 Hooks.on("preDeleteItem", SpellPoints.removeItemFlag);
-Hooks.on("preCreateItem", SpellPoints.addSpellPointsItemFlag);
 
 //Hooks.on("dnd5e.computeLeveledProgression", SpellPoints.calculateSpellPointsProgression);
 

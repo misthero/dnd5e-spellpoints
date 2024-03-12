@@ -76,3 +76,14 @@ textarea.spellPoints {
 div.spell-points-hidden {
   display: none;
 }
+
+.sheet.actor.character .sheet-body .sidebar .card .meter.sp-points .progress::before {
+  background: linear-gradient(to right, #3a0e5f 0%, #8a40c7 100%);
+  border-right: var(--border-width) solid #3a0e5f;
+  border-radius: 4px 0 0 4px;
+}
+
+.window-app.spellpoints-cast {
+  height: auto !important;
+  overflow: hidden;
+}

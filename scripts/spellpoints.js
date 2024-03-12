@@ -64,35 +64,18 @@ export class SpellPoints {
   }
 
   static getActorFlagSpellPointItem(actor) {
-    if (actor.flags !== undefined) {
-      if (actor.flags.dnd5espellpoints !== undefined) {
-        if (actor.flags.dnd5espellpoints.item !== undefined) {
-          return actor.flags.dnd5espellpoints.item
-        }
-      }
-    }
-    return false;
+    const item_id = actor?.flags?.dnd5espellpoints?.item;
+    return typeof item_id === 'string' && item_id.trim().length > 0 ? item_id : false;
   }
 
   static isSpellPointsItem(item) {
-    if (dndV3 && item.type == "feat"
-      && item.flags.core !== undefined
-      && item.flags.core.sourceId !== undefined
-      && item.flags.core.sourceId == "Compendium.dnd5e-spellpoints.module-items.Item.LUSjG8364p7LFY1u") {
-      return true;
-    }
-    return false;
+    return dndV3 &&
+      item.type === "feat" &&
+      item.flags?.core?.sourceId === "Compendium.dnd5e-spellpoints.module-items.Item.LUSjG8364p7LFY1u";
   }
 
   static isMixedActorSpellPointEnabled(actor) {
-    if (actor.flags !== undefined) {
-      if (actor.flags.dnd5espellpoints !== undefined) {
-        if (actor.flags.dnd5espellpoints.enabled !== undefined) {
-          return actor.flags.dnd5espellpoints.enabled
-        }
-      }
-    }
-    return false;
+    return actor?.flags?.dnd5espellpoints?.enabled ?? false;
   }
 
   /**
@@ -114,19 +97,11 @@ export class SpellPoints {
     let items = getProperty(actor, "collections.items");//  filter(u => u.isGM);
 
     const item_id = SpellPoints.getActorFlagSpellPointItem(actor);
-    console.log('SP item_id', item_id);
-    let spItem = items.filter(i => i.key == item_id);
-    console.log('SP spItem', items[item_id]);
     if (items[item_id])
       return items[item_id];
-
-    console.log('SP ACTOR ITEMS', items);
     let features = items.filter(i => i.type == 'feat');
-    console.log('SP ACTOR FEATURES', features);
     // get the item with source custom label = Spell Points
     let sp = features.filter(s => s.system.source.custom == this.settings.spResource);
-    console.log('SP SPELLPOINTS ITEM', sp);
-    console.log('SP SPELLPOINTS NAME', getProperty(sp[0], 'name'));
     // WIP: DETECT SPELLPOINT ITEM (sp[0] ??)
 
     if (typeof sp == 'undefined') {
@@ -159,39 +134,25 @@ export class SpellPoints {
    */
 
   static castSpell(item, consume, options) {
-    console.log('SP CAST SPELL', item, consume, options);
+    //console.log('SP CAST SPELL', item, consume, options);
 
-    if (!consume.consumeSpellSlot) {
+    if (!consume.consumeSpellPoints) {
       return [item, consume, options];
     }
-
-    if (dndV3) {
-      console.log('SP DND IS V3+');
-    }
-
-    console.log('SP - CONSUME SPELL SLOTS');
 
     const actor = item.actor;
     /** do nothing if module is not active **/
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
       return [item, consume, options];
 
-    console.log('SP MODULE ACTIVE');
-
     const settings = this.settings;
-
-    /* if mixedMode active Check if SpellPoints is enabled for this actor */
-    if (settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor))
-      return [item, consume, options];
 
     /** check if this is a spell casting **/
     if (item.type != 'spell')
       return [item, consume, options];
 
-    console.log('SP IS SPELL');
-
     /** if is a pact spell, but no mixed mode and warlocks do not use spell points: do nothing */
-    if (item.system.preparation.mode == 'pact' && !settings.spMixedMode && !settings.warlockUseSp)
+    if (item.system.preparation.mode == 'pact' && !settings.warlockUseSp)
       return [item, consume, options];
 
     let spellPointResource = null;
@@ -207,7 +168,15 @@ export class SpellPoints {
       V3usingResource = true;
     }
 
-    consume.consumeSpellSlot = false;
+    if (consume.consumeSpellSlot) {
+      consume.consumeSpellPoints = false;
+      return [item, consume, options];
+    }
+
+    if (consume.consumeSpellPoints) {
+      consume.consumeSpellSlot = false;
+    }
+
 
     /** not found any resource for spellpoints ? **/
     if (!spellPointResource && !spellPointItem) {
@@ -341,7 +310,6 @@ export class SpellPoints {
         options.createMessage = false;
         delete options.flags;
         return [item, consume, options];
-
       }
     }
 
@@ -379,17 +347,15 @@ export class SpellPoints {
     // Declare settings as a separate variable because jQuery overrides `this` when in an each() block
     let settings = this.settings;
 
-    /* if mixedMode active Check if SpellPoints is enabled for this actor */
-    if (settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor))
-      return;
-
     /** check if this is a spell **/
     if (getProperty(dialog, "item.type") !== "spell")
       return;
 
+    html.addClass('spellpoints-cast');
+
     const spell = dialog.item.system;
     const preparation = spell.preparation.mode; //prepared,pact,always,atwill,innate
-    const warlockCanCast = settings.spMixedMode || settings.warlockUseSp;
+    const warlockCanCast = settings.warlockUseSp;
     /* if is a warlock but mixed mode is disable and warlocks cannot use spellpoints, do nothing. */
     if (preparation == 'pact' && !warlockCanCast)
       return;
@@ -437,9 +403,11 @@ export class SpellPoints {
       }
     })
 
-    let consumeInput = $('input[name="consumeSpellSlot"]', html).parent();
+    let consumeInput = $('input[name="consumeSpellSlot"]', html).parents('.form-group');
     const consumeString = game.i18n.format("dnd5e-spellpoints.consumeSpellSlotInput", { SpellPoints: dndV3 ? spellPointItem.name : this.settings.spResource });
-    consumeInput.html('<input type="checkbox" name="consumeSpellSlot" checked="">' + consumeString);
+    //consumeInput.html('<input type="checkbox" name="consumeSpellSlot">' + consumeString);
+    consumeInput.parent().append('<div class="form-group"><label class="checkbox"><input type="checkbox" name="consumeSpellPoints" checked="">' + consumeString + '</label></div>');
+    $('input[name="consumeSpellSlot"]', html).removeAttr('checked');
 
     if (level == 'none')
       return;
@@ -472,7 +440,7 @@ export class SpellPoints {
     html.on('click', '.dialog-button.copy', function (e) {
       e.preventDefault();
       /** if not consumeSlot we ignore cost, go on and cast or if variant active **/
-      if (!$('input[name="consumeSpellSlot"]', html).prop('checked') || SpellPoints.settings.spEnableVariant) {
+      if (!$('input[name="consumeSpellPoints"]', html).prop('checked') || SpellPoints.settings.spEnableVariant) {
         $('.dialog-button.original', html).trigger("click");
       } else if ($('select[name="slotLevel"]', html).length > 0) {
         if (missing_points) {
@@ -595,7 +563,6 @@ export class SpellPoints {
    * @returns True
    */
   static calculateSpellPoints(item, updates, id) {
-    console.log('SP calculateSpellPoints', item, updates, id);
     const actor = item.parent;
 
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
@@ -604,69 +571,58 @@ export class SpellPoints {
     if (!SpellPoints.settings.spAutoSpellpoints) {
       return true;
     }
-    /* if mixedMode active Check if SpellPoints is enabled for this actor */
-    if (SpellPoints.settings.spMixedMode && !SpellPoints.isMixedActorSpellPointEnabled(actor))
-      return true;
-
-    console.log('SP mixed mode disabled or enabled and active on this actor');
 
     /* updating or dropping a class item */
 
-    if (item.type !== 'class' && item.type !== 'feat') {
+    if (item.type !== 'class') {
       // check if is the spell point feature being dropped.
       return true;
     }
 
-    console.log('SP checked item type:', item.type);
-
-    if (!getProperty(updates.system, 'levels') && !SpellPoints.isSpellPointsItem(item))
+    if (!getProperty(updates.system, 'levels'))
       return true;
 
-    let spellPointResource = SpellPoints.getSpellPointsResource(actor);
-    const actorName = actor.name;
+    SpellPoints.updateSpellPointsMax(item, updates, actor, false);
+    return true;
+  }
 
-    let updateActor = {
-      'flags': {
-        'dnd5espellpoints': {
-          'enabled': SpellPoints.isMixedActorSpellPointEnabled(actor),
-          'item': ""
-        }
-      },
-      'system': {
-        'resources': {
-          [`${spellPointResource.key}`]: {}
-        }
-      }
-    };
 
-    console.log('SP check Existing item');
+  static calculateSpellPointsCreate(item, updates, id) {
+    if (item.type == 'feat' && SpellPoints.isSpellPointsItem(item)) {
+      SpellPoints.processFirstDrop(item);
+      return true;
+    } else if (item.type == 'class') {
+      SpellPoints.calculateSpellPoints(item, updates, id);
+    }
+  }
 
-    let existingItemId = SpellPoints.getActorFlagSpellPointItem(actor);
-    if (SpellPoints.isSpellPointsItem(item) && !existingItemId) {
-      if (spellPointResource) {
-        // update the item with the old resource values
-        item.system.uses.max = actor.system.resources[spellPointResource.key].max;
-        item.system.uses.value = actor.system.resources[spellPointResource.key].value;
-        updateActor.system.resources[`${spellPointResource.key}`].label = '';
-        console.log('SP update value and max from feature');
-      }
+  static updateSpellPointsMax(classItem, updates, actor, createdItem) {
+    if (!SpellPoints.settings.spAutoSpellpoints) {
+      return true;
     }
 
-    let SpeakTo = game.users.filter(u => u.isGM);
-    let message = '';
+    const actorName = actor.name;
+    let spellPointsItem;
+    if (createdItem)
+      spellPointsItem = createdItem;
+    else
+      spellPointsItem = SpellPoints.getSpellPointsItem(actor);
+    if (!spellPointsItem) {
+      // spell points item not found? 
+      return;
+    }
 
     const isCustom = SpellPoints.settings.isCustom.toString().toLowerCase() == 'true';
-    const SpellPointsMax = isCustom ? SpellPoints._calculateSpellPointsCustom(actor) : SpellPoints._calculateSpellPointsFixed(item, updates, actor)
+    const SpellPointsMax = isCustom ? SpellPoints._calculateSpellPointsCustom(actor) : SpellPoints._calculateSpellPointsFixed(classItem, updates, actor)
 
-    console.log('SP SpellPointsMax', SpellPointsMax);
+    if (SpellPointsMax > 0) {
 
-    if (SpellPointsMax > 0 && item.type == 'class') {
-      let spellPointsItem = SpellPoints.getSpellPointsItem(actor);
-      console.log('SP spellPointsItem', spellPointsItem);
-      let updateItem = { [`system.uses.max`]: SpellPointsMax };
-      spellPointsItem.update(updateItem);
-      updateActor = { [`system.resources.${spellPointResource.key}.max`]: SpellPointsMax };
-      actor.update(updateActor);
+      spellPointsItem.update({
+        [`system.uses.max`]: SpellPointsMax,
+        [`system.uses.value`]: createdItem ? SpellPointsMax : spellPointsItem.system.uses.value
+      });
+
+      let SpeakTo = game.users.filter(u => u.isGM);
       let message = "SPELLPOINTS: Found resource '" + SpellPoints.settings.spResource + "' on " + actorName + " character sheet! Your Maximum " + SpellPoints.settings.spResource + " have been updated.";
       ChatMessage.create({
         content: "<i style='color:green;'>" + message + "</i>",
@@ -676,47 +632,52 @@ export class SpellPoints {
         whisper: SpeakTo
       });
     }
-    return true;
+    return spellPointsItem;
   }
 
-  static calculateSpellPointsProgression(slots, actor, item, progression) {
-
-  }
-
+  /** preDeleteItem */
   static removeItemFlag(item, dialog, id) {
-    console.log('SP removeItemFlag', item, dialog, id);
     let actor = item.parent;
     if (item._id == SpellPoints.getActorFlagSpellPointItem(actor)) {
       actor.update({ [`flags.dnd5espellpoints.item`]: '' });
     }
   }
-  static addSpellPointsItemFlag(item, data, update, id) {
-    if (item.type != 'feat') {
-      return true;
-    }
-    console.log('SP addSpellPointsItemFlag', item, data, update, id);
+
+  static processFirstDrop(item) {
     if (SpellPoints.getActorFlagSpellPointItem(item.parent)) {
       // there is already a spellpoints item here.
-      return true;
-    }
-
-    if (!SpellPoints.isSpellPointsItem(item)) {
-      return (item, data, update, id);
+      ui.notifications.error(game.i18n.format("dnd5e-spellpoints.alreadySpItemOwned"));
+      item.update({ 'name': item.name + ' (duplicated please remove)' });
+      return;
     }
 
     const actor = item.parent;
+
     let updateActor = {
       'flags': {
         'dnd5espellpoints': {
-          'enabled': SpellPoints.isMixedActorSpellPointEnabled(actor),
           'item': item._id
         }
       }
     };
     actor.update(updateActor);
 
-  }
+    let spellPointResource = SpellPoints.getSpellPointsResource(actor);
 
+    if (spellPointResource) {
+      // created a spell points item in a sheet with a spell points resource, let's get data from it.
+      let d = Dialog.confirm({
+        title: "Spell Points resource found.",
+        content: "<p>You have an old spell point resource on this character sheet, whould you like to remove it and replace with the new Spell Points?</p>",
+        yes: () => SpellPoints.removeOldResource(item, spellPointResource),
+        no: () => item = SpellPoints.updateSpellPointsMax({}, {}, actor, item),
+        defaultYes: true
+      });
+    } else {
+      SpellPoints.updateSpellPointsMax({}, {}, actor, item)
+    }
+
+  }
 
   /**
    * It adds a checkbox to the character sheet that allows the user to enable/disable spell points for
@@ -727,28 +688,32 @@ export class SpellPoints {
    * @returns The return value is the html_checkbox variable.
    */
   static mixedMode(app, html, data) {
-    if (!this.isModuleActive() || !this.settings.spMixedMode || data.actor.type != "character") {
+    if (!this.isModuleActive() || data.actor.type != "character") {
       return;
     }
 
-    let checked = "";
-    if (SpellPoints.isMixedActorSpellPointEnabled(data.actor)) {
-      checked = "checked";
-    }
+    const actor = data.actor;
 
-    let spellPointUseOnSheetLabel = game.i18n.localize('dnd5e-spellpoints.use-spellpoints');
+    const SpellPointsItem = this.getSpellPointsItem(actor);
+    if (dndV3 && SpellPointsItem) {
+      let value = SpellPointsItem.system.uses.value;
+      let max = SpellPointsItem.system.uses.max;
+      let percent = value / max * 100;
+      let html_spellpoints = '<div class="meter-group">';
+      html_spellpoints += '<div class="label roboto-condensed-upper"><span>' + SpellPointsItem.name + '</span></div>';
+      html_spellpoints += '<div class="meter sectioned sp-points" data-item-id="' + SpellPointsItem._id + '" data-entry-id="' + SpellPointsItem._id + '" data-item-name="' + SpellPointsItem.name + '">';
+      html_spellpoints += '<div class="progress sp-points" role="meter" aria-valuemin="0" aria-valuenow="' + value + '" aria-valuemax="' + max + '" style="--bar-percentage: ' + percent + '%">';
+      html_spellpoints += '<div class="label">';
+      html_spellpoints += '<span class="value">' + value + '</span>';
+      html_spellpoints += '<span class="separator">/</span>';
+      html_spellpoints += '<span class="max">' + max + '</span>';
+      html_spellpoints += '</div>';
+      html_spellpoints += '<input type="text" name="system.uses.value" data-dtype="Number" placeholder="0" value="' + value + '" hidden="">';
+      html_spellpoints += '<input type="text" value="' + max + '" placeholder="0" data-dtype="Number" data-name="system.uses.max" inputmode="numeric" pattern="[0-9+=\-]*" hidden="">';
+      html_spellpoints += '</div>';
+      html_spellpoints += '</div>';
 
-    let html_checkbox = '<div class="spEnable flexrow ">';
-    html_checkbox += '<div class="no-edit"><i class="fas fa-magic"></i> ' + spellPointUseOnSheetLabel + '</div>';
-    html_checkbox += '<label class="edit-allowed"><i class="fas fa-magic"></i>&nbsp;';
-    html_checkbox += spellPointUseOnSheetLabel;
-    html_checkbox += '<input name="flags.dnd5espellpoints.enabled" ' + checked + ' class="spEnableInput visually-hidden" type="checkbox" value="1">';
-    html_checkbox += ' <i class="spEnableCheck fas"></i>';
-    html_checkbox += '</label></div>';
-    if (dndV3) {
-      $('.tab.features', html).append('<section class="classes pills-lg "><div class="class pill-lg">' + html_checkbox + '</div></section>');
-    } else {
-      $('.tab.features', html).prepend(html_checkbox);
+      $('.sidebar .stats', html).append(html_spellpoints);
     }
 
   }
