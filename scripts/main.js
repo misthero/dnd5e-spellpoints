@@ -2,6 +2,7 @@ import { SpellPointsForm } from "./settings-form.js";
 import { SpellPoints } from "./spellpoints.js";
 
 export const MODULE_NAME = 'dnd5e-spellpoints';
+export const ITEM_ID = 'LUSjG8364p7LFY1u';
 
 export let dndV3 = false;
 
@@ -19,8 +20,8 @@ Hooks.on('init', () => {
 
   /** should spellpoints be enabled */
   game.settings.register(MODULE_NAME, "spEnableSpellpoints", {
-    name: "Enable Spell Points system",
-    hint: "Enables or disables spellpoints for casting spells, this will override the slot cost for player tokens.",
+    name: game.i18n.format("dnd5e-spellpoints.enableModule"),
+    hint: game.i18n.format("dnd5e-spellpoints.enableModuleHint"),
     scope: "world",
     config: true,
     default: false,
@@ -37,7 +38,7 @@ Hooks.on('init', () => {
   });
 
   game.settings.register(MODULE_NAME, "settings", {
-    name: "Spell Points Settings",
+    name: game.i18n.format("dnd5e-spellpoints.settingsTitle"),
     scope: "world",
     default: SpellPoints.defaultSettings,
     type: Object,
@@ -63,11 +64,12 @@ Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
 Hooks.on("updateItem", SpellPoints.calculateSpellPoints);
 Hooks.on("createItem", SpellPoints.calculateSpellPointsCreate);
 Hooks.on("preDeleteItem", SpellPoints.removeItemFlag);
+Hooks.on("preUpdateItem", SpellPoints.checkSpellPointsValues);
 
 //Hooks.on("dnd5e.computeLeveledProgression", SpellPoints.calculateSpellPointsProgression);
 
 Hooks.on("renderActorSheet5e", (app, html, data) => {
-  SpellPoints.mixedMode(app, html, data);
+  SpellPoints.alterCharacterSheet(app, html, data);
 });
 
 /**

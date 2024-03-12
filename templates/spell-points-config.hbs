@@ -1,0 +1,21 @@
+<form>
+
+  <div class="form-group dnd5e2 item">
+    <img class="item-image gold-icon" src="{{img}}" style="max-width:52px;margin-right:10px" alt="{{name}}" />
+    <input type="number" class="number-lg" name="uses.max" value="{{uses.max}}" placeholder="{{uses.max}}"
+      data-tooltip="{{localize 'dnd5e-spellpoints.maxSpellPointsOverride'}} {{name}}">
+  </div>
+
+  <hr>
+  <div class="form-group">
+    <label>{{localize "DND5E.per"}}</label>
+    <select name="uses.per" style="flex: 1;">
+      {{selectOptions recovery selected=uses.per blank=(localize "DND5E.None")}}
+    </select>
+  </div>
+  
+
+  <button type="submit">
+    <i class="far fa-save"></i> {{localize "Save"}}
+  </button>
+</form>

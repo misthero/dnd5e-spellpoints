@@ -87,3 +87,12 @@ div.spell-points-hidden {
   height: auto !important;
   overflow: hidden;
 }
+
+#spellpoints-form .description.new-item {
+  border: 1px solid #24a795;
+  margin: 5px;
+  padding: 0 10px 10px;
+  border-radius: 5px;
+  background: #00a9aa33;
+  text-align: center;
+}

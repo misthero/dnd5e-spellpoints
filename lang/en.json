@@ -53,5 +53,15 @@
     "dnd5e-spellpoints.warlockUseSpNote": "By default warlocks cannot use the spellpoints system, enabling this they will be able to do it like other casters.",
     "dnd5e-spellpoints.chatMessagePrivateLabel": "Private Spell Points usage messages.",
     "dnd5e-spellpoints.chatMessagePrivateNote": "Enabling this setting the chat messages about how many Spell Points have been used, will be visible by the GM and the current player, other players will not see the message.",
-    "dnd5e-spellpoints.consumeSpellSlotInput": "Consume {SpellPoints}"
+    "dnd5e-spellpoints.consumeSpellSlotInput": "Consume {SpellPoints}",
+    "dnd5e-spellpoints.maxSpellPointsOverride": "Maximum",
+    "dnd5e-spellpoints.ItemConfig": "Configure",
+    "dnd5e-spellpoints.alreadySpItemOwned": "There is already a spell point item on this character, please remove the duplicate.",
+    "dnd5e-spellpoints.oldResourceFound": "Found an old Spell Point resource.",
+    "dnd5e-spellpoints.oldResourceFoundDesc": "An old resource has been found on this character for use with Spell Points, would you like to import the resource data and remove it?",
+    "dnd5e-spellpoints.enableModule": "Enable SpellPoints Module",
+    "dnd5e-spellpoints.enableModuleHint": "Enables or disables spellpoints for casting spells, this will override the slot cost for player tokens.",
+    "dnd5e-spellpoints.settingsTitle": "Spell Points Module Settings.",
+    "dnd5e-spellpoints.newV3ItemUsage": "Since D&D system update to v3 the usage of 'resources' has been deprecated, you should now add the item (included with this module compendium) to any character that needs spellpoints instead of spellslots. The following is a shortcut to the item:",
+    "dnd5e-spellpoints.duplicated": "Duplicated. Please remove."
 }

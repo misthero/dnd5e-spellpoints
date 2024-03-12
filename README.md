@@ -1,9 +1,14 @@
 # Advanced Magic - Spell Points System 5e
 FoundryVTT module for Spell Point System in D&D5e
 
+## D&D System V3+ notes:
+The module has been update for compatibility to D&D v3. Starting from version 2.0.0 of this module it will not be compatible with previous versions of the Foundry D&D system.
+Now it uses "Items" to allow a character to cast using spell points instead of a resource.
+The Spell Point Feature item is in a compendium included with the module starting from v2, you need to drag the item to your character sheet to enable it for that character.
+
 **Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!**
 
-This module uses the optional rules found in the DMG to allow character to cast spells using a resource named "Spell Points"
+This module uses the optional rules found in the DMG to allow character to cast spells using a resource named "Spell Points". It also allow to create your custom Spell Points / Mana rules and advancement system.
 
 ## Changelog
 https://github.com/misthero/dnd5e-spellpoints/blob/main/CHANGELOG.md
@@ -11,8 +16,8 @@ https://github.com/misthero/dnd5e-spellpoints/blob/main/CHANGELOG.md
 ## Installation Instructions
 - Copy "https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json" into the module installer inside foundry when it asks for the manifest.
 - Launch your world go to settings -> module settings and enable the module `dnd5e-spellpoints`.
-- Choose the name of the resource to use as Spell Points (default "Spell Points") you can change the name in module settings.
-- Create a new resource with the name "Spell Points" on every character sheet. (Hint: if any of your player need more resources you can use the module https://github.com/ardittristan/5eSheet-resourcesPlus/tree/master)
+- Choose the name of the resource to use as Spell Points (default "Spell Points") you can change the name in module settings. (v1 only)
+- Create a new resource with the name "Spell Points" on every character sheet. (Hint: if any of your player need more resources you can use the module https://github.com/ardittristan/5eSheet-resourcesPlus/tree/master)(v1 only)
 - The module will calculate Spell Points automatically when you add a new class item or level up your class. You can even create your own formula for calculating Spell Points.
 
 

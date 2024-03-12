@@ -1,4 +1,4 @@
-import { MODULE_NAME } from "./main.js";
+import { MODULE_NAME, ITEM_ID } from "./main.js";
 import { SpellPoints } from "./spellpoints.js";
 
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -15,12 +15,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 * SPELL POINTS APPLICATION SETTINGS FORM
 */
 export class SpellPointsForm extends FormApplication {
+
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
       title: game.i18n.localize('dnd5e-spellpoints.form-title'),
       id: 'spellpoints-form',
       template: `modules/${MODULE_NAME}/templates/spellpoint-config.html`,
-      width: 500,
+      width: 700,
       closeOnSubmit: true
     });
   }
@@ -32,7 +33,7 @@ export class SpellPointsForm extends FormApplication {
    *   2) Default settings
    *   3) The available formulas
    */
-  getData(options) {
+  async getData(options) {
     let data = mergeObject(
       {
         spFormulas: Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]))
@@ -40,7 +41,13 @@ export class SpellPointsForm extends FormApplication {
       this.reset ? mergeObject(SpellPoints.defaultSettings, { requireSave: true }) : mergeObject(SpellPoints.settings, { requireSave: false })
     );
     this.reset = false;
+    data.item_id = ITEM_ID;
     return data;
+  }
+
+  async getLink() {
+    let link = await TextEditor.enrichHTML("@UUID[Compendium.dnd5e-spellpoints.module-items.Item." + ITEM_ID + "]{Spell Points}");
+    console.log(link); // This will log the HTML string only
   }
 
   onReset() {

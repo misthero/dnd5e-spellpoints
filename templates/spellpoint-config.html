@@ -9,6 +9,7 @@
         value="{{ isCustom }}"
       />
     </div>
+
     {{#each spellPointsByLevel as |cost level|}}
     <div class="form-group spell-points-hidden">
       <textarea name="spellPointsByLevel.{{level}}">{{ cost }}</textarea>
@@ -24,6 +25,19 @@
         value="{{ spResource }}"
       />
       <p class="notes">{{localize "dnd5e-spellpoints.resourceNote"}}</p>
+    </div>
+    <div class="description new-item">
+      <p>{{localize "dnd5e-spellpoints.newV3ItemUsage"}}</p>
+      <a
+        class="content-link"
+        draggable="true"
+        data-uuid="Compendium.dnd5e-spellpoints.module-items.Item.{{ item_id }}"
+        data-id="{{ item_id }}"
+        data-type="Item"
+        data-pack="dnd5e-spellpoints.module-items"
+        data-tooltip="Feature Item"
+        ><i class="fas fa-suitcase"></i>Spell Points</a
+      >
     </div>
 
     <div class="form-group">
