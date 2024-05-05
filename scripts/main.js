@@ -6,7 +6,7 @@ export const ITEM_ID = 'LUSjG8364p7LFY1u';
 
 export let dndV3 = false;
 
-CONFIG.debug.hooks = true;
+CONFIG.debug.hooks = false;
 
 Handlebars.registerHelper("spFormat", (path, ...args) => {
   return game.i18n.format(path, args[0].hash);

@@ -83,9 +83,13 @@ Spell Point Multiplier
 
 ## Making Your Own Formula
 
-Create a macro with the following script:
+Foundry VTT V9: Create a macro with the following script:
 ```js
 console.log(actor.data.data)
+```
+Foundry VTT V10+: Create a macro with the following script:
+```js
+console.log(actor.getRollData())
 ```
 
 While selecting a token, execute the macro. Then, look at the console. This will tell you all the data that is available to you when writing a formula.
@@ -95,7 +99,7 @@ You can test out a formula by rolling it in chat while selecting a token. The fo
 /roll { @abilities.wis.mod,  @abilities.int.mod,  @abilities.cha.mod}kh
 ```
 
-It is also possible to add a module or create your own module that edits or adds information to `actor.data.data`. This new information will be available to the formulas with no concerns over compatibility.
+It is also possible to add a module or create your own module that edits or adds information to `actor.system`. This new information will be available to the formulas with no concerns over compatibility.
 
 
 ## To do

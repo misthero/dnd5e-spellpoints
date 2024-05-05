@@ -22,3 +22,7 @@
 - 1.5.1 Dnd5e 2.2+ compatibility bugfix
 - 1.5.3 Dnd5e 2.4+ compatibility bugfix
 - 2.0.0 Module refactor, DnD5e v3+ compatibility. Removed resource and using items.
+- 2.1.0 Bugfix
+  - Fixed readme
+  - Removed message to create resource if actor doesn't have spell point item.
+  - New feature, enable for NPC (setting available to enable or disable this feature)

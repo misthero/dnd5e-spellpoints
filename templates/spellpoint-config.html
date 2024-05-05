@@ -76,6 +76,18 @@
     </div>
 
     <div class="form-group">
+      <label>{{localize "dnd5e-spellpoints.enableForNpcLabel"}}</label>
+      <input
+        type="checkbox"
+        name="enableForNpc"
+        data-dtype="Boolean"
+        {{checked
+        enableForNpc}}
+      />
+      <!-- <p class="notes">{{localize "dnd5e-spellpoints.enableForNpcNote"}}</p> -->
+    </div>
+
+    <div class="form-group">
       <label>{{localize "dnd5e-spellpoints.chatMessagePrivateLabel"}}</label>
       <input
         type="checkbox"

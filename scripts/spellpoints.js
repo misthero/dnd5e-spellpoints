@@ -15,6 +15,7 @@ export class SpellPoints {
       spAutoSpellpoints: false,
       spFormula: 'DMG',
       warlockUseSp: false,
+      enableForNpc: false,
       chatMessagePrivate: false,
       spellPointsByLevel: { 1: 4, 2: 6, 3: 14, 4: 17, 5: 27, 6: 32, 7: 38, 8: 44, 9: 57, 10: 64, 11: 73, 12: 73, 13: 83, 14: 83, 15: 94, 16: 94, 17: 107, 18: 114, 19: 123, 20: 133 },
       spellPointsCosts: { 1: 2, 2: 3, 3: 5, 4: 6, 5: 7, 6: 9, 7: 10, 8: 11, 9: 13 },
@@ -60,7 +61,12 @@ export class SpellPoints {
   }
 
   static isActorCharacter(actor) {
-    return getProperty(actor, "type") == "character";
+    const isActor = getProperty(actor, "type") == "character";
+    let isNPC = false;
+    if (this.settings.enableForNpc && !isActor) {
+      isNPC = getProperty(actor, "type") == "npc";
+    }
+    return isNPC || isActor;
   }
 
   static getActorFlagSpellPointItem(actor) {
@@ -109,6 +115,7 @@ export class SpellPoints {
       return false;
     }
     return sp[0];
+
   }
 
   /** check what resource is spellpoints on this actor **/
@@ -373,13 +380,13 @@ export class SpellPoints {
 
     if (!spellPointResource && !spellPointItem) {
       // this actor has no spell point resource what to do?
-      let messageCreate;
+      /*let messageCreate;
       if (dndV3) {
         messageCreate = game.i18n.format("dnd5e-spellpoints.pleaseCreateV3", { SpellPoints: this.settings.spResource });
       } else {
         messageCreate = game.i18n.format("dnd5e-spellpoints.pleaseCreate", { SpellPoints: this.settings.spResource });
       }
-      $('#ability-use-form', html).append('<div class="spError">' + messageCreate + '</div>');
+      $('#ability-use-form', html).append('<div class="spError">' + messageCreate + '</div>'); */
       return;
     }
 
