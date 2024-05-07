@@ -63,5 +63,6 @@
     "dnd5e-spellpoints.enableModuleHint": "Habilita ou desabilita spell points para conjurar magias. Isso desabilita o custo de espaço de magia para os tokens de jogadores.",
     "dnd5e-spellpoints.settingsTitle": "Configurações do Módulo de Spell Points.",
     "dnd5e-spellpoints.newV3ItemUsage": "Desde que o sistema D&D atualizou para a v3, o uso de 'recursos' foi descontinuado. Você deve agora adicionar o item (incluído no compendium deste módulo) para todo personagem que precisa usar spell points ao invés de espaços de magia. O seguinte é um atalho para o item:",
-    "dnd5e-spellpoints.duplicated": "Duplicado. Por favor, delete."
+    "dnd5e-spellpoints.duplicated": "Duplicado. Por favor, delete.",
+    "dnd5e-spellpoints.enableForNpcLabel": "Habilitar Spell Points para atores PnJs"
 }
