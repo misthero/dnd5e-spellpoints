@@ -5,10 +5,10 @@ FoundryVTT module for using  Spell Point in D&D5e
 ## D&D System V3+ notes
 
 The module has been update for compatibility to D&D v3. Starting from version 2.0.0 of this module it will not be compatible with previous versions of the Foundry D&D system.
-Now it uses "Items" to allow a character to cast using spell points instead of a resource.
-The Spell Point Feature item is in a compendium included with the module starting from v2, you need to drag the item to your character sheet to enable it for that character.
+Now it uses "Items" to allow a character to cast using spell points instead of a resource. Each Spell Points Item can be configured indipendently or follow the global settings.
+The Spell Point Item is in a compendium included with the module starting from v2, you need to drag the item to your character sheet to enable it for that character.
 
-**Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!**
+### Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!
 
 This module uses the variant rules found in the DMG to allow character to cast spells using a resource named "Spell Points". It also allow to create your custom Spell Points / Mana rules and advancement system.
 
@@ -66,6 +66,11 @@ You are ready to go, now spells cast by player's characters will use spell point
 
 #### You can override the settings for a specific item or a specific character to have unique progression and costs.
 [<img src="https://github.com/misthero/dnd5e-spellpoints/assets/3662610/22e0c899-779a-4825-b582-42e29112f764" width="600px"/>](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/22e0c899-779a-4825-b582-42e29112f764)
+
+#### It's possible to have multiple spellpoints items each one with different settings.
+![immagine](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/9a1ee654-70fe-43d7-bfa5-20de03f70ed4)
+
+
 ## Example Custom Formulas
 
 ### DMG
