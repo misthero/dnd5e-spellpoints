@@ -68,6 +68,18 @@
       "name": "Español",
       "path": "lang/es.json",
       "flags": {}
+    },
+    {
+      "lang": "fr",
+      "name": "Français",
+      "path": "lang/fr.json",
+      "flags": {}
+    },
+    {
+      "lang": "de",
+      "name": "Deutsch",
+      "path": "lang/de.json",
+      "flags": {}
     }
   ]
 }

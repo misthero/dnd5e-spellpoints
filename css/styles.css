@@ -1,3 +1,8 @@
+:root {
+  --sp-left-color: #3a0e5f;
+  --sp-right-color: #8a40c7;
+}
+
 .spError {
   text-align: center;
   color: #b50e0e;
@@ -70,7 +75,12 @@ input.spEnableInput.visually-hidden:checked+.spEnableCheck:before {
 
 textarea.spellPoints {
   width: 100%;
-  resize: none;
+  resize: vertical;
+  min-height: 2em;
+}
+
+textarea.spellPoints[name="spCustomFormulaBase"] {
+  min-height: 5em;
 }
 
 div.spell-points-hidden {
@@ -78,8 +88,8 @@ div.spell-points-hidden {
 }
 
 .sheet.actor.character .sheet-body .sidebar .card .meter.sp-points .progress::before {
-  background: linear-gradient(to right, #3a0e5f 0%, #8a40c7 100%);
-  border-right: var(--border-width) solid #3a0e5f;
+  background: linear-gradient(to right, var(--sp-left-color) 0%, var(--sp-right-color) 100%);
+  border-right: var(--border-width) solid var(--sp-left-color);
   border-radius: 4px 0 0 4px;
 }
 
@@ -95,4 +105,69 @@ div.spell-points-hidden {
   border-radius: 5px;
   background: #00a9aa33;
   text-align: center;
+}
+
+#spellpoints-form {
+  min-width: min(600px, 100vw);
+}
+
+#spellpoints-form .window-content {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#spellpoints-form .spFormTitle {
+  position: sticky;
+  top: 0;
+  padding: 5px 0;
+  background-image: url(/ui/parchment.jpg);
+  background-color: #dbdacf;
+}
+
+#spellpoints-form footer {
+  position: sticky;
+  bottom: 0;
+  padding: 5px 0;
+  background-image: url(/ui/parchment.jpg);
+  background-color: #dbdacf;
+}
+
+input.number-lg.spellpoints_value {
+  margin-right: 10px;
+}
+
+/** item config **/
+
+.spellpoints.item-config {
+  margin: 0 0 20px;
+  background: #00000006;
+  border: 3px double #aaa;
+}
+
+.spellpoints.item-config .accordion-content {
+  padding: 5px;
+}
+
+.spellpoints.item-config .spellpoints-costs>label {
+  flex: 3;
+}
+
+.bordered {
+  border: 1px solid #796161;
+  padding: 10px;
+  margin: 15px 0;
+  background: #449ac514;
+  border-radius: 3px;
+}
+
+.spell-points-types {
+  text-align: center;
+}
+
+.spell-points-types span {
+  display: block;
+}
+
+.spell-points-types input {
+  width: 2em;
 }

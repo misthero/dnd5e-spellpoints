@@ -20,9 +20,12 @@ export class SpellPointsForm extends FormApplication {
     return mergeObject(super.defaultOptions, {
       title: game.i18n.localize('dnd5e-spellpoints.form-title'),
       id: 'spellpoints-form',
-      template: `modules/${MODULE_NAME}/templates/spellpoint-config.html`,
+      template: `modules/${MODULE_NAME}/templates/spellpoint-module-config.hbs`,
       width: 700,
-      closeOnSubmit: true
+      height: 600,
+      //closeOnSubmit: true,
+      submitOnChange: true,
+      resizable: true
     });
   }
 
@@ -34,20 +37,21 @@ export class SpellPointsForm extends FormApplication {
    *   3) The available formulas
    */
   async getData(options) {
+    console.log('getData', SpellPoints.defaultSettings);
     let data = mergeObject(
       {
         spFormulas: Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]))
       },
-      this.reset ? mergeObject(SpellPoints.defaultSettings, { requireSave: true }) : mergeObject(SpellPoints.settings, { requireSave: false })
+      this.reset ? mergeObject(SpellPoints.settings, SpellPoints.defaultSettings, { insertKeys: true, insertValues: true, overwrite: true, recursive: true, performDeletions: true }) : mergeObject(SpellPoints.settings, { requireSave: false })
     );
     this.reset = false;
     data.item_id = ITEM_ID;
+    SpellPoints.setSpColors();
     return data;
   }
 
   async getLink() {
     let link = await TextEditor.enrichHTML("@UUID[Compendium.dnd5e-spellpoints.module-items.Item." + ITEM_ID + "]{Spell Points}");
-    console.log(link); // This will log the HTML string only
   }
 
   onReset() {
@@ -68,10 +72,15 @@ export class SpellPointsForm extends FormApplication {
     }
   }
 
-  _updateObject(event, formData) {
+  _updateObject(event, formData, hideMessage) {
+    var that = this;
     return __awaiter(this, void 0, void 0, function* () {
       let settings = mergeObject(SpellPoints.settings, formData, { insertKeys: true, insertValues: true });
       yield game.settings.set(MODULE_NAME, 'settings', settings);
+      that.render();
+      if (!hideMessage) {
+        ui.notifications.info("settings saved");
+      }
     });
   }
 
@@ -89,22 +98,18 @@ export class SpellPointsForm extends FormApplication {
    * @param {object} event The data detailing the change in the form.
    */
   _onChangeInput(event) {
+    var $form_element = $('form', $(event.delegateTarget));
+    const spFormData = new FormData($form_element[0]);
+
+    let newSettings = this._getSubmitData(spFormData);
+    console.log('newSettings change input', newSettings);
     const input_name = event.originalEvent.target.name
     if (input_name == "spFormula") {
       const input_value = event.originalEvent.target.value;
-      const formulaOverrides = SpellPoints.formulas[input_value]
-      const isCustom = (formulaOverrides.isCustom || "").toString().toLowerCase() == "true"
-      for (let elementName in formulaOverrides) {
-        if (formulaOverrides[elementName] instanceof Object) {
-          for (let elementSubName in formulaOverrides[elementName]) {
-            super.element[0].querySelector(`[name='${elementName}.${elementSubName}']`).value = formulaOverrides[elementName][elementSubName];
-          }
-        } else {
-          super.element[0].querySelector(`[name='${elementName}']`).value = formulaOverrides[elementName];
-        }
-      }
-
-      this.setCustomOnlyVisibility(isCustom);
+      const formulaOverrides = SpellPoints.formulas[input_value];
+      newSettings = mergeObject(newSettings, formulaOverrides);
     }
+    console.log('newSettings change input', newSettings);
+    this._updateObject(event, newSettings, true);
   }
 } /** end SpellPointForm **/

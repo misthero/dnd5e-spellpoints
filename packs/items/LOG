@@ -1,5 +1,5 @@
-2024/03/11-08:18:53.435 d60 Recovering log #7
-2024/03/11-08:18:53.435 d60 Level-0 table #9: started
-2024/03/11-08:18:53.439 d60 Level-0 table #9: 1238 bytes OK
-2024/03/11-08:18:53.453 d60 Delete type=0 #7
-2024/03/11-08:18:53.454 d60 Delete type=3 #6
+2024/05/11-07:34:19.329 4ad4 Recovering log #72
+2024/05/11-07:34:19.329 4ad4 Level-0 table #74: started
+2024/05/11-07:34:19.333 4ad4 Level-0 table #74: 16969 bytes OK
+2024/05/11-07:34:19.347 4ad4 Delete type=0 #72
+2024/05/11-07:34:19.347 4ad4 Delete type=3 #71
