@@ -55,6 +55,17 @@ You are ready to go, now spells cast by player's characters will use spell point
 - Configurable SpellPoint Cost for each spell level for non-liear progression.
 - You can also share your custom spellpoints item.
 
+#### Drag your item on character sheet.
+[<img src="https://github.com/misthero/dnd5e-spellpoints/assets/3662610/7730f934-b995-4494-82e0-fdd9b0b91bb2" width="600px"/>](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/7730f934-b995-4494-82e0-fdd9b0b91bb2)
+
+#### The spell points tracker will appear.
+[<img src="https://github.com/misthero/dnd5e-spellpoints/assets/3662610/5b761ba5-2229-40a7-9654-35cc1821725b" width="600px"/>](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/5b761ba5-2229-40a7-9654-35cc1821725b)
+
+#### Spells will automatically check spell points for casting and deselect Slots.
+[<img src="https://github.com/misthero/dnd5e-spellpoints/assets/3662610/3422b30e-db0d-4d0e-938f-f38e27c4d386" width="600px"/>](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/3422b30e-db0d-4d0e-938f-f38e27c4d386)
+
+#### You can override the settings for a specific item or a specific character to have unique progression and costs.
+[<img src="https://github.com/misthero/dnd5e-spellpoints/assets/3662610/22e0c899-779a-4825-b582-42e29112f764" width="600px"/>](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/22e0c899-779a-4825-b582-42e29112f764)
 ## Example Custom Formulas
 
 ### DMG
