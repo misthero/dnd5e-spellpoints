@@ -37,7 +37,6 @@ export class SpellPointsForm extends FormApplication {
    *   3) The available formulas
    */
   async getData(options) {
-    console.log('getData', SpellPoints.defaultSettings);
     let data = mergeObject(
       {
         spFormulas: Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]))
@@ -79,7 +78,7 @@ export class SpellPointsForm extends FormApplication {
       yield game.settings.set(MODULE_NAME, 'settings', settings);
       that.render();
       if (!hideMessage) {
-        ui.notifications.info("settings saved");
+        ui.notifications.info(game.i18n.format("dnd5e-spellpoints.settingSaved"));
       }
     });
   }
@@ -102,14 +101,13 @@ export class SpellPointsForm extends FormApplication {
     const spFormData = new FormData($form_element[0]);
 
     let newSettings = this._getSubmitData(spFormData);
-    console.log('newSettings change input', newSettings);
     const input_name = event.originalEvent.target.name
     if (input_name == "spFormula") {
       const input_value = event.originalEvent.target.value;
       const formulaOverrides = SpellPoints.formulas[input_value];
       newSettings = mergeObject(newSettings, formulaOverrides);
     }
-    console.log('newSettings change input', newSettings);
+
     this._updateObject(event, newSettings, true);
   }
 } /** end SpellPointForm **/

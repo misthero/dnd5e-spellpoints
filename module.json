@@ -2,7 +2,7 @@
   "id": "dnd5e-spellpoints",
   "title": "Advanced Magic - Spell Points System 5e",
   "description": "FoundryVTT module for Spell Points System in D&amp;D5e. This module use the optional rules found on DMG to allow character to cast spells using a resource named 'Spell Points'",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "compatibility": {
     "minimum": "11",
     "verified": "11.315"
@@ -80,6 +80,20 @@
       "name": "Deutsch",
       "path": "lang/de.json",
       "flags": {}
+    }
+  ],
+  "media": [
+    {
+      "type": "icon",
+      "url": "modules/dnd5e-spellpoints/img/mana-icon.webp"
+    },
+    {
+      "type": "setup",
+      "url": "modules/dnd5e-spellpoints/img/AdvancedMagic.webp"
+    },
+    {
+      "type": "cover",
+      "url": "modules/dnd5e-spellpoints/img/AdvancedMagic.webp"
     }
   ]
 }

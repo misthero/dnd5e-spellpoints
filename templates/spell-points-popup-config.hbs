@@ -1,27 +1,55 @@
 <form>
   <div class="form-group dnd5e2 item">
-    <img class="item-image gold-icon" src="{{img}}"
-      style="max-width:52px;margin-right:10px" alt="{{name}}" />
-    <input type="number" class="number-lg spellpoints_value" name="uses.value"
+    <img
+      class="item-image gold-icon"
+      src="{{img}}"
+      style="max-width:52px;margin-right:10px"
+      alt="{{name}}"
+    />
+    <input
+      type="number"
+      class="number-lg spellpoints_value"
+      name="uses.value"
       value="{{uses.value}}"
       placeholder="{{uses.value}}"
-      data-tooltip="{{localize "dnd5e-spellpoints.currentSpellPointsOverride"
-      SpellPoints=name }}">
-    <input type="number" class="number-lg spellpoints_max" name="uses.max"
+      data-tooltip="{{
+        localize "dnd5e-spellpoints.currentSpellPointsOverride" SpellPoints=name
+      }}"
+    />
+    <input
+      type="number"
+      class="number-lg spellpoints_max"
+      name="uses.max"
       value="{{uses.max}}"
       placeholder="{{uses.max}}"
-      data-tooltip="{{localize 'dnd5e-spellpoints.maxSpellPointsOverride' SpellPoints=name}} {{name}}">
+      data-tooltip="{{
+        localize "dnd5e-spellpoints.maxSpellPointsOverride" SpellPoints=name
+      }} {{name}}"
+    />
   </div>
 
-  <hr>
+  <hr />
   <div class="form-group">
-    <label>{{localize "DND5E.per"}}</label>
+    <label>
+      {{localize "DND5E.per"}}
+    </label>
     <select name="uses.per" style="flex: 1;">
       {{selectOptions recovery selected=uses.per blank=(localize "DND5E.None")}}
     </select>
   </div>
+  <div class="form-group">
+    {{#if formula}}
+      <input
+        type="text"
+        name="uses.recovery"
+        value="{{uses.recovery}}"
+        data-formula-editor=""
+      />
+    {{/if}}
+  </div>
 
   <button type="submit">
-    <i class="far fa-save"></i> {{localize "Save"}}
+    <i class="far fa-save"></i>
+    {{localize "Save"}}
   </button>
 </form>

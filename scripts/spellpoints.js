@@ -34,7 +34,8 @@ export class SpellPoints {
       leveledProgressionFormula: { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "", 10: "", 11: "", 12: "", 13: "", 14: "", 15: "", 16: "", 17: "", 18: "", 19: "", 20: "" },
       spGmOnly: true,
       spColorL: '#3a0e5f',
-      spColorR: '#8a40c7'
+      spColorR: '#8a40c7',
+      spAnimateBar: true
     };
   }
 
@@ -78,6 +79,11 @@ export class SpellPoints {
   static setSpColors() {
     document.documentElement.style.setProperty('--sp-left-color', SpellPoints.settings.spColorL);
     document.documentElement.style.setProperty('--sp-right-color', SpellPoints.settings.spColorR);
+    if (SpellPoints.settings.spAnimateBar) {
+      document.documentElement.style.setProperty('--sp-animation-name', 'scroll');
+    } else {
+      document.documentElement.style.setProperty('--sp-animation-name', 'none');
+    }
   }
 
   static isModuleActive() {
@@ -542,8 +548,6 @@ export class SpellPoints {
     let levelUpdated = false;
     const leveledProgression = settings.spUseLeveled;
 
-    console.log("_calculateSpellPointsFixed", leveledProgression);
-
     if (getProperty(updates.system, 'levels')) {
       changedClassLevel = getProperty(updates.system, 'levels');
       changedClassID = getProperty(item, '_id');
@@ -577,8 +581,6 @@ export class SpellPoints {
 
     }
 
-    console.log("spellcastingLevels", spellcastingLevels);
-
     let totalSpellcastingLevel = 0
     totalSpellcastingLevel += spellcastingLevels['full'].reduce((sum, level) => sum + level, 0);
     totalSpellcastingLevel += spellcastingLevels['pact'].reduce((sum, level) => sum + level, 0);
@@ -592,8 +594,6 @@ export class SpellPoints {
       totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => sum + Math.floor(level / 2), 0);
       totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => sum + Math.floor(level / 3), 0);
     }
-
-    console.log("totalSpellcastingLevel", totalSpellcastingLevel);
 
     if (totalSpellcastingLevel == 0)
       return 0;
@@ -672,8 +672,6 @@ export class SpellPoints {
       return true;
     }
 
-    console.log("UPDATE SPELL POINTS", settings.isCustom, settings.spUseLeveled);
-
     const isCustom = settings.isCustom;
     const spUseLeveled = settings.spUseLeveled;
     const SpellPointsMax = isCustom && !spUseLeveled ? SpellPoints._calculateSpellPointsCustom(actor, settings) : SpellPoints._calculateSpellPointsFixed(classItem, updates, actor, settings)
@@ -685,7 +683,7 @@ export class SpellPoints {
       });
 
       let SpeakTo = game.users.filter(u => u.isGM);
-      let message = "SPELLPOINTS: Found '" + SpellPoints.settings.spResource + "' on " + actorName + " character sheet! Your Maximum " + SpellPoints.settings.spResource + " have been updated.";
+      let message = game.i18n.format("dnd5e-spellpoints.spellPointsFound", { SpellPoints: (dndV3 ? spellPointsItem.name : SpellPoints.settings.spResource), Actor: actorName })
       ChatMessage.create({
         content: "<i style='color:green;'>" + message + "</i>",
         speaker: ChatMessage.getSpeaker({ alias: actorName }),
@@ -793,42 +791,35 @@ export class SpellPoints {
    * @param data - The data object passed to the sheet.
    * @returns The return value is the html_checkbox variable.
    */
-  static alterCharacterSheet(app, html, data, type) {
+  static async alterCharacterSheet(app, html, data, type) {
     if (!this.isModuleActive() || data.actor.type != "character") {
       return;
     }
     const actor = data.actor;
     const SpellPointsItem = this.getSpellPointsItem(actor);
-    if (dndV3 && SpellPointsItem && type == 'v2') {
-      let value = SpellPointsItem.system.uses.value;
-      let max = SpellPointsItem.system.uses.max;
-      let percent = value / max * 100;
-      if (percent > 100)
-        percent = 100;
-      let html_spellpoints = '<div class="meter-group">';
-      html_spellpoints += '<div class="label roboto-condensed-upper"><span>' + SpellPointsItem.name + '</span>';
-      if (data.editable) {
-        let cog = '<a class="config-button spellPoints" data-action="spellPoints" ';
-        cog += 'data-tooltip="' + game.i18n.localize("dnd5e-spellpoints.ItemConfig") + ' ' + SpellPointsItem.name + '" ';
-        cog += 'aria-label="' + game.i18n.localize("dnd5e-spellpoints.ItemConfig") + ' ' + SpellPointsItem.name + '"><i class="fas fa-cog" ></i></a>';
-        html_spellpoints += cog;
+    if (dndV3 && SpellPointsItem) {
+      const value = SpellPointsItem.system.uses.value;
+      const max = SpellPointsItem.system.uses.max;
+      let percent = value / max * 100 > 100 ? 100 : value / max * 100;
+      const template_data = {
+        'isV2': type == 'v2',
+        'editable': data.editable,
+        'name': SpellPointsItem.name,
+        '_id': SpellPointsItem._id,
+        'max': max,
+        'value': value,
+        'percent': percent,
       }
-      html_spellpoints += '</div>';
-      html_spellpoints += '<div class="meter sectioned sp-points" data-item-id="' + SpellPointsItem._id + '" data-entry-id="' + SpellPointsItem._id + '" data-item-name="' + SpellPointsItem.name + '">';
-      html_spellpoints += '<div class="progress sp-points" role="meter" aria-valuemin="0" aria-valuenow="' + value + '" aria-valuemax="' + max + '" style="--bar-percentage: ' + percent + '%">';
-      html_spellpoints += '<div class="label">';
-      html_spellpoints += '<span class="value">' + value + '</span>';
-      html_spellpoints += '<span class="separator">/</span>';
-      html_spellpoints += '<span class="max">' + max + '</span>';
-      html_spellpoints += '</div>';
-      html_spellpoints += '<input type="text" data-name="system.uses.value" data-dtype="Number" placeholder="0" value="' + value + '" inputmode="numeric" pattern="[0-9+=\-]* "hidden="">';
-      html_spellpoints += '<input type="text" value="' + max + '" placeholder="0" data-dtype="Number" data-name="system.uses.max" inputmode="numeric" pattern="[0-9+=\-]*" hidden="">';
-      html_spellpoints += '</div>';
-      html_spellpoints += '</div>';
+      const template_file = "modules/dnd5e-spellpoints/templates/spell-points-sheet-tracker.hbs";
+      const rendered_html = await renderTemplate(template_file, template_data);
 
-      $('.sidebar .stats', html).append(html_spellpoints);
+      if (type == 'v2') {
+        $('.sidebar .stats', html).append(rendered_html);
+      } else {
+        $('.header-details .attributes', html).append(rendered_html);
+      }
 
-      $('.config-button.spellPoints').on('click', function (event) {
+      $('.config-button.spellPoints').off('click').on('click', function (event) {
         event.preventDefault();
         event.stopPropagation();
         let config = new ActorSpellPointsConfig(SpellPointsItem);
@@ -840,7 +831,7 @@ export class SpellPoints {
   static async renderSpellPointsItem(app, html, data) {
     const item = data?.item;
     if (this.isModuleActive() && SpellPoints.isSpellPointsItem(item)) {
-      //app.options.submitOnChange = false;
+      app.options.submitOnChange = false;
       $('.item-properties', html).hide();
       if (data.editable && (game.user.isGM || SpellPoints.settings?.spGmOnly == false)) {
         let data_object = item; // data object to pass to the template
@@ -942,7 +933,8 @@ class ActorSpellPointsConfig extends DocumentSheet {
       uses: this.clone.system.uses,
       img: this.clone.img,
       name: this.clone.name,
-      recovery: game.system.config.limitedUsePeriods
+      recovery: game.system.config.limitedUsePeriods,
+      formula: game.system.config.limitedUsePeriods[this.clone.system.uses.per]?.formula
     };
   }
 
@@ -959,7 +951,6 @@ class ActorSpellPointsConfig extends DocumentSheet {
   async _updateObject(event, formData) {
     const uses = foundry.utils.expandObject(formData).uses
     return this.document.update({ "system.uses": uses });
-
   }
 
   /* -------------------------------------------- */

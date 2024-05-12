@@ -53,17 +53,28 @@
         </div>
       </div>
       <!-- Spell points Color -->
-      <h3>Spell Points bar color</h3>
-      <div
-        class="color_exhample"
-        style="border-radius:4px;height:15px;background:linear-gradient(to right, {{spColorL}} 0%, {{spColorR}} 100%)"></div>
+      <h3>{{localize "dnd5e-spellpoints.spResourceBarSetting"}}</h3>
+      <div class="dnd5e2">
+        <div class="color_test dnd5e2 meter"><label class="label"><span class="value">42</span><span class="separator">/</span><span class="max">42</span></label></div>
+      </div>
       <div class="form-group" style="gap:15px;">
         <div class="form-group">
-          <label>Left Color: </label> <input type="color" value="{{spColorL}}" name="spColorL" /> <i class="notes"> Default: #3a0e5f </i>
+          <label>{{localize "dnd5e-spellpoints.spResourceBarLeftColor"}}: </label> <input type="color" value="{{spColorL}}" name="spColorL" /> <i class="notes"> Default: #3a0e5f </i>
         </div>
         <div class="form-group">
-          <label>Right Color: </label> <input type="color" value="{{spColorR}}" name="spColorR" /> <i class="notes"> Default: #8a40c7 </i>
+          <label>{{localize "dnd5e-spellpoints.spResourceBarRightColor"}}: </label> <input type="color" value="{{spColorR}}" name="spColorR" /> <i class="notes"> Default: #8a40c7 </i>
         </div>
+      </div>
+      <div class="form-group">
+        <label>
+          {{localize "dnd5e-spellpoints.spResourceBarAnimate"}}
+        </label>
+        <input
+          type="checkbox"
+          name="spAnimateBar"
+          data-dtype="Boolean"
+          {{checked spAnimateBar}}
+        />
       </div>
       <hr>
       <!-- Choose Preset -->

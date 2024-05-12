@@ -1,0 +1,43 @@
+{{#if isV2}}
+  <div class="meter-group">
+    <div class="label roboto-condensed-upper"><span>{{name}}</span>
+  {{#if editable}}
+    <a class="config-button spellPoints" data-action="spellPoints" 
+      data-tooltip="{{localize "dnd5e-spellpoints.ItemConfig"}} {{ name }}"
+      aria-label="{{localize "dnd5e-spellpoints.ItemConfig"}} {{name}}"><i class="fas fa-cog" ></i></a>
+  {{/if}}
+    </div>
+    <div class="meter sectioned sp-points" data-item-id="{{_id}}" data-entry-id="{{_id}}" data-item-name="{{name}}">
+      <div class="progress sp-points" role="meter" aria-valuemin="0" aria-valuenow="{{value}}" aria-valuemax="{{max}}" style="--bar-percentage: {{percent}}%">
+      <div class="label">
+        <span class="value">{{value}}</span>
+        <span class="separator"> / </span>
+        <span class="max">{{max}}</span>
+      </div>
+    </div>
+  </div>
+{{else}}
+<li class="attribute initiative">
+  <h4 class="attribute-name box-title">
+    {{name}}
+  </h4>
+  <a
+    class="config-button spellPoints"
+    data-action="spellpoints"
+    data-tooltip="DND5E.InitiativeConfig"
+  >
+    <i class="fas fa-cog"></i>
+  </a>
+  <div class="attribute-value multiple">
+    <span data-tooltip="">
+      {{value}}
+    </span>
+    <span class="sep">
+      /
+    </span>
+    <span data-tooltip="">
+      {{max}}
+    </span>
+  </div>
+</li>
+{{/if}}

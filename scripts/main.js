@@ -6,7 +6,7 @@ export const ITEM_ID = 'LUSjG8364p7LFY1u';
 
 export let dndV3 = false;
 
-CONFIG.debug.hooks = true;
+//CONFIG.debug.hooks = true;
 
 (function () {
   function checkCondition(v1, operator, v2) {

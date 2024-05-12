@@ -86,5 +86,11 @@
     "dnd5e-spellpoints.spGmOnly": "Only the GM is allowed to edit the Spell Point Item.",
     "dnd5e-spellpoints.spOverrideTitle": "Override Spell Points Item Settings.",
     "dnd5e-spellpoints.spOverrideNote1": "Using the item, it is possible to have different Spell Points Settings for every character. You can override the spell point configuration by editing the item. If you do it directly in the character sheet, those settings will apply only to that character.",
-    "dnd5e-spellpoints.spOverrideNote2": "You could also create multiple different copies of the spell points Item, give those different names, like 'Warlock's ManaSystem', 'Homebrew Psi Points', or anything you want, and reuse those on multiple characters or save them in your compendium and share with the community."
+    "dnd5e-spellpoints.spOverrideNote2": "You could also create multiple different copies of the spell points Item, give those different names, like 'Warlock's ManaSystem', 'Homebrew Psi Points', or anything you want, and reuse those on multiple characters or save them in your compendium and share with the community.",
+    "dnd5e-spellpoints.spellPointsFound": "Found '{SpellPoints}' on {Actor} character sheet! Your Maximum {SpellPoints} have been updated.",
+    "dnd5e-spellpoints.settingSaved": "Settings saved!",
+    "dnd5e-spellpoints.spResourceBarSetting": "Character sheet resource bar color",
+    "dnd5e-spellpoints.spResourceBarLeftColor": "Left color",
+    "dnd5e-spellpoints.spResourceBarRightColor": "Right color",
+    "dnd5e-spellpoints.spResourceBarAnimate": "Animate resource bar"
 }
