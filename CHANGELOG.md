@@ -1,4 +1,4 @@
-## CHANGELOG
+# CHANGELOG
 
 - 1.2.0 First support for FoundryVTT 0.8+
 - 1.2.1 Added Spanish translation.
@@ -27,8 +27,8 @@
   - Removed message to create resource if actor doesn't have spell point item.
   - New feature, enable for NPC (setting available to enable or disable this feature)
 - 2.2.0 New Features
-  - Per character/class spellpoints progression and cost.
-  - Per item spell points progression and cost.
-  - Customizable spell point bar color.
+  - Per character/item spellpoints progression and cost.
+  - Customizable spell points bar color.
+  - Animate spell points resource bar.
   - New non-linear progression by level (supports roll formulas).
   - Factor the progression based on caster type: full, half, third, pact, artificier.
