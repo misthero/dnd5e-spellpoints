@@ -1,6 +1,7 @@
 :root {
   --sp-left-color: #3a0e5f;
   --sp-right-color: #8a40c7;
+  --sp-animation-name: scroll;
 }
 
 .spError {
@@ -87,10 +88,21 @@ div.spell-points-hidden {
   display: none;
 }
 
+
+
+form.dnd5e-spellpoints .color_test,
 .sheet.actor.character .sheet-body .sidebar .card .meter.sp-points .progress::before {
-  background: linear-gradient(to right, var(--sp-left-color) 0%, var(--sp-right-color) 100%);
+  background: linear-gradient(to right, var(--sp-left-color), var(--sp-right-color), var(--sp-left-color));
   border-right: var(--border-width) solid var(--sp-left-color);
   border-radius: 4px 0 0 4px;
+  background-size: 200% 100%;
+}
+
+form.dnd5e-spellpoints .color_test {
+  border-radius: 4px !important;
+  min-height: 15px;
+  padding: 2px 6px;
+  border: 1px solid var(--dnd5e-color-gold);
 }
 
 .window-app.spellpoints-cast {
@@ -170,4 +182,52 @@ input.number-lg.spellpoints_value {
 
 .spell-points-types input {
   width: 2em;
+}
+
+form.dnd5e-spellpoints .color_test,
+.progress.sp-points:before {
+  -webkit-animation: var(--sp-animation-name) 5s linear infinite;
+  -moz-animation: var(--sp-animation-name) 5s linear infinite;
+  -o-animation: var(--sp-animation-name) 5s linear infinite;
+  animation: var(--sp-animation-name) 5s linear infinite;
+}
+
+@-webkit-keyframes scroll {
+  0% {
+    background-position: 0 0
+  }
+
+  100% {
+    background-position: -200% 0%
+  }
+}
+
+@-moz-keyframes scroll {
+  0% {
+    background-position: 0 0
+  }
+
+  100% {
+    background-position: -200% 0%
+  }
+}
+
+@-o-keyframes scroll {
+  0% {
+    background-position: 0 0
+  }
+
+  100% {
+    background-position: -200% 0%
+  }
+}
+
+@keyframes scroll {
+  0% {
+    background-position: 0 0
+  }
+
+  100% {
+    background-position: -200% 0%
+  }
 }

@@ -831,20 +831,24 @@ export class SpellPoints {
   static async renderSpellPointsItem(app, html, data) {
     const item = data?.item;
     if (this.isModuleActive() && SpellPoints.isSpellPointsItem(item)) {
+      // this option make the app a little more usable, we keep submit on close and submit on change for checkboxes and select
       app.options.submitOnChange = false;
+
       $('.item-properties', html).hide();
       if (data.editable && (game.user.isGM || SpellPoints.settings?.spGmOnly == false)) {
-        let data_object = item; // data object to pass to the template
+        let template_item = item; // data object to pass to the template
         //get global module settings for defaults
         const def = SpellPoints.settings;
         const formulas = SpellPoints.formulas;
         // store current item configuration
-        let conf = isset(data_object.flags?.spellpoints?.config) ? data_object.flags?.spellpoints?.config : {};
+        let conf = isset(template_item.flags?.spellpoints?.config) ? template_item.flags?.spellpoints?.config : {};
+
+        conf = mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
 
         conf.spFormula = isset(conf?.spFormula) ? conf?.spFormula : def.spFormula;
-        const formula = conf.spFormula;
+        const preset = conf.spFormula;
 
-        conf.isCustom = isset(conf?.spFormula) ? formulas[formula].isCustom : def.isCustom;
+        conf.isCustom = isset(conf?.spFormula) ? formulas[preset].isCustom : def.isCustom;
         conf.spAutoSpellpoints = isset(conf?.spAutoSpellpoints) ? conf?.spAutoSpellpoints : def.spAutoSpellpoints;
         conf.spCustomFormulaBase = isset(conf?.spCustomFormulaBase) ? conf?.spCustomFormulaBase : def.spCustomFormulaBase;
         conf.spCustomFormulaSlotMultiplier = isset(conf?.spCustomFormulaSlotMultiplier) ? conf?.spCustomFormulaSlotMultiplier : def.spCustomFormulaSlotMultiplier;
@@ -853,35 +857,29 @@ export class SpellPoints {
         conf.spellPointsByLevel = isset(conf?.spellPointsByLevel) ? conf?.spellPointsByLevel : def.spellPointsByLevel;
         conf.spUseLeveled = isset(conf?.spUseLeveled) ? conf?.spUseLeveled : def.spUseLeveled;
         conf.leveledProgressionFormula = isset(conf?.leveledProgressionFormula) ? conf?.leveledProgressionFormula : def.leveledProgressionFormula;
-
-        if (isset(conf?.previousFormula) && conf?.previousFormula != formula) {
-          // changed formula preset, update spellpoints default
-          conf.spellPointsCosts = isset(formulas[formula]?.spellPointsCosts) ? formulas[formula]?.spellPointsCosts : conf.spellPointsCosts;
-          conf.spellPointsByLevel = isset(formulas[formula]?.spellPointsByLevel) ? formulas[formula]?.spellPointsByLevel : conf.spellPointsByLevel;
-          conf.isCustom = formulas[formula].isCustom;
-          conf.spCustomFormulaBase = isset(formulas[formula]?.spCustomFormulaBase) ? formulas[formula]?.spCustomFormulaBase : conf.spCustomFormulaBase;
-          conf.spUseLeveled = isset(formulas[formula]?.spUseLeveled) ? formulas[formula]?.spUseLeveled : conf.spUseLeveled;
-          conf.leveledProgressionFormula = isset(formulas[formula]?.leveledProgressionFormula) ? formulas[formula]?.leveledProgressionFormula : conf.leveledProgressionFormula;
-          // update the previous formula variable to detect changes.
-          conf.previousFormula = formula;
-        }
         conf.spLifeCost = isset(conf?.spLifeCost) ? conf?.spLifeCost : def.spLifeCost;
 
-        if (!isset(data_object.flags?.spellpoints?.config)) {
-          data_object.flags.spellpoints = {
-            [`config`]: conf,
-            [`override`]: data_object.flags?.spellpoints?.override
+        if (isset(conf?.previousFormula) && conf?.previousFormula != preset) {
+          // changed formula preset, update spellpoints default
+          conf = mergeObject(conf, formulas[preset], { recursive: true, overwrite: true });
+          conf.previousFormula = preset;
+        }
+
+        if (!isset(template_item.flags?.spellpoints?.config)) {
+          template_item.flags.spellpoints = {
+            [`config`]: template_item.flags?.spellpoints?.override ? conf : {},
+            [`override`]: template_item.flags?.spellpoints?.override
           };
         }
 
-        data_object.flags.spellpoints.spFormulas = Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]));
+        template_item.flags.spellpoints.spFormulas = Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]));
         const template_file = "modules/dnd5e-spellpoints/templates/spell-points-item.hbs"; // file path for the template file, from Data directory
-        const rendered_html = await renderTemplate(template_file, data_object);
+        const rendered_html = await renderTemplate(template_file, template_item);
 
         $('.sheet-body .tab[data-tab="description"] .item-description', html).prepend(rendered_html);
         $('.tab.active', html).scrollTop(app.options?.prevScroll);
 
-        $('.spellpoints.item-config input[type="checkbox"], .spellpoints.item-config select', html).on('change', function () {
+        $('input[type="checkbox"], select', html).on('change', function () {
           let scroll = $('.tab.active', html).scrollTop();
           app.options.prevScroll = scroll;
           app.submit();
