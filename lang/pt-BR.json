@@ -14,7 +14,7 @@
     "dnd5e-spellpoints.castedLife": "{ActorName} conjurou usando sua própria vida, perdendo {hpMaxLost} Pontos de Vida Máximos",
     "dnd5e-spellpoints.castedLifeDead": "{ActorName} conjurou usando sua própria vida. Seus Pontos de Vida Máximos chegaram a 0 e ele MORREU permanentemente!",
     "dnd5e-spellpoints.casterProg": "Progressão de Nível de Conjurador",
-    "dnd5e-spellpoints.casterProgNotes": "Pelas regras, semiconjuradores têm seus pníveis de conjurador diminuídos pela metade ao calcular Spell Points e são dividiso por três para conjuradores terciários. Você pode mudar isso por aqui.",
+    "dnd5e-spellpoints.casterProgNotes": "Pelas regras, semiconjuradores têm seus níveis de conjurador diminuídos pela metade ao calcular Spell Points e são divididos por três para conjuradores terciários. Você pode mudar isso por aqui.",
     "dnd5e-spellpoints.chatMessagePrivateLabel": "Mensagens Privadas de Uso de Spell Points",
     "dnd5e-spellpoints.chatMessagePrivateNote": "Habilitando esta opção faz com que surjam mensagens no chat informando quantos Spell Points foram usados. Será visualizado apenas pelo MJ e o jogador que conjurou a magia, outros jogadores não verão a mensagem.",
     "dnd5e-spellpoints.consumeSpellSlotInput": "Consumir {SpellPoints}",
