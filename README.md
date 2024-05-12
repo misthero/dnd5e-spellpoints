@@ -68,7 +68,8 @@ You are ready to go, now spells cast by player's characters will use spell point
 [<img src="https://github.com/misthero/dnd5e-spellpoints/assets/3662610/22e0c899-779a-4825-b582-42e29112f764" width="600px"/>](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/22e0c899-779a-4825-b582-42e29112f764)
 
 #### It's possible to have multiple spellpoints items each one with different settings.
-![immagine](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/9a1ee654-70fe-43d7-bfa5-20de03f70ed4)
+![immagine](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/67641955-bd17-4b4b-9e1e-ec09566bb77e)
+
 
 
 ## Example Custom Formulas
