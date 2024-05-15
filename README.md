@@ -1,14 +1,8 @@
 # Advanced Magic - Spell Points System 5e
 
-FoundryVTT module for using  Spell Point in D&D5e
+FoundryVTT module for using  Spell Point in D&D5e.
 
-## D&D System V3+ notes
-
-The module has been update for compatibility to D&D v3. Starting from version 2.0.0 of this module it will not be compatible with previous versions of the Foundry D&D system.
-Now it uses "Items" to allow a character to cast using spell points instead of a resource. Each Spell Points Item can be configured indipendently or follow the global settings.
-The Spell Point Item is in a compendium included with the module starting from v2, you need to drag the item to your character sheet to enable it for that character.
-
-### Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!
+**Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!**
 
 This module uses the variant rules found in the DMG to allow character to cast spells using a resource named "Spell Points". It also allow to create your custom Spell Points / Mana rules and advancement system.
 
@@ -49,28 +43,12 @@ You are ready to go, now spells cast by player's characters will use spell point
 
 - Configurable Item Name (DnD V3 only).
 - Automatic spellpoint bar on character sheet (DnD V3 only).
+- Track the spellpoints directly in character sheet.
 - Configurable spellpoint bar color.
 - Per character spell points configuration and progression. Each character can have a different spell points setup overriding the configuration directly on the item (DnD V3 only).
 - Spellcaster classes configurable progression for Full, Half, Third casters.
 - Configurable SpellPoint Cost for each spell level for non-liear progression.
 - You can also share your custom spellpoints item.
-
-#### Drag your item on character sheet.
-[<img src="https://github.com/misthero/dnd5e-spellpoints/assets/3662610/7730f934-b995-4494-82e0-fdd9b0b91bb2" width="600px"/>](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/7730f934-b995-4494-82e0-fdd9b0b91bb2)
-
-#### The spell points tracker will appear.
-[<img src="https://github.com/misthero/dnd5e-spellpoints/assets/3662610/5b761ba5-2229-40a7-9654-35cc1821725b" width="600px"/>](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/5b761ba5-2229-40a7-9654-35cc1821725b)
-
-#### Spells will automatically check spell points for casting and deselect Slots.
-[<img src="https://github.com/misthero/dnd5e-spellpoints/assets/3662610/3422b30e-db0d-4d0e-938f-f38e27c4d386" width="600px"/>](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/3422b30e-db0d-4d0e-938f-f38e27c4d386)
-
-#### You can override the settings for a specific item or a specific character to have unique progression and costs.
-[<img src="https://github.com/misthero/dnd5e-spellpoints/assets/3662610/22e0c899-779a-4825-b582-42e29112f764" width="600px"/>](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/22e0c899-779a-4825-b582-42e29112f764)
-
-#### It's possible to have multiple spellpoints items each one with different settings.
-![immagine](https://github.com/misthero/dnd5e-spellpoints/assets/3662610/67641955-bd17-4b4b-9e1e-ec09566bb77e)
-
-
 
 ## Example Custom Formulas
 

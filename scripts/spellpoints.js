@@ -123,6 +123,7 @@ export class SpellPoints {
    * @return {number} The result of the formula.
    */
   static withActorData(formula, actor) {
+    //console.log('rollFormula', formula);
     let dataObject = actor.getRollData();
     dataObject.flags = actor.flags;
     const r = new Roll(formula.toString(), dataObject);
@@ -407,7 +408,7 @@ export class SpellPoints {
     if (dndV3) {
       spellPointItem = SpellPoints.getSpellPointsItem(actor);
       if (spellPointItem && spellPointItem.flags?.spellpoints?.override)
-        settings = spellPointItem.flags?.spellpoints?.config !== 'undefined' ? spellPointItem.flags?.spellpoints?.config : settings;
+        settings = isset(spellPointItem.flags?.spellpoints?.config) ? spellPointItem.flags?.spellpoints?.config : settings;
     }
 
     if (!spellPointResource && !spellPointItem) {
@@ -434,7 +435,6 @@ export class SpellPoints {
       } else {
         level = selectValue.replace('spell', '');
       }
-
       cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
 
       let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", { amount: cost, SpellPoints: (dndV3 ? spellPointItem.name : this.settings.spResource) })})`
@@ -581,6 +581,7 @@ export class SpellPoints {
 
     }
 
+
     let totalSpellcastingLevel = 0
     totalSpellcastingLevel += spellcastingLevels['full'].reduce((sum, level) => sum + level, 0);
     totalSpellcastingLevel += spellcastingLevels['pact'].reduce((sum, level) => sum + level, 0);
@@ -606,6 +607,7 @@ export class SpellPoints {
   }
 
   /**
+   * ** on updateItem hook applied only if changing a class item **
    * If the module is active, the actor is a character, and the actor has a spell point resource, then
    * update the spell point resource's maximum value
    * @param item - The item that was updated.
@@ -617,24 +619,24 @@ export class SpellPoints {
     const actor = item.parent;
 
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
-      return true;
+      return [item, updates, id];
 
     if (!SpellPoints.settings.spAutoSpellpoints) {
-      return true;
+      return [item, updates, id];
     }
 
     /* updating or dropping a class item */
 
     if (item.type !== 'class') {
       // check if is the spell point feature being dropped.
-      return true;
+      return [item, updates, id];
     }
 
     if (!getProperty(updates.system, 'levels'))
-      return true;
+      return [item, updates, id];
 
     SpellPoints.updateSpellPointsMax(item, updates, actor, false);
-    return true;
+    return [item, updates, id];
   }
 
 
@@ -648,8 +650,6 @@ export class SpellPoints {
   }
 
   static updateSpellPointsMax(classItem, updates, actor, createdItem) {
-
-
     const actorName = actor.name;
     let spellPointsItem;
     if (createdItem)
@@ -663,7 +663,7 @@ export class SpellPoints {
 
     let settings;
     if (spellPointsItem.flags?.spellpoints?.override) {
-      settings = spellPointsItem.flags.spellpoints.config;
+      settings = mergeObject(SpellPoints.settings, spellPointsItem.flags.spellpoints.config, { overwrite: true, recursive: true });
     } else {
       settings = SpellPoints.settings;
     }
@@ -695,6 +695,11 @@ export class SpellPoints {
     return spellPointsItem;
   }
 
+  /** hook computeLeveledProgression  */
+  static levelProgression(slots, actor, classItem, progression) {
+
+  }
+
   /** preDeleteItem */
   static removeItemFlag(item, dialog, id) {
     let actor = item.parent;
@@ -706,29 +711,48 @@ export class SpellPoints {
   /** pre update item */
   /** check if max uses is less than value */
   static checkSpellPointsValues(item, update, difference, id) {
-    let max, value;
-    let changed_uses = false;
-
     if (SpellPoints.isSpellPointsItem(item)) {
+      let max, value;
+      let changed_uses = false;
+      // check if changed the item uses prevent value exceed max
       if (update.system?.uses?.max) {
         max = update.system.uses.max;
         changed_uses = true;
       } else {
-        max = item.system.uses.max;
-      }
-      if (update.system?.uses?.value) {
-        changed_uses = true;
-        value = update.system.uses.value;
-      } else {
-        value = item.system.uses.value;
+        max = item.system.uses.max
       }
 
-      if (value > max) {
-        value = max;
+      if (update.system?.uses?.value) {
+        value = update.system.uses.value;
+        changed_uses = true;
+      } else {
+        value = item.system.uses.value
       }
+
       if (changed_uses) {
-        update.system.uses.value = value;
+        if (value > max) {
+          update.system.uses.value = max
+        }
       }
+
+      //get global module settings for defaults
+      const def = SpellPoints.settings;
+      const formulas = SpellPoints.formulas;
+      // store current item configuration
+      let conf = isset(item.flags?.spellpoints?.config) ? item.flags?.spellpoints?.config : {};
+
+      conf = mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
+      const preset = conf.spFormula;
+
+      conf.isCustom = formulas[preset].isCustom;
+
+      if (!isset(item.flags?.spellpoints?.config)) {
+        update.flags.spellpoints = {
+          [`config`]: item.flags?.spellpoints?.override ? conf : {},
+          [`override`]: item.flags?.spellpoints?.override
+        };
+      }
+
       return [item, update, difference, id];
     }
   }
@@ -744,6 +768,8 @@ export class SpellPoints {
     }
 
     const actor = item.parent;
+    if (actor == null)
+      return;
 
     let updateActor = {
       'flags': {
@@ -845,11 +871,11 @@ export class SpellPoints {
 
         conf = mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
 
-        conf.spFormula = isset(conf?.spFormula) ? conf?.spFormula : def.spFormula;
+        //conf.spFormula = isset(conf?.spFormula) ? conf?.spFormula : def.spFormula;
         const preset = conf.spFormula;
 
         conf.isCustom = isset(conf?.spFormula) ? formulas[preset].isCustom : def.isCustom;
-        conf.spAutoSpellpoints = isset(conf?.spAutoSpellpoints) ? conf?.spAutoSpellpoints : def.spAutoSpellpoints;
+        /*conf.spAutoSpellpoints = isset(conf?.spAutoSpellpoints) ? conf?.spAutoSpellpoints : def.spAutoSpellpoints;
         conf.spCustomFormulaBase = isset(conf?.spCustomFormulaBase) ? conf?.spCustomFormulaBase : def.spCustomFormulaBase;
         conf.spCustomFormulaSlotMultiplier = isset(conf?.spCustomFormulaSlotMultiplier) ? conf?.spCustomFormulaSlotMultiplier : def.spCustomFormulaSlotMultiplier;
         conf.spEnableVariant = isset(conf?.spEnableVariant) ? conf?.spEnableVariant : def.spEnableVariant;
@@ -857,7 +883,7 @@ export class SpellPoints {
         conf.spellPointsByLevel = isset(conf?.spellPointsByLevel) ? conf?.spellPointsByLevel : def.spellPointsByLevel;
         conf.spUseLeveled = isset(conf?.spUseLeveled) ? conf?.spUseLeveled : def.spUseLeveled;
         conf.leveledProgressionFormula = isset(conf?.leveledProgressionFormula) ? conf?.leveledProgressionFormula : def.leveledProgressionFormula;
-        conf.spLifeCost = isset(conf?.spLifeCost) ? conf?.spLifeCost : def.spLifeCost;
+        conf.spLifeCost = isset(conf?.spLifeCost) ? conf?.spLifeCost : def.spLifeCost;*/
 
         if (isset(conf?.previousFormula) && conf?.previousFormula != preset) {
           // changed formula preset, update spellpoints default
