@@ -6,7 +6,7 @@ function isset(variable) {
 
 export class SpellPoints {
   static get settings() {
-    return mergeObject(this.defaultSettings, game.settings.get(MODULE_NAME, 'settings'), { insertKeys: true, insertValues: true });
+    return foundry.utils.mergeObject(this.defaultSettings, game.settings.get(MODULE_NAME, 'settings'), { insertKeys: true, insertValues: true });
   }
 
   /**
@@ -91,10 +91,10 @@ export class SpellPoints {
   }
 
   static isActorCharacter(actor) {
-    const isActor = getProperty(actor, "type") == "character";
+    const isActor = foundry.utils.getProperty(actor, "type") == "character";
     let isNPC = false;
     if (this.settings.enableForNpc && !isActor) {
-      isNPC = getProperty(actor, "type") == "npc";
+      isNPC = foundry.utils.getProperty(actor, "type") == "npc";
     }
     return isNPC || isActor;
   }
@@ -127,12 +127,12 @@ export class SpellPoints {
     let dataObject = actor.getRollData();
     dataObject.flags = actor.flags;
     const r = new Roll(formula.toString(), dataObject);
-    r.evaluate({ async: false });
+    r.evaluateSync({ async: false });
     return r.total;
   }
 
   static getSpellPointsItem(actor) {
-    let items = getProperty(actor, "collections.items");//  filter(u => u.isGM);
+    let items = foundry.utils.getProperty(actor, "collections.items");//  filter(u => u.isGM);
 
     const item_id = SpellPoints.getActorFlagSpellPointItem(actor);
     if (items[item_id])
@@ -150,7 +150,7 @@ export class SpellPoints {
 
   /** check what resource is spellpoints on this actor **/
   static getSpellPointsResource(actor) {
-    let _resources = getProperty(actor, "system.resources");
+    let _resources = foundry.utils.getProperty(actor, "system.resources");
     for (let r in _resources) {
       if (_resources[r].label == this.settings.spResource) {
         return { 'values': _resources[r], 'key': r };
@@ -325,7 +325,7 @@ export class SpellPoints {
         } else {
           updateActor.system.attributes = { 'hp': { 'tempmax': newTempMaxHP } };// hp max reduction
           if (hpActual > newMaxHP) { // a character cannot have more hp than his maximum
-            updateActor.system.attributes = mergeObject(updateActor.system.attributes, { 'hp': { 'value': newMaxHP } });
+            updateActor.system.attributes = foundry.utils.mergeObject(updateActor.system.attributes, { 'hp': { 'value': newMaxHP } });
           }
           ChatMessage.create({
             content: "<i style='color:red;'>" + game.i18n.format("dnd5e-spellpoints.castedLife", { ActorName: actor.name, hpMaxLost: hpMaxLost }) + "</i>",
@@ -379,7 +379,7 @@ export class SpellPoints {
       return;
 
     /** check if actor is a player character **/
-    let actor = getProperty(dialog, "item.actor");
+    let actor = foundry.utils.getProperty(dialog, "item.actor");
     if (!this.isActorCharacter(actor))
       return;
 
@@ -387,7 +387,7 @@ export class SpellPoints {
     let settings = this.settings;
 
     /** check if this is a spell **/
-    if (getProperty(dialog, "item.type") !== "spell")
+    if (foundry.utils.getProperty(dialog, "item.type") !== "spell")
       return;
 
     html.addClass('spellpoints-cast');
@@ -435,6 +435,7 @@ export class SpellPoints {
       } else {
         level = selectValue.replace('spell', '');
       }
+      //console.log('LEVEL', level);
       cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
 
       let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", { amount: cost, SpellPoints: (dndV3 ? spellPointItem.name : this.settings.spResource) })})`
@@ -548,9 +549,9 @@ export class SpellPoints {
     let levelUpdated = false;
     const leveledProgression = settings.spUseLeveled;
 
-    if (getProperty(updates.system, 'levels')) {
-      changedClassLevel = getProperty(updates.system, 'levels');
-      changedClassID = getProperty(item, '_id');
+    if (foundry.utils.getProperty(updates.system, 'levels')) {
+      changedClassLevel = foundry.utils.getProperty(updates.system, 'levels');
+      changedClassID = foundry.utils.getProperty(item, '_id');
       levelUpdated = true;
     }
     // check for multiclasses
@@ -632,7 +633,7 @@ export class SpellPoints {
       return [item, updates, id];
     }
 
-    if (!getProperty(updates.system, 'levels'))
+    if (!foundry.utils.getProperty(updates.system, 'levels'))
       return [item, updates, id];
 
     SpellPoints.updateSpellPointsMax(item, updates, actor, false);
@@ -663,7 +664,7 @@ export class SpellPoints {
 
     let settings;
     if (spellPointsItem.flags?.spellpoints?.override) {
-      settings = mergeObject(SpellPoints.settings, spellPointsItem.flags.spellpoints.config, { overwrite: true, recursive: true });
+      settings = foundry.utils.mergeObject(SpellPoints.settings, spellPointsItem.flags.spellpoints.config, { overwrite: true, recursive: true });
     } else {
       settings = SpellPoints.settings;
     }
@@ -741,7 +742,7 @@ export class SpellPoints {
       // store current item configuration
       let conf = isset(item.flags?.spellpoints?.config) ? item.flags?.spellpoints?.config : {};
 
-      conf = mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
+      conf = foundry.utils.mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
       const preset = conf.spFormula;
 
       conf.isCustom = formulas[preset].isCustom;
@@ -869,7 +870,7 @@ export class SpellPoints {
         // store current item configuration
         let conf = isset(template_item.flags?.spellpoints?.config) ? template_item.flags?.spellpoints?.config : {};
 
-        conf = mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
+        conf = foundry.utils.mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
 
         //conf.spFormula = isset(conf?.spFormula) ? conf?.spFormula : def.spFormula;
         const preset = conf.spFormula;
@@ -887,7 +888,7 @@ export class SpellPoints {
 
         if (isset(conf?.previousFormula) && conf?.previousFormula != preset) {
           // changed formula preset, update spellpoints default
-          conf = mergeObject(conf, formulas[preset], { recursive: true, overwrite: true });
+          conf = foundry.utils.mergeObject(conf, formulas[preset], { recursive: true, overwrite: true });
           conf.previousFormula = preset;
         }
 

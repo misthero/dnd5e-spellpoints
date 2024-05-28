@@ -3,7 +3,6 @@ import { SpellPoints } from "./spellpoints.js";
 
 export const MODULE_NAME = 'dnd5e-spellpoints';
 export const ITEM_ID = 'LUSjG8364p7LFY1u';
-
 export let dndV3 = false;
 
 //CONFIG.debug.hooks = true;
@@ -127,7 +126,7 @@ Hooks.on('renderSpellPointsForm', (spellPointsForm, html, data) => {
   const isCustom = (data.isCustom || "").toString().toLowerCase() == "true"
   spellPointsForm.setCustomOnlyVisibility(isCustom)
 })
-
+// dnd 3.2 changed the params from item, consume, options, update to item, config, options 
 Hooks.on("dnd5e.preItemUsageConsumption", (item, consume, options, update) => {
   SpellPoints.castSpell(item, consume, options, update);
 })

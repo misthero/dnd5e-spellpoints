@@ -134,6 +134,7 @@ form.dnd5e-spellpoints .color_test {
   padding: 5px 0;
   background-image: url(/ui/parchment.jpg);
   background-color: #dbdacf;
+  z-index: 5;
 }
 
 #spellpoints-form footer {

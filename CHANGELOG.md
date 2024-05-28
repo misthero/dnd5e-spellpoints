@@ -33,3 +33,5 @@
   - New non-linear progression by level (supports roll formulas).
   - Factor the progression based on caster type: full, half, third, pact, artificier.
 - 2.2.1 Bugfix
+  - Foundry v12 Compatibility
+  - Customizable Cantrip costs.

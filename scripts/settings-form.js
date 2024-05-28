@@ -17,7 +17,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 export class SpellPointsForm extends FormApplication {
 
   static get defaultOptions() {
-    return mergeObject(super.defaultOptions, {
+    return foundry.utils.mergeObject(super.defaultOptions, {
       title: game.i18n.localize('dnd5e-spellpoints.form-title'),
       id: 'spellpoints-form',
       template: `modules/${MODULE_NAME}/templates/spellpoint-module-config.hbs`,
@@ -37,11 +37,11 @@ export class SpellPointsForm extends FormApplication {
    *   3) The available formulas
    */
   async getData(options) {
-    let data = mergeObject(
+    let data = foundry.utils.mergeObject(
       {
         spFormulas: Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]))
       },
-      this.reset ? mergeObject(SpellPoints.settings, SpellPoints.defaultSettings, { insertKeys: true, insertValues: true, overwrite: true, recursive: true, performDeletions: true }) : mergeObject(SpellPoints.settings, { requireSave: false })
+      this.reset ? foundry.utils.mergeObject(SpellPoints.settings, SpellPoints.defaultSettings, { insertKeys: true, insertValues: true, overwrite: true, recursive: true, performDeletions: true }) : foundry.utils.mergeObject(SpellPoints.settings, { requireSave: false })
     );
     this.reset = false;
     data.item_id = ITEM_ID;
@@ -74,7 +74,7 @@ export class SpellPointsForm extends FormApplication {
   _updateObject(event, formData, hideMessage) {
     var that = this;
     return __awaiter(this, void 0, void 0, function* () {
-      let settings = mergeObject(SpellPoints.settings, formData, { insertKeys: true, insertValues: true });
+      let settings = foundry.utils.mergeObject(SpellPoints.settings, formData, { insertKeys: true, insertValues: true });
       yield game.settings.set(MODULE_NAME, 'settings', settings);
       that.render();
       if (!hideMessage) {
@@ -105,7 +105,7 @@ export class SpellPointsForm extends FormApplication {
     if (input_name == "spFormula") {
       const input_value = event.originalEvent.target.value;
       const formulaOverrides = SpellPoints.formulas[input_value];
-      newSettings = mergeObject(newSettings, formulaOverrides);
+      newSettings = foundry.utils.mergeObject(newSettings, formulaOverrides);
     }
 
     this._updateObject(event, newSettings, true);
