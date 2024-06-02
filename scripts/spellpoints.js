@@ -127,7 +127,8 @@ export class SpellPoints {
     let dataObject = actor.getRollData();
     dataObject.flags = actor.flags;
     const r = new Roll(formula.toString(), dataObject);
-    r.evaluate({ async: false });
+    //r.evaluateSync({ async: false }); //vtt v12+
+    r.evaluate({ async: false });  //vtt v11
     return r.total;
   }
 
