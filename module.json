@@ -5,7 +5,8 @@
   "version": "2.2.15",
   "compatibility": {
     "minimum": "11",
-    "verified": "11.999"
+    "verified": "11.999",
+    "maximum": "11.999"
   },
   "relationships": {
     "systems": [
