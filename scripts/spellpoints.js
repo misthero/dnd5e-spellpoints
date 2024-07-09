@@ -569,6 +569,12 @@ export class SpellPoints {
     for (let c of actorClasses) {
       /* spellcasting: pact; full; half; third; artificier; none; **/
       let spellcasting = c.system.spellcasting.progression;
+      if (spellcasting == 'none') {
+        // check subclasses
+        let subclass = c.subclass;
+        spellcasting = subclass.system.spellcasting.progression;
+      }
+
       let level = c.system.levels;
 
       // get updated class new level

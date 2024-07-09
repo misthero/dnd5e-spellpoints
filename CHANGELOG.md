@@ -37,3 +37,4 @@
   - Foundry v12 Compatibility
   - Customizable Cantrip costs.
 - 2.2.20 renaming version
+- 2.2.30 fix subclass detection with spellcasting when using DMG formula
