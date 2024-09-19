@@ -92,5 +92,8 @@
     "dnd5e-spellpoints.spResourceBarSetting": "Cor da Barra de Spell Points na Ficha",
     "dnd5e-spellpoints.spResourceBarLeftColor": "Cor Esquerda",
     "dnd5e-spellpoints.spResourceBarRightColor": "Cor Direita",
-    "dnd5e-spellpoints.spResourceBarAnimate": "Barra de Recurso Animada"
+    "dnd5e-spellpoints.spResourceBarAnimate": "Barra de Recurso Animada",
+    "dnd5e-spellpoints.updateSpellPointMax": "Calcular Máx. {SpellPoints}",
+    "dnd5e-spellpoints.updateSpellPointMaxTooltip": "Redefine o valor máximo de acordo com sua configuração.",
+    "dnd5e-spellpoints.spClassSubtype": "Spell Points"
 }
