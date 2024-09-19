@@ -92,5 +92,8 @@
     "dnd5e-spellpoints.spResourceBarSetting": "Character sheet resource bar color",
     "dnd5e-spellpoints.spResourceBarLeftColor": "Left color",
     "dnd5e-spellpoints.spResourceBarRightColor": "Right color",
-    "dnd5e-spellpoints.spResourceBarAnimate": "Animate resource bar"
+    "dnd5e-spellpoints.spResourceBarAnimate": "Animate resource bar",
+    "dnd5e-spellpoints.updateSpellPointMax": "Calculate Max {SpellPoints}",
+    "dnd5e-spellpoints.updateSpellPointMaxTooltip": "Reset the max value according to your configuration.",
+    "dnd5e-spellpoints.spClassSubtype": "Spell Points"
 }

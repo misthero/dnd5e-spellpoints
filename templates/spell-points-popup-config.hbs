@@ -1,55 +1,167 @@
 <form>
-  <div class="form-group dnd5e2 item">
-    <img
-      class="item-image gold-icon"
-      src="{{img}}"
-      style="max-width:52px;margin-right:10px"
-      alt="{{name}}"
-    />
-    <input
-      type="number"
-      class="number-lg spellpoints_value"
-      name="uses.value"
-      value="{{uses.value}}"
-      placeholder="{{uses.value}}"
-      data-tooltip="{{
-        localize "dnd5e-spellpoints.currentSpellPointsOverride" SpellPoints=name
-      }}"
-    />
-    <input
-      type="number"
-      class="number-lg spellpoints_max"
-      name="uses.max"
-      value="{{uses.max}}"
-      placeholder="{{uses.max}}"
-      data-tooltip="{{
-        localize "dnd5e-spellpoints.maxSpellPointsOverride" SpellPoints=name
-      }} {{name}}"
-    />
+  <div class="form-group dnd5e2 item sp-popup">
+    <div class="form-fields">
+      <img
+        class="item-image gold-icon"
+        src="{{img}}"
+        style="max-width:52px;margin-right:10px"
+        alt="{{name}}"
+      />
+      <div class="form-group label-top">
+        <label>{{localize "DND5E.Current" }}</label>
+        <div class="form-fields">
+          <input
+            type="number"
+            class="number-lg spellpoints_value sp-number"
+            name="uses.value"
+            value="{{uses.value}}"
+            placeholder="{{uses.value}}"
+            data-tooltip="{{localize
+              'dnd5e-spellpoints.currentSpellPointsOverride'
+              SpellPoints=name
+            }}"
+          />
+        </div>
+      </div>
+      <div class="form-group label-top">
+        <label>{{localize "DND5E.Max" }}</label>
+        <div class="form-fields">
+          <input
+            type="number"
+            class="number-lg spellpoints_max sp-number"
+            name="uses.max"
+            value="{{uses.max}}"
+            placeholder="{{uses.max}}"
+            data-tooltip="{{localize
+              'dnd5e-spellpoints.maxSpellPointsOverride'
+              SpellPoints=name
+            }}"
+          />
+        </div>
+      </div>
+    </div>
+    
   </div>
+  <hr />
+  <div class="form-fields"></div>
+      <button
+      type="button"
+        class="control-button"
+        data-action="updateSpellPointMax"
+        data-tooltip=" {{localize
+          'dnd5e-spellpoints.updateSpellPointMaxTooltip' SpellPoints=name
+        }}"
+      >
+        {{localize "dnd5e-spellpoints.updateSpellPointMax" SpellPoints=name}}
+      </button>
+    </div>
 
   <hr />
-  <div class="form-group">
-    <label>
-      {{localize "DND5E.per"}}
-    </label>
-    <select name="uses.per" style="flex: 1;">
-      {{selectOptions recovery selected=uses.per blank=(localize "DND5E.None")}}
-    </select>
-  </div>
-  <div class="form-group">
-    {{#if formula}}
-      <input
-        type="text"
-        name="uses.recovery"
-        value="{{uses.recovery}}"
-        data-formula-editor=""
-      />
-    {{/if}}
-  </div>
+  <fieldset>
+    <legend>
+      <span>
+        {{localize "DND5E.Recovery"}}
+      </span>
+      <button
+        type="button"
+        class="unbutton control-button"
+        data-action="addRecovery"
+        data-tooltip="DND5E.USES.Recovery.Action.Create"
+        aria-label="{{localize 'DND5E.USES.Recovery.Action.Create'}}"
+      >
+        <i class="fas fa-plus" inert></i>
+      </button>
+    </legend>
+    {{#each usesRecovery}}
+      <div
+        class="form-group split-group full-width card"
+        data-index="{{@index}}"
+      >
+        <div class="form-fields">
+          {{! Period }}
+          <div class="form-group label-top">
+            <label>{{localize "DND5E.Period" }}</label>
+            <div class="form-fields">
+              <select name="{{prefix}}period">
+                {{selectOptions
+                  @root.recoveryPeriods
+                  selected=source.period
+                  blank=(localize "DND5E.None")
+                }}
+              </select>
+            </div>
+          </div>
 
-  <button type="submit">
-    <i class="far fa-save"></i>
-    {{localize "Save"}}
-  </button>
+          {{! type }}
+          {{#unless (eq source.period "recharge")}}
+            <div class="form-group label-top">
+              <label>{{localize "DND5E.Recovery" }}</label>
+              <div class="form-fields">
+                <select name="{{prefix}}type">
+                  {{selectOptions
+                    @root.recoveryTypes
+                    selected=source.type
+                    blank=(localize "DND5E.None")
+                  }}
+                </select>
+              </div>
+            </div>
+          {{/unless}}
+
+          {{! formula }}
+          {{#if (or (eq source.type "formula") formulaOptions)}}
+            <div class="form-group label-top">
+              <label>{{localize "DND5E.Formula" }}</label>
+              <div class="form-fields">
+                <!-- free formula -->
+                {{#if (eq source.type "formula")}}
+                  <input
+                    type="text"
+                    name="{{prefix}}formula"
+                    value="{{source.formula}}"
+                  />
+                {{/if}}
+                <!-- dice formula -->
+                {{#if formulaOptions}}
+                  <select name="{{prefix}}formula">
+                    {{selectOptions
+                      formulaOptions
+                      selected=source.formula
+                      blank=(localize "DND5E.None")
+                    }}
+                  </select>
+                {{/if}}
+              </div>
+            </div>
+          {{/if}}
+
+          <!-- remove recovery button -->
+          <button
+            type="button"
+            class="unbutton control-button"
+            data-action="deleteRecovery"
+            data-tooltip="DND5E.USES.Recovery.Action.Delete"
+            aria-label="{{localize 'DND5E.USES.Recovery.Action.Delete'}}"
+          >
+            <i class="fas fa-minus" inert></i>
+          </button>
+        </div>
+      </div>
+    {{else}}
+      <div class="empty">
+        {{localize "DND5E.UsesPeriods.Never"}}
+      </div>
+    {{/each}}
+  </fieldset>
+
+  <!-- save button -->
+  <section class="sheet-footer">
+    <button
+      type="submit"
+      class="dialog-button ok default gold-button"
+      data-tooltip="{{localize 'Save'}}"
+    >
+      <i class="far fa-save"></i>
+    </button>
+  </section>
 </form>

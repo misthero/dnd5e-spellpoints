@@ -1,9 +1,10 @@
+import { DND5E } from "../../../systems/dnd5e/dnd5e.mjs";
 import { SpellPointsForm } from "./settings-form.js";
 import { SpellPoints } from "./spellpoints.js";
 
-export const MODULE_NAME = 'dnd5e-spellpoints';
-export const ITEM_ID = 'LUSjG8364p7LFY1u';
-export let dndV3 = false;
+export const SP_MODULE_NAME = 'dnd5e-spellpoints';
+export const SP_ITEM_ID = 'LUSjG8364p7LFY1u';
+export let dndV4 = false;
 
 //CONFIG.debug.hooks = true;
 
@@ -44,34 +45,68 @@ Handlebars.registerHelper("spFormat", (path, ...args) => {
   return game.i18n.format(path, args[0].hash);
 });
 
+async function update2_4_00() {
+  if (!game.user.isGM) {
+    return;
+  }
+  const settingExists = typeof game.settings.settings.get(SP_MODULE_NAME + '.spPrevVersion') === 'undefined' ? 0 : 1;
+  let spPrevVersion = 0;
+  if (settingExists) {
+    spPrevVersion = game.settings.get(SP_MODULE_NAME, "spPrevVersion");
+  }
+  const spCurrVersion = game.modules.get(SP_MODULE_NAME).version;
+  if (foundry.utils.isNewerVersion(spCurrVersion, spPrevVersion)) {
+    const spItems = game.items.filter((i) => {
+      const is_sp = i.flags?.core?.sourceId === 'Compendium.dnd5e-spellpoints.module-items.Item.' + SP_ITEM_ID
+        || i.system?.source?.custom == 'Spell Points';
+      return is_sp;
+    });
+    for (const s in spItems) {
+      const FoundItem = spItems[s];
+      if (FoundItem.system.activities.size > 0) {
+        FoundItem.system.activities.forEach((n) => {
+          n.delete();
+        })
+      }
+    }
+  };
+}
+
+Hooks.on('ready', () => {
+  update2_4_00();
+})
 
 Hooks.on('init', () => {
   console.log('SpellPoints init');
+
+
   if (typeof game.dnd5e.version === 'string') {
-    dndV3 = foundry.utils.isNewerVersion(game.dnd5e.version, '2.99.99');
+    dndV4 = foundry.utils.isNewerVersion(game.dnd5e.version, '3.99.99');
   }
 
+  DND5E.featureTypes.class.subtypes.sp = game.i18n.format(SP_MODULE_NAME + ".spClassSubtype");
+
   /** should spellpoints be enabled */
-  game.settings.register(MODULE_NAME, "spEnableSpellpoints", {
-    name: game.i18n.format("dnd5e-spellpoints.enableModule"),
-    hint: game.i18n.format("dnd5e-spellpoints.enableModuleHint"),
+  game.settings.register(SP_MODULE_NAME, "spEnableSpellpoints", {
+    name: game.i18n.format(SP_MODULE_NAME + ".enableModule"),
+    hint: game.i18n.format(SP_MODULE_NAME + ".enableModuleHint"),
     scope: "world",
     config: true,
     default: false,
     type: Boolean
   });
 
-  game.settings.registerMenu(MODULE_NAME, MODULE_NAME, {
-    name: "dnd5e-spellpoints.form",
-    label: "dnd5e-spellpoints.form-title",
-    hint: "dnd5e-spellpoints.form-hint",
+  game.settings.registerMenu(SP_MODULE_NAME, SP_MODULE_NAME, {
+    name: SP_MODULE_NAME + ".form",
+    label: SP_MODULE_NAME + ".form-title",
+    hint: SP_MODULE_NAME + ".form-hint",
     icon: "fas fa-magic",
     type: SpellPointsForm,
     restricted: true
   });
 
-  game.settings.register(MODULE_NAME, "settings", {
-    name: game.i18n.format("dnd5e-spellpoints.settingsTitle"),
+  game.settings.register(SP_MODULE_NAME, "settings", {
+    name: game.i18n.format(SP_MODULE_NAME + ".settingsTitle"),
     scope: "world",
     default: SpellPoints.defaultSettings,
     type: Object,
@@ -92,8 +127,8 @@ Hooks.on('init', () => {
 });
 
 /** spell launch dialog **/
-Hooks.on("renderAbilityUseDialog", async (dialog, html, formData) => {
-  SpellPoints.checkDialogSpellPoints(dialog, html, formData);
+Hooks.on("renderActivityUsageDialog", async (dialog, html) => {
+  SpellPoints.checkDialogSpellPoints(dialog, html);
 })
 
 Hooks.on("updateItem", SpellPoints.calculateSpellPoints);
@@ -127,7 +162,7 @@ Hooks.on('renderSpellPointsForm', (spellPointsForm, html, data) => {
   spellPointsForm.setCustomOnlyVisibility(isCustom)
 })
 // dnd 3.2 changed the params from item, consume, options, update to item, config, options 
-Hooks.on("dnd5e.preItemUsageConsumption", (item, consume, options, update) => {
+Hooks.on("dnd5e.preActivityConsumption", (item, consume, options, update) => {
   SpellPoints.castSpell(item, consume, options, update);
 })
 

@@ -88,10 +88,9 @@ div.spell-points-hidden {
   display: none;
 }
 
-
-
 form.dnd5e-spellpoints .color_test,
-.sheet.actor.character .sheet-body .sidebar .card .meter.sp-points .progress::before {
+.sheet.actor.character .sheet-body .sidebar .card .meter.sp-points .progress::before,
+.sheet.actor.npc .sidebar .meter.sp-points .progress::before {
   background: linear-gradient(to right, var(--sp-left-color), var(--sp-right-color), var(--sp-left-color));
   border-right: var(--border-width) solid var(--sp-left-color);
   border-radius: 4px 0 0 4px;
@@ -155,10 +154,23 @@ input.number-lg.spellpoints_value {
   margin: 0 0 20px;
   background: #00000006;
   border: 3px double #aaa;
+  padding: 10px;
+}
+
+.spellpoints.item-config textarea {
+  background: var(--color-dark-3);
+  color: var(--color-light-1);
 }
 
 .spellpoints.item-config .accordion-content {
   padding: 5px;
+}
+
+.spellpoints-properties .checkbox input[name="flags.spellpoints.override"] {
+  top: 0;
+  /* font-size: 3em; */
+  width: 20px;
+  height: 20px;
 }
 
 .spellpoints.item-config .spellpoints-costs>label {
@@ -191,6 +203,28 @@ form.dnd5e-spellpoints .color_test,
   -moz-animation: var(--sp-animation-name) 5s linear infinite;
   -o-animation: var(--sp-animation-name) 5s linear infinite;
   animation: var(--sp-animation-name) 5s linear infinite;
+}
+
+.dnd5e-spellpoints.actor-spell-points-config .header-button.control.close {
+  text-indent: -999em;
+}
+
+.dnd5e-spellpoints.actor-spell-points-config .header-button.control.close i {
+  text-indent: 0;
+  position: absolute;
+}
+
+.sp-popup .sp-number {
+  height: 100%;
+  font-size: 3em !important;
+  border: 1px solid #830dab66 !important;
+  /* box-shadow: 0 0 15px #900db9 inset; */
+}
+
+.actor-spell-points-config .sheet-footer {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
 }
 
 @-webkit-keyframes scroll {

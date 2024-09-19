@@ -19,7 +19,7 @@
     "dnd5e-spellpoints.costLabel": "Costo in Punti Magia per uno Slot di livello {slotLevel}.",
     "dnd5e-spellpoints.createNewResource": "Per favore, crea una nuova risorsa chiamata: {SpellPoints}",
     "dnd5e-spellpoints.createNewResourceV3": "Crea un oggetto 'Capacità di Classe' che abbia come etichetta per la 'custom source': '{SpellPoints}'",
-    "dnd5e-spellpoints.currentSpellPointsOverride": "{SpellPoints} Attuale",
+    "dnd5e-spellpoints.currentSpellPointsOverride": "{SpellPoints} Attuali",
     "dnd5e-spellpoints.CUSTOM": "Formula Personalizzata",
     "dnd5e-spellpoints.DMG": "Guida del Dungeon Master",
     "dnd5e-spellpoints.DMG_CUSTOM": "Guida del Dungeon Master (Personalizzato)",
@@ -76,5 +76,8 @@
     "dnd5e-spellpoints.useLeveledProgression": "Attiva la progressione basata sul livello da incantatore.",
     "dnd5e-spellpoints.warlockUseSpLabel": "I Warlock usano i Punti Magia",
     "dnd5e-spellpoints.warlockUseSpNote": "Di base i Warlock non possono usare il sistema dei Punti Magia, abilitando questa opzione essi potranno utilizzarli come tutti gli altri utenti di magia.",
-    "dnd5e-spellpoints.youNotEnough": "Non hai abbastanza '{SpellPoints}' per lanciare l'incantesimo."
+    "dnd5e-spellpoints.youNotEnough": "Non hai abbastanza '{SpellPoints}' per lanciare l'incantesimo.",
+    "dnd5e-spellpoints.updateSpellPointMax": "Ricalcola il massimo di {SpellPoints}",
+    "dnd5e-spellpoints.updateSpellPointMaxTooltip": "Ricalcola il valore massimo in base alla tua configurazione.",
+    "dnd5e-spellpoints.spClassSubtype": "Spell Points"
 }

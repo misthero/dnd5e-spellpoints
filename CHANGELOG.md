@@ -38,3 +38,6 @@
   - Customizable Cantrip costs.
 - 2.2.20 renaming version
 - 2.2.30 fix subclass detection with spellcasting when using DMG formula
+- 2.4.00 Compatibility release for D&D v4
+  - Removed compatibility with old resources
+  - Some code refactoring and cleanup  

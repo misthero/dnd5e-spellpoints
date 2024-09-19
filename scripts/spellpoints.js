@@ -1,4 +1,4 @@
-import { MODULE_NAME, ITEM_ID, dndV3 } from "./main.js";
+import { SP_MODULE_NAME, SP_ITEM_ID } from "./main.js";
 
 function isset(variable) {
   return (typeof variable !== 'undefined');
@@ -6,7 +6,7 @@ function isset(variable) {
 
 export class SpellPoints {
   static get settings() {
-    return foundry.utils.mergeObject(this.defaultSettings, game.settings.get(MODULE_NAME, 'settings'), { insertKeys: true, insertValues: true });
+    return foundry.utils.mergeObject(this.defaultSettings, game.settings.get(SP_MODULE_NAME, 'settings'), { insertKeys: true, insertValues: true });
   }
 
   /**
@@ -87,7 +87,7 @@ export class SpellPoints {
   }
 
   static isModuleActive() {
-    return game.settings.get(MODULE_NAME, 'spEnableSpellpoints');
+    return game.settings.get(SP_MODULE_NAME, 'spEnableSpellpoints');
   }
 
   static isActorCharacter(actor) {
@@ -105,9 +105,8 @@ export class SpellPoints {
   }
 
   static isSpellPointsItem(item) {
-    return dndV3 &&
-      item.type === "feat" &&
-      (item.flags?.core?.sourceId === "Compendium.dnd5e-spellpoints.module-items.Item." + ITEM_ID
+    return (item.type === "feat" || (item.type === "class" && item.type.subtype === "sp"))
+      && (item.flags?.core?.sourceId === "Compendium.dnd5e-spellpoints.module-items.Item." + SP_ITEM_ID
         || item.system.source?.custom === this.settings.spResource);
   }
 
@@ -132,15 +131,13 @@ export class SpellPoints {
   }
 
   static getSpellPointsItem(actor) {
-    let items = foundry.utils.getProperty(actor, "collections.items");//  filter(u => u.isGM);
-
+    let items = foundry.utils.getProperty(actor, "collections.items");
     const item_id = SpellPoints.getActorFlagSpellPointItem(actor);
     if (items[item_id])
       return items[item_id];
-    let features = items.filter(i => i.type == 'feat');
+    let features = items.filter(i => i.type == 'feat' || i.type == 'class' && i.type.subtype == 'sp');
     // get the item with source custom label = Spell Points
     let sp = features.filter(s => s.system.source.custom == this.settings.spResource);
-    // WIP: DETECT SPELLPOINT ITEM (sp[0] ??)
 
     if (typeof sp == 'undefined') {
       return false;
@@ -172,9 +169,11 @@ export class SpellPoints {
    */
 
   static castSpell(item, consume, options) {
-    //console.log('SP CAST SPELL', item, consume, options);
+    //console.log('SP CAST SPELL item', item);
+    //console.log('SP CAST SPELL consume', consume);
+    //console.log('SP CAST SPELL options', options);
 
-    if (!consume.consumeSpellPoints) {
+    if (!consume.consume?.spellPoints) {
       return [item, consume, options];
     }
 
@@ -183,70 +182,43 @@ export class SpellPoints {
     if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
       return [item, consume, options];
 
-    let spellPointResource = null;
-    let spellPointItem = null;
-    if (dndV3) {
-      spellPointItem = SpellPoints.getSpellPointsItem(actor);
-    } else {
-      spellPointResource = SpellPoints.getSpellPointsResource(actor);
-    }
+    let spellPointItem = SpellPoints.getSpellPointsItem(actor);
+
     const moduleSettings = this.settings
     let settings = moduleSettings;
 
-    let V3usingResource = false;
-    if (dndV3 && !spellPointItem && spellPointResource) {
-      V3usingResource = true;
-    } else if (spellPointItem.flags?.spellpoints?.override) {
+    if (spellPointItem.flags?.spellpoints?.override) {
       settings = spellPointItem.flags?.spellpoints?.config !== 'undefined' ? spellPointItem.flags?.spellpoints.config : settings;
     }
 
     /** check if this is a spell casting **/
-    if (item.type != 'spell')
-      return [item, consume, options];
+    /** dnd v4 this is not an item hook but an activation hook */
+    /*if (item.type != 'spell')
+      return [item, consume, options];*/
 
     /** if is a pact spell, but no mixed mode and warlocks do not use spell points: do nothing */
-    if (item.system.preparation.mode == 'pact' && !moduleSettings.warlockUseSp)
+    if (item.parent.preparation.mode == 'pact' && !moduleSettings.warlockUseSp)
       return [item, consume, options];
 
-    if (consume.consumeSpellSlot) {
-      consume.consumeSpellPoints = false;
+    if (consume.consume.spellSlot) {
+      consume.consume.spellPoints = false;
       return [item, consume, options];
     }
 
-    if (consume.consumeSpellPoints) {
-      consume.consumeSpellSlot = false;
+    if (consume.consume.spellPoints) {
+      consume.consume.spellSlot = false;
+      consume.hasConsumption = false;
     }
 
     /** not found any resource for spellpoints ? **/
-    if (!spellPointResource && !spellPointItem) {
-      let actorNoSP_message = '';
-      let createNewResource_message = '';
-      if (dndV3 && !V3usingResource) {
-        actorNoSP_message = game.i18n.format("dnd5e-spellpoints.actorNoSPV3", { ActorName: actor.name, SpellPoints: moduleSettings.spResource });
-        createNewResource_message = game.i18n.format("dnd5e-spellpoints.createNewResourceV3", { SpellPoints: moduleSettings.spResource })
-      } else {
-        actorNoSP_message = game.i18n.format("dnd5e-spellpoints.actorNoSP", { ActorName: actor.name, SpellPoints: moduleSettings.spResource });
-        createNewResource_message = game.i18n.format("dnd5e-spellpoints.createNewResource", { SpellPoints: moduleSettings.spResource })
-      }
-      ChatMessage.create({
-        content: "<i style='color:red;'>" + actorNoSP_message + "</i>",
-        speaker: ChatMessage.getSpeaker({ alias: actor.name })
-      });
-      ui.notifications.error(createNewResource_message);
+    if (!spellPointItem) {
       return {};
     }
 
     /** find the spell level just cast */
-    const spellLvl = item.system.level;
+    const spellLvl = options.data.flags.dnd5e.use.spellLevel;
 
-    let actualSpellPoints = 0;
-    if (dndV3) {
-      actualSpellPoints = spellPointItem.system.uses.value;
-    } else {
-      if (actor.system.resources[spellPointResource.key].hasOwnProperty("value")) {
-        actualSpellPoints = actor.system.resources[spellPointResource.key].value;
-      }
-    }
+    let actualSpellPoints = spellPointItem.system.uses.value;
 
     /* get spell cost in spellpoints */
     const spellPointCost = this.withActorData(settings.spellPointsCosts[spellLvl], actor);
@@ -274,20 +246,17 @@ export class SpellPoints {
     /** update spellpoints **/
     if (actualSpellPoints - spellPointCost >= 0) {
       /* character has enough spellpoints */
-      if (dndV3) {
-        spellPointItem.system.uses.value = spellPointItem.system.uses.value - spellPointCost;
-      } else {
-        spellPointResource.values.value = spellPointResource.values.value - spellPointCost;
-      }
+      spellPointItem.system.uses.spent = spellPointItem.system.uses.spent + spellPointCost;
 
       ChatMessage.create({
-        content: "<i style='color:green;'>" + game.i18n.format("dnd5e-spellpoints.spellUsingSpellPoints",
-          {
-            ActorName: actor.name,
-            SpellPoints: moduleSettings.spResource,
-            spellPointUsed: spellPointCost,
-            remainingPoints: dndV3 ? spellPointItem.system.uses.value : spellPointResource.values.value
-          }) + "</i>",
+        content: "<i style='color:green;'>" +
+          game.i18n.format(SP_MODULE_NAME + ".spellUsingSpellPoints",
+            {
+              ActorName: actor.name,
+              SpellPoints: moduleSettings.spResource,
+              spellPointUsed: spellPointCost,
+              remainingPoints: spellPointItem.system.uses.value - spellPointCost
+            }) + "</i>",
         speaker: ChatMessage.getSpeaker({ alias: actor.name }),
         isContentVisible: false,
         isAuthor: true,
@@ -297,11 +266,7 @@ export class SpellPoints {
       /** check if actor can cast using HP **/
       if (settings.spEnableVariant) {
         // spell point resource is 0 but character can still cast.
-        if (dndV3) {
-          spellPointItem.system.uses.value = 0;
-        } else {
-          spellPointResource.values.value = 0;
-        }
+        spellPointItem.system.uses.spent = spellPointItem.system.uses.max
 
         const hpMaxLost = spellPointCost * SpellPoints.withActorData(settings.spLifeCost, actor);
         const hpActual = actor.system.attributes.hp.value;
@@ -316,7 +281,7 @@ export class SpellPoints {
           // 3 death saves failed and 0 hp
           updateActor.system.attributes = { 'death': { 'failure': 3 }, 'hp': { 'tempmax': -hpMaxFull, 'value': 0 } };
           ChatMessage.create({
-            content: "<i style='color:red;'>" + game.i18n.format("dnd5e-spellpoints.castedLifeDead", { ActorName: actor.name }) + "</i>",
+            content: "<i style='color:red;'>" + game.i18n.format(SP_MODULE_NAME + ".castedLifeDead", { ActorName: actor.name }) + "</i>",
             speaker: ChatMessage.getSpeaker({ alias: actor.name }),
             isContentVisible: false,
             isAuthor: true,
@@ -328,7 +293,7 @@ export class SpellPoints {
             updateActor.system.attributes = foundry.utils.mergeObject(updateActor.system.attributes, { 'hp': { 'value': newMaxHP } });
           }
           ChatMessage.create({
-            content: "<i style='color:red;'>" + game.i18n.format("dnd5e-spellpoints.castedLife", { ActorName: actor.name, hpMaxLost: hpMaxLost }) + "</i>",
+            content: "<i style='color:red;'>" + game.i18n.format(SP_MODULE_NAME + ".castedLife", { ActorName: actor.name, hpMaxLost: hpMaxLost }) + "</i>",
             speaker: ChatMessage.getSpeaker({ alias: actor.name }),
             isContentVisible: false,
             isAuthor: true,
@@ -337,7 +302,7 @@ export class SpellPoints {
         }
       } else {
         ChatMessage.create({
-          content: "<i style='color:red;'>" + game.i18n.format("dnd5e-spellpoints.notEnoughSp", { ActorName: actor.name, SpellPoints: moduleSettings.spResource }) + "</i>",
+          content: "<i style='color:red;'>" + game.i18n.format(SP_MODULE_NAME + ".notEnoughSp", { ActorName: actor.name, SpellPoints: moduleSettings.spResource }) + "</i>",
           speaker: ChatMessage.getSpeaker({ alias: actor.name }),
           isContentVisible: false,
           isAuthor: true,
@@ -345,8 +310,11 @@ export class SpellPoints {
         });
         consume.consumeSpellSlot = false;
         consume.consumeSpellLevel = false;
-        consume.createMeasuredTemplate = false;
+        consume.create.measuredTemplate = false;
         options.createMessage = false;
+        options.create = false;
+        options.hasConsumption = false;
+        consume.hasConsumption = false;
         delete options.flags;
         return [item, consume, options];
       }
@@ -354,12 +322,12 @@ export class SpellPoints {
 
     consume.consumeSpellLevel = false;
     consume.consumeSpellSlot = false;
-    if (dndV3) {
-      updateItem.system.uses = { value: spellPointItem.system.uses.value };
-      spellPointItem.update(updateItem);
-    } else {
-      updateActor.system.resources[`${spellPointResource.key}`] = { value: spellPointResource.values.value };
-    }
+    options.hasConsumption = false;
+    consume.hasConsumption = false;
+
+    updateItem.system.uses = spellPointItem.system.uses;
+    spellPointItem.update(updateItem);
+
     actor.update(updateActor);
 
     return [item, consume, options];
@@ -374,12 +342,22 @@ export class SpellPoints {
    * @param formData - The data that was submitted by the user.
    * @returns the value of the variable `level`
    */
-  static async checkDialogSpellPoints(dialog, html, formData) {
+  static async checkDialogSpellPoints(dialog, html) {
     if (!SpellPoints.isModuleActive())
       return;
 
+    var Appconfig = foundry.utils.getProperty(dialog, "config");
+
+    if (typeof Appconfig?.consume?.spellPoints == 'undefined') {
+      dialog.config.consume.spellSlot = false;
+      dialog.config.consume.spellPoints = true;
+    }
+
+    Appconfig = foundry.utils.getProperty(dialog, "config");
+
     /** check if actor is a player character **/
     let actor = foundry.utils.getProperty(dialog, "item.actor");
+
     if (!this.isActorCharacter(actor))
       return;
 
@@ -387,10 +365,11 @@ export class SpellPoints {
     let settings = this.settings;
 
     /** check if this is a spell **/
+    // TODO: maybe this check is not correct anymore
     if (foundry.utils.getProperty(dialog, "item.type") !== "spell")
       return;
 
-    html.addClass('spellpoints-cast');
+    $(html).addClass('spellpoints-cast');
 
     const spell = dialog.item.system;
     const preparation = spell.preparation.mode; //prepared,pact,always,atwill,innate
@@ -403,31 +382,24 @@ export class SpellPoints {
     const baseSpellLvl = spell.level;
 
     /** get spellpoints **/
-    let spellPointItem = null;
-    let spellPointResource = SpellPoints.getSpellPointsResource(actor);;
-    if (dndV3) {
-      spellPointItem = SpellPoints.getSpellPointsItem(actor);
-      if (spellPointItem && spellPointItem.flags?.spellpoints?.override)
-        settings = isset(spellPointItem.flags?.spellpoints?.config) ? spellPointItem.flags?.spellpoints?.config : settings;
+    null;
+    let spellPointResource = SpellPoints.getSpellPointsResource(actor);
+
+    const spellPointItem = SpellPoints.getSpellPointsItem(actor);
+    if (!spellPointItem) {
+      // this actor has no spell point resource what to do?
+      return;
     }
 
-    if (!spellPointResource && !spellPointItem) {
-      // this actor has no spell point resource what to do?
-      /*let messageCreate;
-      if (dndV3) {
-        messageCreate = game.i18n.format("dnd5e-spellpoints.pleaseCreateV3", { SpellPoints: this.settings.spResource });
-      } else {
-        messageCreate = game.i18n.format("dnd5e-spellpoints.pleaseCreate", { SpellPoints: this.settings.spResource });
-      }
-      $('#ability-use-form', html).append('<div class="spError">' + messageCreate + '</div>'); */
-      return;
+    if (spellPointItem && spellPointItem.flags?.spellpoints?.override) {
+      settings = isset(spellPointItem.flags?.spellpoints?.config) ? spellPointItem.flags?.spellpoints?.config : settings;
     }
 
     let level = 'none';
     let cost = 0;
 
     /** Replace list of spell slots with list of spell point costs **/
-    $('select[name="slotLevel"] option', html).each(function () {
+    $('select[name="spell.slot"] option', $(html)).each(function () {
       let selectValue = $(this).val();
 
       if (selectValue == 'pact' && warlockCanCast) {
@@ -438,57 +410,55 @@ export class SpellPoints {
       //console.log('LEVEL', level);
       cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
 
-      let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format("dnd5e-spellpoints.spellCost", { amount: cost, SpellPoints: (dndV3 ? spellPointItem.name : this.settings.spResource) })})`
+      let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format(SP_MODULE_NAME + ".spellCost", { amount: cost, SpellPoints: spellPointItem.name })})`
       if ((selectValue == 'pact' && warlockCanCast) || selectValue != 'pact') {
         $(this).text(newText);
       }
     })
 
-    let consumeInput = $('input[name="consumeSpellSlot"]', html).parents('.form-group');
-    const consumeString = game.i18n.format("dnd5e-spellpoints.consumeSpellSlotInput", { SpellPoints: dndV3 ? spellPointItem.name : this.settings.spResource });
-    //consumeInput.html('<input type="checkbox" name="consumeSpellSlot">' + consumeString);
-    consumeInput.parent().append('<div class="form-group"><label class="checkbox"><input type="checkbox" name="consumeSpellPoints" checked="">' + consumeString + '</label></div>');
-    $('input[name="consumeSpellSlot"]', html).removeAttr('checked');
+    let consumeInput = $('dnd5e-checkbox[name="consume.spellSlot"]', $(html)).parents('.form-group');
+    const consumeString = game.i18n.format(SP_MODULE_NAME + ".consumeSpellSlotInput", { SpellPoints: spellPointItem.name });
+    const consumeSpellPoints = Appconfig.consume.spellPoints ? "checked" : '';
+    consumeInput.parent().append(`<div class="form-group"><label>${consumeString}</label><div class="form-fields"><input type="checkbox" name="consume.spellPoints" ${consumeSpellPoints}></div></div>`);
+
+    if (!dialog.config.consume.spellSlot) {
+      $('dnd5e-checkbox[name="consume.spellSlot"]', $(html)).removeAttr('checked');
+    }
 
     if (level == 'none')
       return;
 
     /** Calculate spell point cost and warn user if they have none left */
     let spellPointCost = 0;
-    let actualSpellPoints = 0;
-    if (dndV3) {
-      actualSpellPoints = spellPointItem.system.uses.value;
-    } else {
-      actualSpellPoints = actor.system.resources[spellPointResource.key].value;
-    }
+    let actualSpellPoints = spellPointItem.system.uses.value;
 
     if (preparation == 'pact' && warlockCanCast)
       spellPointCost = cost;
     else
       spellPointCost = SpellPoints.withActorData(settings.spellPointsCosts[baseSpellLvl], actor);
     const missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - spellPointCost < 0);
-    const messageNotEnough = game.i18n.format("dnd5e-spellpoints.youNotEnough", { SpellPoints: dndV3 ? spellPointItem.name : this.settings.spResource });
+    const messageNotEnough = game.i18n.format(SP_MODULE_NAME + ".youNotEnough", { SpellPoints: spellPointItem.name });
 
     if (missing_points) {
       $('#ability-use-form', html).append('<div class="spError">' + messageNotEnough + '</div>');
     }
 
-    let copyButton = $('.dialog-button', html).clone();
-    $('.dialog-button', html).addClass('original').hide();
+    let copyButton = $('.form-footer button', $(html)).clone();
+    $('.form-footer button', $(html)).addClass('original').hide();
     copyButton.addClass('copy').removeClass('use').attr('data-button', '');
-    $('.dialog-buttons', html).append(copyButton);
+    $('.form-footer', $(html)).append(copyButton);
 
-    html.on('click', '.dialog-button.copy', function (e) {
+    $(html).on('click', '.copy', function (e) {
       e.preventDefault();
       /** if not consumeSlot we ignore cost, go on and cast or if variant active **/
-      if (!$('input[name="consumeSpellPoints"]', html).prop('checked') || settings.spEnableVariant) {
-        $('.dialog-button.original', html).trigger("click");
-      } else if ($('select[name="slotLevel"]', html).length > 0) {
+      if (!$('dnd5e-checkbox[name="consume.spellSlot"]', $(html)).prop('checked') || settings.spEnableVariant) {
+        $('.original', $(html)).trigger("click");
+      } else if ($('select[name="spell.slot"]', $(html)).length > 0) {
         if (missing_points) {
           ui.notifications.error(messageNotEnough);
           dialog.close();
         } else {
-          $('.dialog-button.original', html).trigger("click");
+          $('.original', $(html)).trigger("click");
         }
       }
     })
@@ -648,7 +618,7 @@ export class SpellPoints {
 
 
   static calculateSpellPointsCreate(item, updates, id) {
-    if (item.type == 'feat' && SpellPoints.isSpellPointsItem(item)) {
+    if (SpellPoints.isSpellPointsItem(item)) {
       SpellPoints.processFirstDrop(item);
       return true;
     } else if (item.type == 'class') {
@@ -690,7 +660,7 @@ export class SpellPoints {
       });
 
       let SpeakTo = game.users.filter(u => u.isGM);
-      let message = game.i18n.format("dnd5e-spellpoints.spellPointsFound", { SpellPoints: (dndV3 ? spellPointsItem.name : SpellPoints.settings.spResource), Actor: actorName })
+      let message = game.i18n.format(SP_MODULE_NAME + ".spellPointsFound", { SpellPoints: spellPointsItem.name, Actor: actorName })
       ChatMessage.create({
         content: "<i style='color:green;'>" + message + "</i>",
         speaker: ChatMessage.getSpeaker({ alias: actorName }),
@@ -721,6 +691,7 @@ export class SpellPoints {
     if (SpellPoints.isSpellPointsItem(item)) {
       let max, value;
       let changed_uses = false;
+      console.log("checkSpellPointsValues UPDATE", update)
       // check if changed the item uses prevent value exceed max
       if (update.system?.uses?.max) {
         max = update.system.uses.max;
@@ -767,9 +738,9 @@ export class SpellPoints {
   static processFirstDrop(item) {
     if (SpellPoints.getActorFlagSpellPointItem(item.parent)) {
       // there is already a spellpoints item here.
-      ui.notifications.error(game.i18n.format("dnd5e-spellpoints.alreadySpItemOwned"));
+      ui.notifications.error(game.i18n.format(SP_MODULE_NAME + ".alreadySpItemOwned"));
       item.update({
-        'name': item.name + ' (' + game.i18n.format("dnd5e-spellpoints.duplicated") + ')'
+        'name': item.name + ' (' + game.i18n.format(SP_MODULE_NAME + ".duplicated") + ')'
       });
       return;
     }
@@ -792,8 +763,8 @@ export class SpellPoints {
     if (spellPointResource) {
       // created a spell points item in a sheet with a spell points resource, let's get data from it.
       let d = Dialog.confirm({
-        title: game.i18n.format("dnd5e-spellpoints.oldResourceFound"),
-        content: "<p>" + game.i18n.format("dnd5e-spellpoints.oldResourceFoundDesc") + "</p>",
+        title: game.i18n.format(SP_MODULE_NAME + ".oldResourceFound"),
+        content: "<p>" + game.i18n.format(SP_MODULE_NAME + ".oldResourceFoundDesc") + "</p>",
         yes: () => SpellPoints.removeOldResource(item, spellPointResource),
         no: () => item = SpellPoints.updateSpellPointsMax({}, {}, actor, item),
         defaultYes: true
@@ -812,7 +783,8 @@ export class SpellPoints {
     actor.update(updateActor);
     item.update({
       [`system.uses.max`]: max,
-      [`system.uses.value`]: value
+      [`system.uses.value`]: value,
+      [`system.uses.spent`]: max - value
     })
   }
 
@@ -825,17 +797,21 @@ export class SpellPoints {
    * @returns The return value is the html_checkbox variable.
    */
   static async alterCharacterSheet(app, html, data, type) {
-    if (!this.isModuleActive() || data.actor.type != "character") {
+    console.log('alterCharacterSheet', data.actor);
+    console.log('alterCharacterSheet', html);
+    console.log('alterCharacterSheet type', type);
+    if (!this.isModuleActive() || (data.actor.type != "character" && data.actor.type != "npc")) {
       return;
     }
     const actor = data.actor;
     const SpellPointsItem = this.getSpellPointsItem(actor);
-    if (dndV3 && SpellPointsItem) {
+    if (SpellPointsItem) {
       const value = SpellPointsItem.system.uses.value;
       const max = SpellPointsItem.system.uses.max;
       let percent = value / max * 100 > 100 ? 100 : value / max * 100;
       const template_data = {
         'isV2': type == 'v2',
+        'isNPC': type == 'npc',
         'editable': data.editable,
         'name': SpellPointsItem.name,
         '_id': SpellPointsItem._id,
@@ -848,6 +824,8 @@ export class SpellPoints {
 
       if (type == 'v2') {
         $('.sidebar .stats', html).append(rendered_html);
+      } else if (type == 'npc') {
+        $('.sheet-body .sidebar', html).prepend(rendered_html);
       } else {
         $('.header-details .attributes', html).append(rendered_html);
       }
@@ -862,12 +840,14 @@ export class SpellPoints {
   }
 
   static async renderSpellPointsItem(app, html, data) {
+    const html_obj = $(html);
     const item = data?.item;
+
     if (this.isModuleActive() && SpellPoints.isSpellPointsItem(item)) {
       // this option make the app a little more usable, we keep submit on close and submit on change for checkboxes and select
-      app.options.submitOnChange = false;
+      //app.options.submitOnChange = false;
 
-      $('.item-properties', html).hide();
+      $('.item-properties', html_obj).hide();
       if (data.editable && (game.user.isGM || SpellPoints.settings?.spGmOnly == false)) {
         let template_item = item; // data object to pass to the template
         //get global module settings for defaults
@@ -882,15 +862,6 @@ export class SpellPoints {
         const preset = conf.spFormula;
 
         conf.isCustom = isset(conf?.spFormula) ? formulas[preset].isCustom : def.isCustom;
-        /*conf.spAutoSpellpoints = isset(conf?.spAutoSpellpoints) ? conf?.spAutoSpellpoints : def.spAutoSpellpoints;
-        conf.spCustomFormulaBase = isset(conf?.spCustomFormulaBase) ? conf?.spCustomFormulaBase : def.spCustomFormulaBase;
-        conf.spCustomFormulaSlotMultiplier = isset(conf?.spCustomFormulaSlotMultiplier) ? conf?.spCustomFormulaSlotMultiplier : def.spCustomFormulaSlotMultiplier;
-        conf.spEnableVariant = isset(conf?.spEnableVariant) ? conf?.spEnableVariant : def.spEnableVariant;
-        conf.spellPointsCosts = isset(conf?.spellPointsCosts) ? conf?.spellPointsCosts : def.spellPointsCosts;
-        conf.spellPointsByLevel = isset(conf?.spellPointsByLevel) ? conf?.spellPointsByLevel : def.spellPointsByLevel;
-        conf.spUseLeveled = isset(conf?.spUseLeveled) ? conf?.spUseLeveled : def.spUseLeveled;
-        conf.leveledProgressionFormula = isset(conf?.leveledProgressionFormula) ? conf?.leveledProgressionFormula : def.leveledProgressionFormula;
-        conf.spLifeCost = isset(conf?.spLifeCost) ? conf?.spLifeCost : def.spLifeCost;*/
 
         if (isset(conf?.previousFormula) && conf?.previousFormula != preset) {
           // changed formula preset, update spellpoints default
@@ -909,11 +880,11 @@ export class SpellPoints {
         const template_file = "modules/dnd5e-spellpoints/templates/spell-points-item.hbs"; // file path for the template file, from Data directory
         const rendered_html = await renderTemplate(template_file, template_item);
 
-        $('.sheet-body .tab[data-tab="description"] .item-description', html).prepend(rendered_html);
-        $('.tab.active', html).scrollTop(app.options?.prevScroll);
+        $('.sheet-body .tab[data-tab="description"] .item-descriptions', html_obj).prepend(rendered_html);
+        $('.tab.active', html_obj).scrollTop(app.options?.prevScroll);
 
-        $('input[type="checkbox"], select', html).on('change', function () {
-          let scroll = $('.tab.active', html).scrollTop();
+        $('input[type="checkbox"], select', html_obj).on('change', function () {
+          let scroll = $('.tab.active', html_obj).scrollTop();
           app.options.prevScroll = scroll;
           app.submit();
         });
@@ -921,9 +892,6 @@ export class SpellPoints {
       return (app, html, data);
     }
   }
-
-
-
 } /** END SpellPoint Class **/
 
 
@@ -941,32 +909,124 @@ class ActorSpellPointsConfig extends DocumentSheet {
     this.clone = this.object.clone();
   }
 
+  /** @inheritDoc */
+  async _onChangeInput(event) {
+    super._onChangeInput(event)
+    const data = foundry.utils.expandObject(this._getSubmitData());
+
+    data.uses.spent = data.uses.max > data.uses.value ? data.uses.max - data.uses.value : 0;
+    const that = this;
+
+    this._updateObject(event, data).then((data) => {
+      that.clone = data;
+      that.render();
+    });
+    //this.render();
+  }
+
+  /**
+   * Handle performing some sheet action.
+   * @param {PointerEvent} event  The originating event.
+   * @returns {Promise|void}
+   * @protected
+   */
+  _onSheetAction(event) {
+    const target = event.currentTarget;
+    const { action } = target.dataset;
+    switch (action) {
+      case "addRecovery": return this._onAddRecovery();
+      case "deleteRecovery": return this._onDeleteRecovery(target);
+      case "updateSpellPointMax": return this._updateMax();
+    }
+  }
+
+  _updateMax() {
+    const actor = this.clone.parent;
+    const item = SpellPoints.getSpellPointsItem(actor);
+    SpellPoints.updateSpellPointsMax({}, {}, actor, item);
+  }
+
+  /**
+   * Create a new recovery profile.
+   * @returns {Promise}
+   * @protected
+   */
+  _onAddRecovery() {
+    const data = foundry.utils.expandObject(this._getSubmitData());
+    data.uses.recovery = [...this.clone.system.uses.recovery, {}];
+    this._updateObject(null, data).then((data) => {
+      this.clone = data;
+      this.render();
+    });
+  }
+
+  /**
+   * Delete a recovery profile.
+   * @param {HTMLElement} target  The deletion event target.
+   * @returns {Promise}
+   * @protected
+   */
+  _onDeleteRecovery(target) {
+    const data = foundry.utils.expandObject(this._getSubmitData());
+    data.uses.recovery = [...this.clone.system.uses.recovery];
+    data.uses.recovery.splice(target.closest("[data-index]").dataset.index, 1);
+    this._updateObject(null, data).then((data) => {
+      this.clone = data;
+      this.render();
+    });
+  }
+
   /* -------------------------------------------- */
 
   /** @override */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["dnd5e", "dnd5e-spellpoints", "actor-spell-points-config"], /** css classes */
+      classes: ["dnd5e2", "dnd5e-spellpoints", "actor-spell-points-config", "sheet", "item"], /** css classes */
       template: "modules/dnd5e-spellpoints/templates/spell-points-popup-config.hbs",
-      width: 320,
+      width: 400,
       height: "auto",
+      title: "TITLE",
       sheetConfig: false
     });
   }
 
   get title() {
-    return `${game.i18n.localize("dnd5e-spellpoints.ItemConfig")}: ${this.document.name}`;
+    return `${game.i18n.localize(SP_MODULE_NAME + ".ItemConfig")}: ${this.document.name}`;
   }
 
   /** @inheritdoc */
-  getData(options) {
-    return {
-      uses: this.clone.system.uses,
-      img: this.clone.img,
-      name: this.clone.name,
-      recovery: game.system.config.limitedUsePeriods,
-      formula: game.system.config.limitedUsePeriods[this.clone.system.uses.per]?.formula
-    };
+  async getData(options) {
+    const context = await super.getData(options);
+
+    context.uses = this.clone.system.uses;
+    context.system = this.clone.system;
+    context.img = this.clone.img;
+    context.name = this.clone.name;
+    context.recovery = game.system.config.limitedUsePeriods;
+
+    // Limited Uses
+    context.data = { uses: this.clone.uses };
+    context.hasLimitedUses = this.clone.hasLimitedUses;
+    context.recoveryPeriods = [
+      ...Object.entries(CONFIG.DND5E.limitedUsePeriods)
+        .filter(([, { deprecated }]) => !deprecated)
+        .map(([value, { label }]) => ({ value, label, group: game.i18n.localize("DND5E.DurationTime") })),
+      { value: "recharge", label: game.i18n.localize("DND5E.USES.Recovery.Recharge.Label") }
+    ];
+    context.recoveryTypes = [
+      { value: "recoverAll", label: game.i18n.localize("DND5E.USES.Recovery.Type.RecoverAll") },
+      { value: "loseAll", label: game.i18n.localize("DND5E.USES.Recovery.Type.LoseAll") },
+      { value: "formula", label: game.i18n.localize("DND5E.USES.Recovery.Type.Formula") }
+    ];
+    context.usesRecovery = (context.system.uses?.recovery ?? []).map((data, index) => ({
+      data,
+      //fields: context.fields.uses.fields.recovery.element.fields,
+      prefix: `uses.recovery.${index}.`,
+      source: context.uses.recovery[index] ?? data,
+      formulaOptions: data.period === "recharge" ? data.recharge?.options : null
+    }));
+
+    return context;
   }
 
   /* -------------------------------------------- */
@@ -980,8 +1040,8 @@ class ActorSpellPointsConfig extends DocumentSheet {
 
   /** @inheritdoc */
   async _updateObject(event, formData) {
-    const uses = foundry.utils.expandObject(formData).uses
-    return this.document.update({ "system.uses": uses });
+    const uses = foundry.utils.expandObject(formData).uses;
+    return this.document.update({ "system.uses": uses });;
   }
 
   /* -------------------------------------------- */
@@ -991,6 +1051,9 @@ class ActorSpellPointsConfig extends DocumentSheet {
   /** @inheritDoc */
   activateListeners(html) {
     super.activateListeners(html);
+    if (this.isEditable) {
+      html.find("button.control-button").on("click", this._onSheetAction.bind(this));
+    }
   }
 
 }

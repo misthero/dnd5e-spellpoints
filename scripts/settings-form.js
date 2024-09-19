@@ -1,4 +1,4 @@
-import { MODULE_NAME, ITEM_ID } from "./main.js";
+import { SP_MODULE_NAME, SP_ITEM_ID } from "./main.js";
 import { SpellPoints } from "./spellpoints.js";
 
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -20,7 +20,7 @@ export class SpellPointsForm extends FormApplication {
     return foundry.utils.mergeObject(super.defaultOptions, {
       title: game.i18n.localize('dnd5e-spellpoints.form-title'),
       id: 'spellpoints-form',
-      template: `modules/${MODULE_NAME}/templates/spellpoint-module-config.hbs`,
+      template: `modules/${SP_MODULE_NAME}/templates/spellpoint-module-config.hbs`,
       width: 700,
       height: 600,
       //closeOnSubmit: true,
@@ -44,13 +44,13 @@ export class SpellPointsForm extends FormApplication {
       this.reset ? foundry.utils.mergeObject(SpellPoints.settings, SpellPoints.defaultSettings, { insertKeys: true, insertValues: true, overwrite: true, recursive: true, performDeletions: true }) : foundry.utils.mergeObject(SpellPoints.settings, { requireSave: false })
     );
     this.reset = false;
-    data.item_id = ITEM_ID;
+    data.item_id = SP_ITEM_ID;
     SpellPoints.setSpColors();
     return data;
   }
 
   async getLink() {
-    let link = await TextEditor.enrichHTML("@UUID[Compendium.dnd5e-spellpoints.module-items.Item." + ITEM_ID + "]{Spell Points}");
+    let link = await TextEditor.enrichHTML("@UUID[Compendium.dnd5e-spellpoints.module-items.Item." + SP_ITEM_ID + "]{Spell Points}");
   }
 
   onReset() {
@@ -75,10 +75,10 @@ export class SpellPointsForm extends FormApplication {
     var that = this;
     return __awaiter(this, void 0, void 0, function* () {
       let settings = foundry.utils.mergeObject(SpellPoints.settings, formData, { insertKeys: true, insertValues: true });
-      yield game.settings.set(MODULE_NAME, 'settings', settings);
+      yield game.settings.set(SP_MODULE_NAME, 'settings', settings);
       that.render();
       if (!hideMessage) {
-        ui.notifications.info(game.i18n.format("dnd5e-spellpoints.settingSaved"));
+        ui.notifications.info(game.i18n.format(SP_MODULE_NAME+".settingSaved"));
       }
     });
   }
