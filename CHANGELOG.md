@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [2.4.1]
+## [2.4.10]
 
 ### Compatibility release for D&D v4
 
