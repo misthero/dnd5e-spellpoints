@@ -1,4 +1,8 @@
 # Advanced Magic - Spell Points System 5e
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/misthero/dnd5e-spellpoints/total) ![GitHub contributors](https://img.shields.io/github/contributors/misthero/dnd5e-spellpoints) ![GitHub last commit](https://img.shields.io/github/last-commit/misthero/dnd5e-spellpoints)
+
+
+
 
 FoundryVTT module for using  Spell Point in D&D5e.
 
