@@ -1,12 +1,13 @@
 # CHANGELOG
 
-## [2.4.04]
+## [2.4.05]
 
 ### Compatibility release for D&D v4
 
 - Removed compatibility with old resources
 - Some code refactoring and cleanup
-- CI setup
+- Added SP bar for NPCs
+- Recalculate max spellpoints button added to quick config
 
 ## [2.2.30]
 

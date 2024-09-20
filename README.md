@@ -12,7 +12,7 @@
 
 This module uses the variant rules found in the DMG to allow character to cast spells using a resource named "Spell Points". It also allow to create your custom Spell Points / Mana rules and advancement system.
 
-[Help and feature request]([issues])
+[Help and feature request][issues]
 
 ## Changelog
 
@@ -20,23 +20,14 @@ This module uses the variant rules found in the DMG to allow character to cast s
 
 ## Installation Instructions
 
-- Copy `https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json` into the module installer inside foundry when it asks for the manifest.
-- Launch your world go to settings -> module settings and enable the module `dnd5e-spellpoints`.
+- Copy `https://github.com/misthero/dnd5e-spellpoints/releases/latest/download/module.json` into the module installer inside foundry when it asks for the manifest.
+- Launch your world go to settings -> module settings and enable the module Advanced Magic - Spell Points System 5e `dnd5e-spellpoints`.
 - Find the spellpoints Item from the module compendium and import it.
-- Drag the item on every character that should use Spell Points.
+- Drag the item on every character or NPC that should use Spell Points.
 
-### Old v1 verion Instructions
-
-- Choose the name of the resource to use as Spell Points (default "Spell Points") you can change the name in module settings. (v1 only)
-- Create a new resource with the name "Spell Points" on every character sheet. (Hint: if any of your player need more resources you can use the module <https://github.com/ardittristan/5eSheet-resourcesPlus/tree/master)(v1> only)
-
-You are ready to go, now spells cast by player's characters will use spell points instead of slots.
-
-**Notice**: Slots won't disappear from character sheets, but they will always stay full as long as this module is enabled.
+**Notice**: Slots won't disappear from character sheets, but they won't be used.
 
 ## Features
-
-- Configurable resource name (DnDV2 only).
 
 - Warlock can use spellpoints (disabled by default).
 - NPC can use spellpoints (disabled by default).
@@ -46,16 +37,18 @@ You are ready to go, now spells cast by player's characters will use spell point
   - Health Penalty Multiplier (See **[Advanced Magic - Spell Point System 5e!](https://www.drivethrurpg.com/product/272967/Advanced-Magic--Spell-Points-System-5e)** for more information).
 - Optionally you can enable a variant rule to allow players to keep casting even when they run out of spellpoints using their own life with terrible consequences if you are using the **[Advanced Magic - Spell Point System 5e!](https://www.drivethrurpg.com/product/272967/Advanced-Magic--Spell-Points-System-5e)** available as "Pay what you Want" on DriveThruRPG.
 
-## DnD v3 Specific Features (spellpoints Item)
+## DnD v3/v4 Specific Features (spellpoints Item)
 
-- Configurable Item Name (DnD V3 only).
-- Automatic spellpoint bar on character sheet (DnD V3 only).
+- Configurable Item Name
+- Automatic spellpoint bar on character sheet
 - Track the spellpoints directly in character sheet.
 - Configurable spellpoint bar color.
-- Per character spell points configuration and progression. Each character can have a different spell points setup overriding the configuration directly on the item (DnD V3 only).
+- Per character spell points configuration and progression. Each character can have a different spell points setup overriding the configuration directly on the item.
 - Spellcaster classes configurable progression for Full, Half, Third casters.
 - Configurable SpellPoint Cost for each spell level for non-liear progression.
 - You can also share your custom spellpoints item.
+
+![spellpoints on sheet](https://i.postimg.cc/XqPY225m/screenshot-2024-09-21.png)
 
 ## Example Custom Formulas
 
@@ -139,6 +132,7 @@ It is also possible to add a module or create your own module that edits or adds
 ### Incompatibility
 
 None at the moment but please let me know if any.
+
 
 
 [issues]: https://github.com/misthero/dnd5e-spellpoints/issues
