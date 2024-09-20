@@ -37,7 +37,7 @@ jobs:
 
       # Create zip file.
       - name: Create ZIP archive
-        run: zip -r ./live-play-tt.zip 
+        run: zip -r ./${{env.MODULE_ID}}.zip 
           module.json 
           README.md 
           LICENSE 
@@ -63,6 +63,6 @@ jobs:
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "./module.json, ./live-play-tt.zip"
+          artifacts: "./module.json, ./${{env.MODULE_ID}}.zip"
           tag: ${{ github.event.release.tag_name }}
           body: ${{ steps.get_release_notes.outputs.release_notes }}
