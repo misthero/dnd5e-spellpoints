@@ -33,7 +33,7 @@ jobs:
           id: ${{env.MODULE_ID}}
           url: https://github.com/${{ github.repository }}
           download: https://github.com/${{ github.repository }}/releases/download/${{steps.get_version.outputs.version}}/${{env.MODULE_ID}}.zip
-          manifest: https://github.com/${{ github.repository }}/releases/download/${{steps.get_version.outputs.version}}/module.json,
+          manifest: https://github.com/${{ github.repository }}/releases/latest/download/module.json,
 
       # Create zip file.
       - name: Create ZIP archive
