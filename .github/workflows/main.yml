@@ -1,0 +1,68 @@
+name: Release Creation
+
+on:
+  push:
+    tags:
+    - 'v*'
+  release:
+    types: [published]
+env:
+  MODULE_ID: dnd5e-spellpoints
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Get part of the tag after the `v`.
+      - name: Extract tag version number
+        id: get_version
+        uses: battila7/get-version-action@v2
+
+      # Modify manifest version, download, esmodules, styles, remove hotreload.
+      - name: Modify Manifest to remove HotReload
+        uses: microsoft/variable-substitution@v1
+        with:
+          files: "module.json"
+        env:
+          flags.hotReload: false
+          version: ${{steps.get_version.outputs.version-without-v}}
+          id: ${{env.MODULE_ID}}
+          url: https://github.com/${{ github.repository }}
+          download: https://github.com/${{ github.repository }}/releases/download/${{steps.get_version.outputs.version}}/${{env.MODULE_ID}}.zip
+          manifest: https://github.com/${{ github.repository }}/releases/download/${{steps.get_version.outputs.version}}/module.json,
+
+      # Create zip file.
+      - name: Create ZIP archive
+        run: zip -r ./live-play-tt.zip 
+          module.json 
+          README.md 
+          LICENSE 
+          CHANGELOG.md 
+          css/
+
+      # Get the release notes and set a convenient 'id' for accessing later
+      - name: Read release notes and add to package
+        uses: yashanand1910/standard-release-notes@v1.5.0
+        id: get_release_notes
+        with:
+          changelog_path: ./CHANGELOG.md # Optional
+          version: ${{steps.get_version.outputs.version}} # Required
+
+      # Create a release for this specific version.
+      - name: Update Release with Files
+        if: '!github.event.release.prerelease'
+        id: create_version_release
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          name: ${{ github.event.release.name }}
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: "./module.json, ./live-play-tt.zip"
+          tag: ${{ github.event.release.tag_name }}
+          body: ${{ steps.get_release_notes.outputs.release_notes }}
