@@ -1,11 +1,12 @@
 # CHANGELOG
 
-## [2.4.03]
+## [2.4.04]
 
 ### Compatibility release for D&D v4
 
 - Removed compatibility with old resources
 - Some code refactoring and cleanup
+- CI setup
 
 ## [2.2.30]
 

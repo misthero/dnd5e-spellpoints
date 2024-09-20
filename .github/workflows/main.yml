@@ -43,6 +43,11 @@ jobs:
           LICENSE 
           CHANGELOG.md 
           css/
+          img/
+          lang/
+          packs/
+          scripts/
+          templates/
 
       # Get the release notes and set a convenient 'id' for accessing later
       - name: Read release notes and add to package
