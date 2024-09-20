@@ -1,14 +1,18 @@
 # Advanced Magic - Spell Points System 5e
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/misthero/dnd5e-spellpoints/total) ![GitHub contributors](https://img.shields.io/github/contributors/misthero/dnd5e-spellpoints) ![GitHub last commit](https://img.shields.io/github/last-commit/misthero/dnd5e-spellpoints)
 
+![GitHub Downloads (all assets, all releases)][download-shield] ![GitHub contributors][contributor-shield] ![GitHub last commit][last-commit-shield] [![Forks][forks-shield]][forks-url] [![Stargazers][stars-shield]][stars-url]
 
+[![Forge Installs][forge-installs]][forge-link] ![Foundry Version](https://img.shields.io/endpoint?label=Foundry%20VTT%20versions:&url=https://foundryshields.com/version?url=https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json)
 
+[![ko-fi](https://img.shields.io/badge/ko--fi-Support%20Me-red?style=flat-square&logo=ko-fi)](https://ko-fi.com/misthero)
 
-FoundryVTT module for using  Spell Point in D&D5e.
+#### FoundryVTT module for using  Spell Point in D&D5e.
 
 **Not using spellpoints for your games? well, you should, spellpoints are much better than slots!!**
 
 This module uses the variant rules found in the DMG to allow character to cast spells using a resource named "Spell Points". It also allow to create your custom Spell Points / Mana rules and advancement system.
+
+[Help and feature request]([issues])
 
 ## Changelog
 
@@ -25,7 +29,6 @@ This module uses the variant rules found in the DMG to allow character to cast s
 
 - Choose the name of the resource to use as Spell Points (default "Spell Points") you can change the name in module settings. (v1 only)
 - Create a new resource with the name "Spell Points" on every character sheet. (Hint: if any of your player need more resources you can use the module <https://github.com/ardittristan/5eSheet-resourcesPlus/tree/master)(v1> only)
-
 
 You are ready to go, now spells cast by player's characters will use spell points instead of slots.
 
@@ -89,7 +92,7 @@ ceil(
     3 * @spells.spell3.max +
     4 * @spells.spell4.max +
     5 * @spells.spell5.max +
-    <!-- 6 * @spells.spell6.max + -->
+    6 * @spells.spell6.max +
     7 * @spells.spell7.max +
     8 * @spells.spell8.max +
     9 * @spells.spell9.max
@@ -136,3 +139,15 @@ It is also possible to add a module or create your own module that edits or adds
 ### Incompatibility
 
 None at the moment but please let me know if any.
+
+
+[issues]: https://github.com/misthero/dnd5e-spellpoints/issues
+[forks-shield]: https://img.shields.io/github/forks/misthero/dnd5e-spellpoints.svg?style=flat-round
+[forks-url]: https://github.com/forks/misthero/dnd5e-spellpoints/network/members
+[stars-shield]: https://img.shields.io/github/stars/misthero/dnd5e-spellpoints.svg?style=flat-round
+[stars-url]: https://github.com/misthero/dnd5e-spellpoints/stargazers
+[download-shield]: https://img.shields.io/github/downloads/misthero/dnd5e-spellpoints/total?label=Latest%20Downloads
+[contributor-shield]: https://img.shields.io/github/contributors/misthero/dnd5e-spellpoints?label=Contributors
+[last-commit-shield]: https://img.shields.io/github/last-commit/misthero/dnd5e-spellpoints?label=Last%20Commit
+[forge-installs]: https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https://forge-vtt.com/api/bazaar/package/dnd5e-spellpoints&colorB=blueviolet
+[forge-link]: https://forge-vtt.com/bazaar#package=dnd5e-spellpoints
