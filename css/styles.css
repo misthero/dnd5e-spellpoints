@@ -152,14 +152,26 @@ input.number-lg.spellpoints_value {
 
 .spellpoints.item-config {
   margin: 0 0 20px;
-  background: #00000006;
-  border: 3px double #aaa;
+  border: 4px double var(--dnd5e-color-gold);
   padding: 10px;
+  border-radius: 4px;
+  opacity: 0.8;
+}
+
+.editable .spellpoints.item-config {
+  opacity: 1;
 }
 
 .spellpoints.item-config textarea {
-  background: var(--color-dark-3);
-  color: var(--color-light-1);
+  background: var(--dnd5e-background-parchment);
+  color: var(--color-text-dark-primary);
+  border: var(--dnd5e-border-gold);
+}
+
+.spellpoints.item-config textarea[readonly] {}
+
+.form-group.spellpoints-costs {
+  margin-bottom: 3px;
 }
 
 .spellpoints.item-config .accordion-content {

@@ -255,7 +255,7 @@ export class SpellPoints {
               ActorName: actor.name,
               SpellPoints: moduleSettings.spResource,
               spellPointUsed: spellPointCost,
-              remainingPoints: spellPointItem.system.uses.value - spellPointCost
+              remainingPoints: actualSpellPoints - spellPointCost
             }) + "</i>",
         speaker: ChatMessage.getSpeaker({ alias: actor.name }),
         isContentVisible: false,
@@ -301,6 +301,7 @@ export class SpellPoints {
           });
         }
       } else {
+
         ChatMessage.create({
           content: "<i style='color:red;'>" + game.i18n.format(SP_MODULE_NAME + ".notEnoughSp", { ActorName: actor.name, SpellPoints: moduleSettings.spResource }) + "</i>",
           speaker: ChatMessage.getSpeaker({ alias: actor.name }),
@@ -382,8 +383,6 @@ export class SpellPoints {
     const baseSpellLvl = spell.level;
 
     /** get spellpoints **/
-    null;
-    let spellPointResource = SpellPoints.getSpellPointsResource(actor);
 
     const spellPointItem = SpellPoints.getSpellPointsItem(actor);
     if (!spellPointItem) {
@@ -691,7 +690,7 @@ export class SpellPoints {
     if (SpellPoints.isSpellPointsItem(item)) {
       let max, value;
       let changed_uses = false;
-      console.log("checkSpellPointsValues UPDATE", update)
+      //console.log("checkSpellPointsValues UPDATE", update)
       // check if changed the item uses prevent value exceed max
       if (update.system?.uses?.max) {
         max = update.system.uses.max;
@@ -758,20 +757,7 @@ export class SpellPoints {
     };
     actor.update(updateActor);
 
-    let spellPointResource = SpellPoints.getSpellPointsResource(actor);
-
-    if (spellPointResource) {
-      // created a spell points item in a sheet with a spell points resource, let's get data from it.
-      let d = Dialog.confirm({
-        title: game.i18n.format(SP_MODULE_NAME + ".oldResourceFound"),
-        content: "<p>" + game.i18n.format(SP_MODULE_NAME + ".oldResourceFoundDesc") + "</p>",
-        yes: () => SpellPoints.removeOldResource(item, spellPointResource),
-        no: () => item = SpellPoints.updateSpellPointsMax({}, {}, actor, item),
-        defaultYes: true
-      });
-    } else {
-      SpellPoints.updateSpellPointsMax({}, {}, actor, item)
-    }
+    SpellPoints.updateSpellPointsMax({}, {}, actor, item)
   }
 
   static removeOldResource(item, spellPointResource) {
@@ -797,9 +783,9 @@ export class SpellPoints {
    * @returns The return value is the html_checkbox variable.
    */
   static async alterCharacterSheet(app, html, data, type) {
-    console.log('alterCharacterSheet', data.actor);
-    console.log('alterCharacterSheet', html);
-    console.log('alterCharacterSheet type', type);
+    //console.log('alterCharacterSheet', data.actor);
+    //console.log('alterCharacterSheet', html);
+    //console.log('alterCharacterSheet type', type);
     if (!this.isModuleActive() || (data.actor.type != "character" && data.actor.type != "npc")) {
       return;
     }
@@ -845,52 +831,52 @@ export class SpellPoints {
 
     if (this.isModuleActive() && SpellPoints.isSpellPointsItem(item)) {
       // this option make the app a little more usable, we keep submit on close and submit on change for checkboxes and select
-      //app.options.submitOnChange = false;
-
+      app.options.submitOnChange = false;
       $('.item-properties', html_obj).hide();
-      if (data.editable && (game.user.isGM || SpellPoints.settings?.spGmOnly == false)) {
-        let template_item = item; // data object to pass to the template
-        //get global module settings for defaults
-        const def = SpellPoints.settings;
-        const formulas = SpellPoints.formulas;
-        // store current item configuration
-        let conf = isset(template_item.flags?.spellpoints?.config) ? template_item.flags?.spellpoints?.config : {};
+      let template_item = item; // data object to pass to the template
+      //get global module settings for defaults
+      const def = SpellPoints.settings;
+      const formulas = SpellPoints.formulas;
+      // store current item configuration
+      let conf = isset(template_item.flags?.spellpoints?.config) ? template_item.flags?.spellpoints?.config : {};
 
-        conf = foundry.utils.mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
+      conf = foundry.utils.mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
 
-        //conf.spFormula = isset(conf?.spFormula) ? conf?.spFormula : def.spFormula;
-        const preset = conf.spFormula;
+      //conf.spFormula = isset(conf?.spFormula) ? conf?.spFormula : def.spFormula;
+      const preset = conf.spFormula;
 
-        conf.isCustom = isset(conf?.spFormula) ? formulas[preset].isCustom : def.isCustom;
+      conf.isCustom = isset(conf?.spFormula) ? formulas[preset].isCustom : def.isCustom;
 
-        if (isset(conf?.previousFormula) && conf?.previousFormula != preset) {
-          // changed formula preset, update spellpoints default
-          conf = foundry.utils.mergeObject(conf, formulas[preset], { recursive: true, overwrite: true });
-          conf.previousFormula = preset;
-        }
-
-        if (!isset(template_item.flags?.spellpoints?.config)) {
-          template_item.flags.spellpoints = {
-            [`config`]: template_item.flags?.spellpoints?.override ? conf : {},
-            [`override`]: template_item.flags?.spellpoints?.override
-          };
-        }
-
-        template_item.flags.spellpoints.spFormulas = Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]));
-        const template_file = "modules/dnd5e-spellpoints/templates/spell-points-item.hbs"; // file path for the template file, from Data directory
-        const rendered_html = await renderTemplate(template_file, template_item);
-
-        $('.sheet-body .tab[data-tab="description"] .item-descriptions', html_obj).prepend(rendered_html);
-        $('.tab.active', html_obj).scrollTop(app.options?.prevScroll);
-
-        $('input[type="checkbox"], select', html_obj).on('change', function () {
-          let scroll = $('.tab.active', html_obj).scrollTop();
-          app.options.prevScroll = scroll;
-          app.submit();
-        });
+      if (isset(conf?.previousFormula) && conf?.previousFormula != preset) {
+        // changed formula preset, update spellpoints default
+        conf = foundry.utils.mergeObject(conf, formulas[preset], { recursive: true, overwrite: true });
+        conf.previousFormula = preset;
       }
-      return (app, html, data);
+
+      if (!isset(template_item.flags?.spellpoints?.config)) {
+        template_item.flags.spellpoints = {
+          [`config`]: template_item.flags?.spellpoints?.override ? conf : {},
+          [`override`]: template_item.flags?.spellpoints?.override
+        };
+      }
+
+      template_item.flags.spellpoints.editable = data.editable && (game.user.isGM || SpellPoints.settings?.spGmOnly == false);
+
+      template_item.flags.spellpoints.spFormulas = Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]));
+      const template_file = "modules/dnd5e-spellpoints/templates/spell-points-item.hbs"; // file path for the template file, from Data directory
+      const rendered_html = await renderTemplate(template_file, template_item);
+
+      $('.sheet-body .tab[data-tab="description"] .item-descriptions', html_obj).prepend(rendered_html);
+      $('.tab.active', html_obj).scrollTop(app.options?.prevScroll);
+
+      $('input[type="checkbox"], select', html_obj).on('change', function () {
+        let scroll = $('.tab.active', html_obj).scrollTop();
+        app.options.prevScroll = scroll;
+        app.submit();
+      });
     }
+    return (app, html, data);
+
   }
 } /** END SpellPoint Class **/
 
@@ -944,6 +930,8 @@ class ActorSpellPointsConfig extends DocumentSheet {
     const actor = this.clone.parent;
     const item = SpellPoints.getSpellPointsItem(actor);
     SpellPoints.updateSpellPointsMax({}, {}, actor, item);
+    this.clone = item;
+    this.render();
   }
 
   /**

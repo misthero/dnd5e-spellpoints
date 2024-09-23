@@ -65,7 +65,7 @@ export class SpellPointsForm extends FormApplication {
    */
   setCustomOnlyVisibility(isCustom) {
     const displayValue = isCustom ? 'block' : 'none';
-    const customElements = this.element[0].querySelectorAll('.spell-points-custom-only')
+    const customElements = this.element[0].querySelectorAll('.spell-points-custom-only');
     for (let elementIndex = 0, customElement; customElement = customElements[elementIndex]; elementIndex++) {
       customElement.style.display = displayValue;
     }
@@ -78,7 +78,7 @@ export class SpellPointsForm extends FormApplication {
       yield game.settings.set(SP_MODULE_NAME, 'settings', settings);
       that.render();
       if (!hideMessage) {
-        ui.notifications.info(game.i18n.format(SP_MODULE_NAME+".settingSaved"));
+        ui.notifications.info(game.i18n.format(SP_MODULE_NAME + ".settingSaved"));
       }
     });
   }

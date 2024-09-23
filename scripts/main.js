@@ -1,10 +1,9 @@
-import { DND5E } from "../../../systems/dnd5e/dnd5e.mjs";
 import { SpellPointsForm } from "./settings-form.js";
 import { SpellPoints } from "./spellpoints.js";
+import { checkUpdate } from "./update.js";
 
 export const SP_MODULE_NAME = 'dnd5e-spellpoints';
 export const SP_ITEM_ID = 'LUSjG8364p7LFY1u';
-export let dndV4 = false;
 
 //CONFIG.debug.hooks = true;
 
@@ -45,46 +44,21 @@ Handlebars.registerHelper("spFormat", (path, ...args) => {
   return game.i18n.format(path, args[0].hash);
 });
 
-async function update2_4_00() {
-  if (!game.user.isGM) {
-    return;
-  }
-  const settingExists = typeof game.settings.settings.get(SP_MODULE_NAME + '.spPrevVersion') === 'undefined' ? 0 : 1;
-  let spPrevVersion = 0;
-  if (settingExists) {
-    spPrevVersion = game.settings.get(SP_MODULE_NAME, "spPrevVersion");
-  }
-  const spCurrVersion = game.modules.get(SP_MODULE_NAME).version;
-  if (foundry.utils.isNewerVersion(spCurrVersion, spPrevVersion)) {
-    const spItems = game.items.filter((i) => {
-      const is_sp = i.flags?.core?.sourceId === 'Compendium.dnd5e-spellpoints.module-items.Item.' + SP_ITEM_ID
-        || i.system?.source?.custom == 'Spell Points';
-      return is_sp;
-    });
-    for (const s in spItems) {
-      const FoundItem = spItems[s];
-      if (FoundItem.system.activities.size > 0) {
-        FoundItem.system.activities.forEach((n) => {
-          n.delete();
-        })
-      }
-    }
-  };
-}
-
 Hooks.on('ready', () => {
-  update2_4_00();
+  checkUpdate();
 })
 
 Hooks.on('init', () => {
   console.log('SpellPoints init');
 
+  // add a class feature subtype
+  game.dnd5e.config.featureTypes.class.subtypes.sp = game.i18n.format(SP_MODULE_NAME + ".spClassSubtype");
 
-  if (typeof game.dnd5e.version === 'string') {
-    dndV4 = foundry.utils.isNewerVersion(game.dnd5e.version, '3.99.99');
-  }
-
-  DND5E.featureTypes.class.subtypes.sp = game.i18n.format(SP_MODULE_NAME + ".spClassSubtype");
+  game.settings.register(SP_MODULE_NAME, "spPrevVersion", {
+    scope: "world",
+    config: false,
+    default: null
+  })
 
   /** should spellpoints be enabled */
   game.settings.register(SP_MODULE_NAME, "spEnableSpellpoints", {
@@ -150,8 +124,6 @@ Hooks.on("renderActorSheet5eNPC", (app, html, data) => {
   SpellPoints.alterCharacterSheet(app, html, data, 'npc');
 });
 
-
-
 /**
   * Hook that is triggered after the SpellPointsForm has been rendered. This
   * sets the visiblity of the custom formula fields based on if the current
@@ -159,7 +131,7 @@ Hooks.on("renderActorSheet5eNPC", (app, html, data) => {
   */
 Hooks.on('renderSpellPointsForm', (spellPointsForm, html, data) => {
   const isCustom = (data.isCustom || "").toString().toLowerCase() == "true"
-  spellPointsForm.setCustomOnlyVisibility(isCustom)
+  //spellPointsForm.setCustomOnlyVisibility(isCustom)
 })
 // dnd 3.2 changed the params from item, consume, options, update to item, config, options 
 Hooks.on("dnd5e.preActivityConsumption", (item, consume, options, update) => {

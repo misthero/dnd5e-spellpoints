@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.4.2]
+
+- bugfix for the forge import path
+- first update path implementation
+- fix for config popup not refreshing when recalculating spellpoints
+- style optimizations
+
 ## [2.4.11]
 
 ### Compatibility release for D&D v4
