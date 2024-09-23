@@ -148,6 +148,11 @@ input.number-lg.spellpoints_value {
   margin-right: 10px;
 }
 
+form .form-group .form-fields>input[type="checkbox"][name="consume.spellPoints"] {
+  flex: none;
+  margin: 0;
+}
+
 /** item config **/
 
 .spellpoints.item-config {

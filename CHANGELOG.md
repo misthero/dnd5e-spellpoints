@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [2.4.2]
+## [2.4.21]
 
 - bugfix for the forge import path
 - first update path implementation
