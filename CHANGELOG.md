@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [2.4.22]
+
+### Removed old settings not necessary with the new version using the spellpoints item
+
+- "Warlock use spell points" setting is gone. Just give them the spell points item or not.
+- "Npc use spell points" setting is gone. Just give them the spell points item or not.
+- "Mixed mode" checkbox is gone. Every actor can use spell points or slots depending on the presence of the item.
+- "Enable module" checkbox is gone. If no actor has the item the module will do nothing.
+
 ## [2.4.21]
 
 - bugfix for the forge import path

@@ -29,8 +29,6 @@ This module uses the variant rules found in the DMG to allow character to cast s
 
 ## Features
 
-- Warlock can use spellpoints (disabled by default).
-- NPC can use spellpoints (disabled by default).
 - Configurable formulas. All numerical fields are powered by FoundryVTT's Roll class. This not only give you access to functions like `round` and `kh` but also data within the characters themselves such as `@details.level` or `@abilities.cha.mod`. See [Data Paths as Variables](https://foundryvtt.com/article/dice-advanced/) for more information. The following fields are formulas:
   - SpellPointMaximum Base Formula (applied only if the character has at least one spell slot)
   - SpellPointMaximum Slot Multiplier (multiplies the cost of all spell slots the character would have). To reproduce the formula in the DMG, leave this as `1`.

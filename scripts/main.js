@@ -60,16 +60,6 @@ Hooks.on('init', () => {
     default: null
   })
 
-  /** should spellpoints be enabled */
-  game.settings.register(SP_MODULE_NAME, "spEnableSpellpoints", {
-    name: game.i18n.format(SP_MODULE_NAME + ".enableModule"),
-    hint: game.i18n.format(SP_MODULE_NAME + ".enableModuleHint"),
-    scope: "world",
-    config: true,
-    default: false,
-    type: Boolean
-  });
-
   game.settings.registerMenu(SP_MODULE_NAME, SP_MODULE_NAME, {
     name: SP_MODULE_NAME + ".form",
     label: SP_MODULE_NAME + ".form-title",

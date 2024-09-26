@@ -14,18 +14,15 @@ export class SpellPoints {
    */
   static get defaultSettings() {
     return {
-      spEnableSpellpoints: false,
       spResource: 'Spell Points',
       spAutoSpellpoints: true,
       spFormula: 'DMG',
-      warlockUseSp: false,
       enableForNpc: false,
       chatMessagePrivate: false,
       spellPointsByLevel: { 1: 4, 2: 6, 3: 14, 4: 17, 5: 27, 6: 32, 7: 38, 8: 44, 9: 57, 10: 64, 11: 73, 12: 73, 13: 83, 14: 83, 15: 94, 16: 94, 17: 107, 18: 114, 19: 123, 20: 133 },
       spellPointsCosts: { 1: 2, 2: 3, 3: 5, 4: 6, 5: 7, 6: 9, 7: 10, 8: 11, 9: 13 },
       spEnableVariant: false,
       spLifeCost: 2,
-      spMixedMode: false,
       isCustom: false,
       spCustomFormulaBase: '0',
       spCustomFormulaSlotMultiplier: '1',
@@ -86,10 +83,6 @@ export class SpellPoints {
     }
   }
 
-  static isModuleActive() {
-    return game.settings.get(SP_MODULE_NAME, 'spEnableSpellpoints');
-  }
-
   static isActorCharacter(actor) {
     const isActor = foundry.utils.getProperty(actor, "type") == "character";
     let isNPC = false;
@@ -108,10 +101,6 @@ export class SpellPoints {
     return (item.type === "feat" || (item.type === "class" && item.type.subtype === "sp"))
       && (item.flags?.core?.sourceId === "Compendium.dnd5e-spellpoints.module-items.Item." + SP_ITEM_ID
         || item.system.source?.custom === this.settings.spResource);
-  }
-
-  static isMixedActorSpellPointEnabled(actor) {
-    return actor?.flags?.dnd5espellpoints?.enabled ?? false;
   }
 
   /**
@@ -179,7 +168,7 @@ export class SpellPoints {
 
     const actor = item.actor;
     /** do nothing if module is not active **/
-    if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
+    if (!SpellPoints.isActorCharacter(actor))
       return [item, consume, options];
 
     let spellPointItem = SpellPoints.getSpellPointsItem(actor);
@@ -195,10 +184,6 @@ export class SpellPoints {
     /** dnd v4 this is not an item hook but an activation hook */
     /*if (item.type != 'spell')
       return [item, consume, options];*/
-
-    /** if is a pact spell, but no mixed mode and warlocks do not use spell points: do nothing */
-    if (item.parent.preparation.mode == 'pact' && !moduleSettings.warlockUseSp)
-      return [item, consume, options];
 
     if (consume.consume.spellSlot) {
       consume.consume.spellPoints = false;
@@ -344,8 +329,6 @@ export class SpellPoints {
    * @returns the value of the variable `level`
    */
   static async checkDialogSpellPoints(dialog, html) {
-    if (!SpellPoints.isModuleActive())
-      return;
 
     var Appconfig = foundry.utils.getProperty(dialog, "config");
 
@@ -374,10 +357,6 @@ export class SpellPoints {
 
     const spell = dialog.item.system;
     const preparation = spell.preparation.mode; //prepared,pact,always,atwill,innate
-    const warlockCanCast = settings.warlockUseSp;
-    /* if is a warlock but mixed mode is disable and warlocks cannot use spellpoints, do nothing. */
-    if (preparation == 'pact' && !warlockCanCast)
-      return;
 
     // spell level can change later if casting it with a greater slot, baseSpellLvl is the default
     const baseSpellLvl = spell.level;
@@ -401,7 +380,7 @@ export class SpellPoints {
     $('select[name="spell.slot"] option', $(html)).each(function () {
       let selectValue = $(this).val();
 
-      if (selectValue == 'pact' && warlockCanCast) {
+      if (selectValue == 'pact') {
         level = actor.system.spells.pact.level;
       } else {
         level = selectValue.replace('spell', '');
@@ -410,9 +389,8 @@ export class SpellPoints {
       cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
 
       let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format(SP_MODULE_NAME + ".spellCost", { amount: cost, SpellPoints: spellPointItem.name })})`
-      if ((selectValue == 'pact' && warlockCanCast) || selectValue != 'pact') {
-        $(this).text(newText);
-      }
+      $(this).text(newText);
+
     })
 
     let consumeInput = $('dnd5e-checkbox[name="consume.spellSlot"]', $(html)).parents('.form-group');
@@ -431,7 +409,7 @@ export class SpellPoints {
     let spellPointCost = 0;
     let actualSpellPoints = spellPointItem.system.uses.value;
 
-    if (preparation == 'pact' && warlockCanCast)
+    if (preparation == 'pact')
       spellPointCost = cost;
     else
       spellPointCost = SpellPoints.withActorData(settings.spellPointsCosts[baseSpellLvl], actor);
@@ -594,7 +572,7 @@ export class SpellPoints {
   static calculateSpellPoints(item, updates, id) {
     const actor = item.parent;
 
-    if (!SpellPoints.isModuleActive() || !SpellPoints.isActorCharacter(actor))
+    if (!SpellPoints.isActorCharacter(actor))
       return [item, updates, id];
 
     if (!SpellPoints.settings.spAutoSpellpoints) {
@@ -786,7 +764,7 @@ export class SpellPoints {
     //console.log('alterCharacterSheet', data.actor);
     //console.log('alterCharacterSheet', html);
     //console.log('alterCharacterSheet type', type);
-    if (!this.isModuleActive() || (data.actor.type != "character" && data.actor.type != "npc")) {
+    if (data.actor.type != "character" && data.actor.type != "npc") {
       return;
     }
     const actor = data.actor;
@@ -829,7 +807,7 @@ export class SpellPoints {
     const html_obj = $(html);
     const item = data?.item;
 
-    if (this.isModuleActive() && SpellPoints.isSpellPointsItem(item)) {
+    if (SpellPoints.isSpellPointsItem(item)) {
       // this option make the app a little more usable, we keep submit on close and submit on change for checkboxes and select
       app.options.submitOnChange = false;
       $('.item-properties', html_obj).hide();
