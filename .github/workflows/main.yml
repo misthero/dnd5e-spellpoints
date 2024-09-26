@@ -68,6 +68,6 @@ jobs:
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "./module.json, ./${{env.MODULE_ID}}.zip"
+          artifacts: "./module.json, ./${{env.MODULE_ID}}.zip, ./CHANGELOG.md"
           tag: ${{ github.event.release.tag_name }}
           body: ${{ steps.get_release_notes.outputs.release_notes }}
