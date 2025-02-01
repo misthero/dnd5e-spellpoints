@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [2.4.3]
+
+### Fixed some bug with auto calculation and pact magic
+
+- if the formula is Default DMG pact slots will not give spellpoints
+- the cast spell dialog will not default to consume spellpoints if the spell is a pact spell and the forumla is Default DMG
+- diabling Consume Slot in the activity of a spell will also disable Spell Points.
+
 ## [2.4.22]
 
 ### Removed old settings not necessary with the new version using the spellpoints item

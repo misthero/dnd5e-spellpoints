@@ -95,6 +95,11 @@ Hooks.on("renderActivityUsageDialog", async (dialog, html) => {
   SpellPoints.checkDialogSpellPoints(dialog, html);
 })
 
+/** render activity sheet to add consume spellpoints **/
+Hooks.on("renderActivitySheet", async (sheet, html) => {
+  SpellPoints.alterActivityDialogSP(sheet, html);
+});
+
 Hooks.on("updateItem", SpellPoints.calculateSpellPoints);
 Hooks.on("createItem", SpellPoints.calculateSpellPointsCreate);
 Hooks.on("preDeleteItem", SpellPoints.removeItemFlag);

@@ -158,11 +158,11 @@ export class SpellPoints {
    */
 
   static castSpell(item, consume, options) {
-    //console.log('SP CAST SPELL item', item);
+    // ('SP CAST SPELL item', item);
     //console.log('SP CAST SPELL consume', consume);
     //console.log('SP CAST SPELL options', options);
 
-    if (!consume.consume?.spellPoints) {
+    if (!consume.consume?.spellPoints || !item.consumption.spellSlot) {
       return [item, consume, options];
     }
 
@@ -182,8 +182,11 @@ export class SpellPoints {
 
     /** check if this is a spell casting **/
     /** dnd v4 this is not an item hook but an activation hook */
-    /*if (item.type != 'spell')
-      return [item, consume, options];*/
+
+    const parentItem = item?.parent?.parent;
+
+    if (typeof parentItem == 'undefined' || parentItem?.type != 'spell')
+      return [item, consume, options];
 
     if (consume.consume.spellSlot) {
       consume.consume.spellPoints = false;
@@ -320,6 +323,7 @@ export class SpellPoints {
   }
 
   /**
+   * renderActivityUsageDialog hook
    * It checks if the spell is being cast by a player character, and if so, it replaces the spell slot
    * dropdown with a list of spell point costs, and adds a button to the dialog that will cast the
    * spell if the spell point cost is available
@@ -332,9 +336,20 @@ export class SpellPoints {
 
     var Appconfig = foundry.utils.getProperty(dialog, "config");
 
+    // Declare settings as a separate variable because jQuery overrides `this` when in an each() block
+    let settings = this.settings;
+
     if (typeof Appconfig?.consume?.spellPoints == 'undefined') {
-      dialog.config.consume.spellSlot = false;
-      dialog.config.consume.spellPoints = true;
+      if (dialog.config.spell.slot == 'pact' && settings.spFormula == 'DMG') {
+        // do nothing
+      } else {
+        dialog.config.consume.spellSlot = false;
+        dialog.config.consume.spellPoints = true;
+      }
+    }
+
+    if (dialog.activity.consumption.spellSlot == false) {
+      return [dialog, html];
     }
 
     Appconfig = foundry.utils.getProperty(dialog, "config");
@@ -345,8 +360,8 @@ export class SpellPoints {
     if (!this.isActorCharacter(actor))
       return;
 
-    // Declare settings as a separate variable because jQuery overrides `this` when in an each() block
-    let settings = this.settings;
+
+
 
     /** check if this is a spell **/
     // TODO: maybe this check is not correct anymore
@@ -387,16 +402,21 @@ export class SpellPoints {
       }
       //console.log('LEVEL', level);
       cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
-
-      let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format(SP_MODULE_NAME + ".spellCost", { amount: cost, SpellPoints: spellPointItem.name })})`
-      $(this).text(newText);
-
+      if (settings.spFormula == 'DMG' && selectValue == 'pact') {
+        // do nothing
+      } else {
+        let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format(SP_MODULE_NAME + ".spellCost", { amount: cost, SpellPoints: spellPointItem.name })})`
+        $(this).text(newText);
+      }
     })
 
     let consumeInput = $('dnd5e-checkbox[name="consume.spellSlot"]', $(html)).parents('.form-group');
     const consumeString = game.i18n.format(SP_MODULE_NAME + ".consumeSpellSlotInput", { SpellPoints: spellPointItem.name });
     const consumeSpellPoints = Appconfig.consume.spellPoints ? "checked" : '';
-    consumeInput.parent().append(`<div class="form-group"><label>${consumeString}</label><div class="form-fields"><input type="checkbox" name="consume.spellPoints" ${consumeSpellPoints}></div></div>`);
+    consumeInput.parent().append(`<div class="form-group">
+      <label>${consumeString}</label>
+      <div class="form-fields">
+      <input type="checkbox" name="consume.spellPoints" ${consumeSpellPoints}></div></div>`);
 
     if (!dialog.config.consume.spellSlot) {
       $('dnd5e-checkbox[name="consume.spellSlot"]', $(html)).removeAttr('checked');
@@ -439,6 +459,42 @@ export class SpellPoints {
         }
       }
     })
+  }
+
+  static async alterActivityDialogSP(dialog, html) {
+    if (dialog.activity.isSpell) {
+
+      const spellPointItem = SpellPoints.getSpellPointsItem(dialog.activity.actor);
+      if (!spellPointItem) {
+        return (dialog, html);
+      }
+      const template_data = {
+        spellPointsEnabled: spellPointItem ? true : false, // TODO: check if spell points are enabled for this actor
+        itemName: spellPointItem.name,
+      };
+
+      const template_file = "modules/dnd5e-spellpoints/templates/spell-points-activity.hbs";
+      const rendered_html = await renderTemplate(template_file, template_data);
+      $('.tab.activity-consumption', html).prepend(rendered_html);
+      return (dialog, html);
+      //console.log('alterActivityDialogSP', dialog);
+      /*const activity = dialog.activity;
+      const spell = dialog.activity.item;
+      if (typeof activity?.consumption?.spellPoints == 'undefined') {
+        //activity.validConsumptionTypes
+        //activity.update({ 'consumption.spellPoints': true });
+      }
+      let spEnabled = activity?.consumption?.spellPoints ? activity?.consumption?.spellPoints : true;
+      const template_data = {
+        spellPointsEnabled: spEnabled,
+      };
+      const template_file = "modules/dnd5e-spellpoints/templates/spell-points-activity.hbs";
+      const rendered_html = await renderTemplate(template_file, template_data);
+      $('.tab.activity-consumption', html).prepend(rendered_html);
+      */
+    }
+
+    return (dialog, html);
   }
 
   /**
@@ -532,23 +588,35 @@ export class SpellPoints {
         spellcastingLevels[spellcasting].push(level);
         spellcastingClassCount++;
       }
-
     }
+
+    //console.log('spellcastingLevels', spellcastingLevels);
+    //console.log('settings.spFormula', settings.spFormula);
 
 
     let totalSpellcastingLevel = 0
     totalSpellcastingLevel += spellcastingLevels['full'].reduce((sum, level) => sum + level, 0);
-    totalSpellcastingLevel += spellcastingLevels['pact'].reduce((sum, level) => sum + level, 0);
+    //console.log('totalSpellcastingLevel full', totalSpellcastingLevel);
+    if (settings.spFormula != 'DMG') {
+      // by default pact magic is not included in the total spellcasting level
+      totalSpellcastingLevel += spellcastingLevels['pact'].reduce((sum, level) => sum + level, 0);
+      //console.log('totalSpellcastingLevel full + pact', totalSpellcastingLevel);
+    }
     totalSpellcastingLevel += spellcastingLevels['artificer'].reduce((sum, level) => sum + Math.ceil(level / 2), 0);
+    //console.log('totalSpellcastingLevel full + pact + artificier', totalSpellcastingLevel);
     // Half and third casters only round up if they do not multiclass into other spellcasting classes and if they
     // have enough levels to obtain the spellcasting feature.
     if (spellcastingClassCount == 1 && (spellcastingLevels['half'][0] >= 2 || spellcastingLevels['third'][0] >= 3)) {
       totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => sum + Math.ceil(level / 2), 0);
       totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => sum + Math.ceil(level / 3), 0);
+      //console.log('totalSpellcastingLevel full + pact + artificier + half + third SINGLE CLASS', totalSpellcastingLevel);
     } else {
       totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => sum + Math.floor(level / 2), 0);
       totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => sum + Math.floor(level / 3), 0);
+      //console.log('totalSpellcastingLevel full + pact + artificier + half + third MULTI CLASS', totalSpellcastingLevel);
     }
+
+
 
     if (totalSpellcastingLevel == 0)
       return 0;
