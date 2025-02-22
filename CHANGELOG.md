@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.4.40]
+
+### Compatibility release
+
+- Bugfix for D&D system 4.3.3
+
 ## [2.4.32]
 
 ### Fixed some bug with auto calculation and pact magic

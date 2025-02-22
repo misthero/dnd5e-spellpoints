@@ -322,6 +322,43 @@ export class SpellPoints {
     return [item, consume, options];
   }
 
+
+  // prepare the spellpoints configuration.
+  static async checkPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
+    if (!activity.isSpell) {
+      // exit if not a spell 
+      return [activity, usageConfig, dialogConfig, messageConfig];
+    }
+
+    const actor = activity.actor;
+    const spellPointItem = SpellPoints.getSpellPointsItem(actor);
+
+    if (!this.isActorCharacter(actor) || !spellPointItem) {
+      // exit if the actor is not a character or if the actor has no spell point resource
+      return [activity, usageConfig, dialogConfig, messageConfig];
+    }
+
+    // is a spell, is a character, and has a spell point resource
+    usageConfig.consume.shouldUseSpellpoints = true;
+    usageConfig.spellPointsItem = spellPointItem;
+
+    // add custom classes to the dialog
+    if (!dialogConfig.applicationClass.DEFAULT_OPTIONS.classes.includes('spellpoints-cast')) {
+      dialogConfig.applicationClass.DEFAULT_OPTIONS.classes.push('spellpoints-cast');
+    }
+
+    if (!usageConfig.consume.spellSlot) {
+      // set consume spellPoints to false and exit if not consuming a spell slot
+      usageConfig.consume.spellPoints = false;
+      return [activity, usageConfig, dialogConfig, messageConfig];
+    }
+
+    usageConfig.consume.spellPoints = true;
+    usageConfig.consume.spellSlot = false;
+
+    return [activity, usageConfig, dialogConfig, messageConfig];
+  }
+
   /**
    * renderActivityUsageDialog hook
    * It checks if the spell is being cast by a player character, and if so, it replaces the spell slot
@@ -334,41 +371,19 @@ export class SpellPoints {
    */
   static async checkDialogSpellPoints(dialog, html) {
 
-    var Appconfig = foundry.utils.getProperty(dialog, "config");
+    var usageConfig = foundry.utils.getProperty(dialog, "config");
+
+    if (usageConfig?.consume?.shouldUseSpellpoints !== true) {
+      return;
+    }
+
+    //console.log('checkDialogSpellPoints usageConfig', usageConfig);
 
     // Declare settings as a separate variable because jQuery overrides `this` when in an each() block
     let settings = this.settings;
 
-    if (typeof Appconfig?.consume?.spellPoints == 'undefined') {
-      if (dialog.config.spell.slot == 'pact' && settings.spFormula == 'DMG') {
-        // do nothing
-      } else {
-        dialog.config.consume.spellSlot = false;
-        dialog.config.consume.spellPoints = true;
-      }
-    }
-
-    if (dialog.activity.consumption.spellSlot == false) {
-      return [dialog, html];
-    }
-
-    Appconfig = foundry.utils.getProperty(dialog, "config");
-
     /** check if actor is a player character **/
     let actor = foundry.utils.getProperty(dialog, "item.actor");
-
-    if (!this.isActorCharacter(actor))
-      return;
-
-
-
-
-    /** check if this is a spell **/
-    // TODO: maybe this check is not correct anymore
-    if (foundry.utils.getProperty(dialog, "item.type") !== "spell")
-      return;
-
-    $(html).addClass('spellpoints-cast');
 
     const spell = dialog.item.system;
     const preparation = spell.preparation.mode; //prepared,pact,always,atwill,innate
@@ -377,12 +392,7 @@ export class SpellPoints {
     const baseSpellLvl = spell.level;
 
     /** get spellpoints **/
-
-    const spellPointItem = SpellPoints.getSpellPointsItem(actor);
-    if (!spellPointItem) {
-      // this actor has no spell point resource what to do?
-      return;
-    }
+    const spellPointItem = usageConfig.spellPointsItem;
 
     if (spellPointItem && spellPointItem.flags?.spellpoints?.override) {
       settings = isset(spellPointItem.flags?.spellpoints?.config) ? spellPointItem.flags?.spellpoints?.config : settings;
@@ -390,49 +400,53 @@ export class SpellPoints {
 
     let level = 'none';
     let cost = 0;
+    let actualSpellPoints = spellPointItem.system.uses.value;
 
     /** Replace list of spell slots with list of spell point costs **/
-    $('select[name="spell.slot"] option', $(html)).each(function () {
-      let selectValue = $(this).val();
+    if (usageConfig.consume.spellPoints) {
+      $('select[name="spell.slot"] option', $(html)).each(function () {
+        let optionValue = $(this).val();
 
-      if (selectValue == 'pact') {
-        level = actor.system.spells.pact.level;
-      } else {
-        level = selectValue.replace('spell', '');
-      }
-      //console.log('LEVEL', level);
-      cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
-      if (settings.spFormula == 'DMG' && selectValue == 'pact') {
-        // do nothing
-      } else {
-        let newText = `${CONFIG.DND5E.spellLevels[level]} (${game.i18n.format(SP_MODULE_NAME + ".spellCost", { amount: cost, SpellPoints: spellPointItem.name })})`
-        $(this).text(newText);
-      }
-    })
+        if (optionValue == 'pact') {
+          level = actor.system.spells.pact.level;
+        } else {
+          level = optionValue.replace('spell', '');
+        }
+
+        cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
+        if (settings.spFormula == 'DMG' && optionValue == 'pact') {
+          // do nothing
+        } else {
+          const spCostText = game.i18n.format(SP_MODULE_NAME + ".spellCost", { amount: cost + '/' + actualSpellPoints, SpellPoints: spellPointItem.name });
+          let newText = `${CONFIG.DND5E.spellLevels[level]} (${spCostText})`;
+          if (usageConfig.consume.spellSlot) {
+            newText = $(this).text() + ' (' + spCostText + ')';
+          }
+
+          $(this).text(newText);
+        }
+      })
+    }
 
     let consumeInput = $('dnd5e-checkbox[name="consume.spellSlot"]', $(html)).parents('.form-group');
     const consumeString = game.i18n.format(SP_MODULE_NAME + ".consumeSpellSlotInput", { SpellPoints: spellPointItem.name });
-    const consumeSpellPoints = Appconfig.consume.spellPoints ? "checked" : '';
+    const consumeSpellPoints = usageConfig.consume.spellPoints ? "checked" : '';
     consumeInput.parent().append(`<div class="form-group">
       <label>${consumeString}</label>
       <div class="form-fields">
       <input type="checkbox" name="consume.spellPoints" ${consumeSpellPoints}></div></div>`);
-
-    if (!dialog.config.consume.spellSlot) {
-      $('dnd5e-checkbox[name="consume.spellSlot"]', $(html)).removeAttr('checked');
-    }
 
     if (level == 'none')
       return;
 
     /** Calculate spell point cost and warn user if they have none left */
     let spellPointCost = 0;
-    let actualSpellPoints = spellPointItem.system.uses.value;
 
-    if (preparation == 'pact')
+    if (preparation == 'pact') {
       spellPointCost = cost;
-    else
+    } else {
       spellPointCost = SpellPoints.withActorData(settings.spellPointsCosts[baseSpellLvl], actor);
+    }
     const missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - spellPointCost < 0);
     const messageNotEnough = game.i18n.format(SP_MODULE_NAME + ".youNotEnough", { SpellPoints: spellPointItem.name });
 

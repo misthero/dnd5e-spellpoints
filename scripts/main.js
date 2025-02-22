@@ -95,6 +95,10 @@ Hooks.on("renderActivityUsageDialog", async (dialog, html) => {
   SpellPoints.checkDialogSpellPoints(dialog, html);
 })
 
+Hooks.on("dnd5e.preUseActivity", async (activity, usageConfig, dialogConfig, messageConfig) => {
+  SpellPoints.checkPreUseActivity(activity, usageConfig, dialogConfig, messageConfig);
+})
+
 /** render activity sheet to add consume spellpoints **/
 Hooks.on("renderActivitySheet", async (sheet, html) => {
   SpellPoints.alterActivityDialogSP(sheet, html);

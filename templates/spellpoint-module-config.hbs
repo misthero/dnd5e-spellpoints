@@ -14,6 +14,7 @@
         <input type="hidden" name="spellPointsByLevel.{{level}}" value="{{cost}}"/>
       {{/each}}
 
+      <!--
       <div class="form-group">
         <label>{{localize "dnd5e-spellpoints.resourceLabel"}}</label>
         <input
@@ -24,6 +25,14 @@
         />
         <p class="notes">{{localize "dnd5e-spellpoints.resourceNote"}}</p>
       </div>
+      -->
+      <input
+          type="hidden"
+          name="spResource"
+          data-dtype="string"
+          value="{{spResource}}"
+        />
+        
       <div class="description new-item">
         <p>{{localize "dnd5e-spellpoints.newV3ItemUsage"}}</p>
         <a

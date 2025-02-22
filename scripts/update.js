@@ -20,7 +20,7 @@ export const checkUpdate = function () {
     updateSuccess = update2_4_12();
   }
 
-  // update previous version
+  // update previous version setting
   if (updateSuccess) {
     const currentVersion = game.modules.get(SP_MODULE_NAME).version;
     game.settings.set(SP_MODULE_NAME, "spPrevVersion", currentVersion);
