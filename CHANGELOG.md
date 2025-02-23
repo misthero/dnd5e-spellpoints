@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.00]
+
+### New feature
+
+- Optional spell points cost for cantrips: https://github.com/misthero/dnd5e-spellpoints/issues/31
+
 ## [2.4.40]
 
 ### Compatibility release

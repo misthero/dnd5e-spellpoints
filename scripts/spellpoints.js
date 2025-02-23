@@ -20,7 +20,7 @@ export class SpellPoints {
       enableForNpc: false,
       chatMessagePrivate: false,
       spellPointsByLevel: { 1: 4, 2: 6, 3: 14, 4: 17, 5: 27, 6: 32, 7: 38, 8: 44, 9: 57, 10: 64, 11: 73, 12: 73, 13: 83, 14: 83, 15: 94, 16: 94, 17: 107, 18: 114, 19: 123, 20: 133 },
-      spellPointsCosts: { 1: 2, 2: 3, 3: 5, 4: 6, 5: 7, 6: 9, 7: 10, 8: 11, 9: 13 },
+      spellPointsCosts: { 0: 0, 1: 2, 2: 3, 3: 5, 4: 6, 5: 7, 6: 9, 7: 10, 8: 11, 9: 13 },
       spEnableVariant: false,
       spLifeCost: 2,
       isCustom: false,
@@ -61,7 +61,7 @@ export class SpellPoints {
         spCustomFormulaBase: 'ceil((2*@spells.pact.level + 1*@spells.spell1.max + 2*@spells.spell2.max + 3*@spells.spell3.max + 4*@spells.spell4.max + 5*@spells.spell5.max + 6*@spells.spell6.max + 7*@spells.spell7.max + 8*@spells.spell8.max + 9*@spells.spell9.max) / 2) + @attributes.spelldc - 8 - @attributes.prof',
         spCustomFormulaSlotMultiplier: '0',
         spUseLeveled: false,
-        spellPointsCosts: { 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '12', 7: '14', 8: '24', 9: '27' },
+        spellPointsCosts: { 0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '12', 7: '14', 8: '24', 9: '27' },
         leveledProgressionFormula: this.defaultSettings.leveledProgressionFormula
       },
       CUSTOM: {
@@ -152,26 +152,26 @@ export class SpellPoints {
    * the function reduces the actor's maximum hit points by the amount of hit points required to cast
    * the spell
    * @param item - the Item being used
-   * @param consume - resource consumption
+   * @param consumeConfig - resource consumption
    * @param actor - The actor that is being updated.
    * @returns The update object.
    */
 
-  static castSpell(item, consume, options) {
+  static castSpell(item, consumeConfig, options) {
     // ('SP CAST SPELL item', item);
     //console.log('SP CAST SPELL consume', consume);
     //console.log('SP CAST SPELL options', options);
 
-    if (!consume.consume?.spellPoints || !item.consumption.spellSlot) {
-      return [item, consume, options];
+    if (!consumeConfig.consume?.spellPoints || !item.consumption.spellSlot) {
+      return [item, consumeConfig, options];
     }
 
     const actor = item.actor;
     /** do nothing if module is not active **/
     if (!SpellPoints.isActorCharacter(actor))
-      return [item, consume, options];
+      return [item, consumeConfig, options];
 
-    let spellPointItem = SpellPoints.getSpellPointsItem(actor);
+    let spellPointItem = consumeConfig.spellPointsItem;
 
     const moduleSettings = this.settings
     let settings = moduleSettings;
@@ -186,16 +186,16 @@ export class SpellPoints {
     const parentItem = item?.parent?.parent;
 
     if (typeof parentItem == 'undefined' || parentItem?.type != 'spell')
-      return [item, consume, options];
+      return [item, consumeConfig, options];
 
-    if (consume.consume.spellSlot) {
-      consume.consume.spellPoints = false;
-      return [item, consume, options];
+    if (consumeConfig.consume.spellSlot) {
+      consumeConfig.consume.spellPoints = false;
+      return [item, consumeConfig, options];
     }
 
-    if (consume.consume.spellPoints) {
-      consume.consume.spellSlot = false;
-      consume.hasConsumption = false;
+    if (consumeConfig.consume.spellPoints) {
+      consumeConfig.consume.spellSlot = false;
+      consumeConfig.hasConsumption = false; // prevent slot consumption
     }
 
     /** not found any resource for spellpoints ? **/
@@ -204,7 +204,7 @@ export class SpellPoints {
     }
 
     /** find the spell level just cast */
-    const spellLvl = options.data.flags.dnd5e.use.spellLevel;
+    const spellLvl = consumeConfig.isCantrip ? 0 : options.data.flags.dnd5e.use.spellLevel;
 
     let actualSpellPoints = spellPointItem.system.uses.value;
 
@@ -297,38 +297,42 @@ export class SpellPoints {
           isAuthor: true,
           whisper: SpeakTo
         });
-        consume.consumeSpellSlot = false;
-        consume.consumeSpellLevel = false;
-        consume.create.measuredTemplate = false;
+        consumeConfig.consume.SpellSlot = false;
+        consumeConfig.consume.SpellLevel = false;
+        consumeConfig.create.measuredTemplate = false;
         options.createMessage = false;
         options.create = false;
         options.hasConsumption = false;
-        consume.hasConsumption = false;
+        consumeConfig.hasConsumption = false;
         delete options.flags;
-        return [item, consume, options];
+        return [item, consumeConfig, options];
       }
     }
 
-    consume.consumeSpellLevel = false;
-    consume.consumeSpellSlot = false;
+    consumeConfig.consume.SpellLevel = false;
+    consumeConfig.consume.SpellSlot = false;
     options.hasConsumption = false;
-    consume.hasConsumption = false;
+    consumeConfig.hasConsumption = false;
 
     updateItem.system.uses = spellPointItem.system.uses;
     spellPointItem.update(updateItem);
 
     actor.update(updateActor);
 
-    return [item, consume, options];
+    return [item, consumeConfig, options];
   }
 
 
-  // prepare the spellpoints configuration.
+  /*
+   * prepare the spellpoints configuration.
+   */
   static async checkPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     if (!activity.isSpell) {
       // exit if not a spell 
       return [activity, usageConfig, dialogConfig, messageConfig];
     }
+
+    //console.log('checkPreUseActivity', activity, usageConfig, dialogConfig, messageConfig);
 
     const actor = activity.actor;
     const spellPointItem = SpellPoints.getSpellPointsItem(actor);
@@ -338,8 +342,26 @@ export class SpellPoints {
       return [activity, usageConfig, dialogConfig, messageConfig];
     }
 
+    const isCantrip = activity.item.system.level === 0;
+    if (isCantrip) {
+      // check if cantrip spells costs spellpoints
+      let settings = this.settings;
+      if (spellPointItem.flags?.spellpoints?.override) {
+        settings = spellPointItem.flags?.spellpoints?.config !== 'undefined' ? spellPointItem.flags?.spellpoints.config : settings;
+      }
+      if (settings.spellPointsCosts[0] == 0) {
+        return [activity, usageConfig, dialogConfig, messageConfig];
+      } else {
+        usageConfig.hasConsumption = true;
+        usageConfig.isCantrip = true;
+        usageConfig.spell = { slot: "spell0" };
+      }
+    } else {
+      usageConfig.isCantrip = false;
+    }
+
     // is a spell, is a character, and has a spell point resource
-    usageConfig.consume.shouldUseSpellpoints = true;
+    usageConfig.consume.canUseSpellpoints = true;
     usageConfig.spellPointsItem = spellPointItem;
 
     // add custom classes to the dialog
@@ -347,7 +369,7 @@ export class SpellPoints {
       dialogConfig.applicationClass.DEFAULT_OPTIONS.classes.push('spellpoints-cast');
     }
 
-    if (!usageConfig.consume.spellSlot) {
+    if (!isCantrip && !usageConfig.consume.spellSlot) {
       // set consume spellPoints to false and exit if not consuming a spell slot
       usageConfig.consume.spellPoints = false;
       return [activity, usageConfig, dialogConfig, messageConfig];
@@ -373,7 +395,7 @@ export class SpellPoints {
 
     var usageConfig = foundry.utils.getProperty(dialog, "config");
 
-    if (usageConfig?.consume?.shouldUseSpellpoints !== true) {
+    if (usageConfig?.consume?.canUseSpellpoints !== true) {
       return;
     }
 
@@ -398,27 +420,27 @@ export class SpellPoints {
       settings = isset(spellPointItem.flags?.spellpoints?.config) ? spellPointItem.flags?.spellpoints?.config : settings;
     }
 
-    let level = 'none';
+    let optionLevel = 'none';
     let cost = 0;
     let actualSpellPoints = spellPointItem.system.uses.value;
 
     /** Replace list of spell slots with list of spell point costs **/
-    if (usageConfig.consume.spellPoints) {
+    if (usageConfig.consume.spellPoints && !usageConfig?.isCantrip) {
       $('select[name="spell.slot"] option', $(html)).each(function () {
         let optionValue = $(this).val();
 
         if (optionValue == 'pact') {
-          level = actor.system.spells.pact.level;
+          optionLevel = actor.system.spells.pact.level;
         } else {
-          level = optionValue.replace('spell', '');
+          optionLevel = optionValue.replace('spell', '');
         }
 
-        cost = SpellPoints.withActorData(settings.spellPointsCosts[level], actor);
+        cost = SpellPoints.withActorData(settings.spellPointsCosts[optionLevel], actor);
         if (settings.spFormula == 'DMG' && optionValue == 'pact') {
           // do nothing
         } else {
           const spCostText = game.i18n.format(SP_MODULE_NAME + ".spellCost", { amount: cost + '/' + actualSpellPoints, SpellPoints: spellPointItem.name });
-          let newText = `${CONFIG.DND5E.spellLevels[level]} (${spCostText})`;
+          let newText = $(this).text() + ` (${spCostText})`;
           if (usageConfig.consume.spellSlot) {
             newText = $(this).text() + ' (' + spCostText + ')';
           }
@@ -428,30 +450,47 @@ export class SpellPoints {
       })
     }
 
-    let consumeInput = $('dnd5e-checkbox[name="consume.spellSlot"]', $(html)).parents('.form-group');
+    let choosenSpellLevel = usageConfig.spell.slot.replace('spell', '');
+
+    if (choosenSpellLevel == 'pact') {
+      choosenSpellLevel = actor.system.spells.pact.level;
+    }
+
+    let consumeSection = $('section[data-application-part="consumption"] fieldset', $(html));
+    if (usageConfig.isCantrip) {
+      consumeSection = $('section[data-application-part="consumption"]', $(html));
+    }
+
     const consumeString = game.i18n.format(SP_MODULE_NAME + ".consumeSpellSlotInput", { SpellPoints: spellPointItem.name });
     const consumeSpellPoints = usageConfig.consume.spellPoints ? "checked" : '';
-    consumeInput.parent().append(`<div class="form-group">
-      <label>${consumeString}</label>
-      <div class="form-fields">
-      <input type="checkbox" name="consume.spellPoints" ${consumeSpellPoints}></div></div>`);
 
-    if (level == 'none')
-      return;
+    let SpellPointsInput = `<div class="form-group">
+        <label>${consumeString}</label>
+        <div class="form-fields">
+        <input type="checkbox" name="consume.spellPoints" ${consumeSpellPoints}></div></div>`;
+
+    if (usageConfig.isCantrip) {
+      SpellPointsInput = `<fieldset>${SpellPointsInput}</fieldset>`;
+    }
+
+    consumeSection.append(SpellPointsInput);
 
     /** Calculate spell point cost and warn user if they have none left */
     let spellPointCost = 0;
 
+
+
     if (preparation == 'pact') {
       spellPointCost = cost;
     } else {
-      spellPointCost = SpellPoints.withActorData(settings.spellPointsCosts[baseSpellLvl], actor);
+      spellPointCost = SpellPoints.withActorData(settings.spellPointsCosts[choosenSpellLevel], actor);
     }
+
     const missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - spellPointCost < 0);
     const messageNotEnough = game.i18n.format(SP_MODULE_NAME + ".youNotEnough", { SpellPoints: spellPointItem.name });
 
     if (missing_points) {
-      $('#ability-use-form', html).append('<div class="spError">' + messageNotEnough + '</div>');
+      consumeSection.append('<div class="spError">' + messageNotEnough + '</div>');
     }
 
     let copyButton = $('.form-footer button', $(html)).clone();
@@ -491,21 +530,6 @@ export class SpellPoints {
       const rendered_html = await renderTemplate(template_file, template_data);
       $('.tab.activity-consumption', html).prepend(rendered_html);
       return (dialog, html);
-      //console.log('alterActivityDialogSP', dialog);
-      /*const activity = dialog.activity;
-      const spell = dialog.activity.item;
-      if (typeof activity?.consumption?.spellPoints == 'undefined') {
-        //activity.validConsumptionTypes
-        //activity.update({ 'consumption.spellPoints': true });
-      }
-      let spEnabled = activity?.consumption?.spellPoints ? activity?.consumption?.spellPoints : true;
-      const template_data = {
-        spellPointsEnabled: spEnabled,
-      };
-      const template_file = "modules/dnd5e-spellpoints/templates/spell-points-activity.hbs";
-      const rendered_html = await renderTemplate(template_file, template_data);
-      $('.tab.activity-consumption', html).prepend(rendered_html);
-      */
     }
 
     return (dialog, html);
@@ -603,9 +627,6 @@ export class SpellPoints {
         spellcastingClassCount++;
       }
     }
-
-    //console.log('spellcastingLevels', spellcastingLevels);
-    //console.log('settings.spFormula', settings.spFormula);
 
 
     let totalSpellcastingLevel = 0
@@ -710,6 +731,7 @@ export class SpellPoints {
 
     const isCustom = settings.isCustom;
     const spUseLeveled = settings.spUseLeveled;
+
     const SpellPointsMax = isCustom && !spUseLeveled ? SpellPoints._calculateSpellPointsCustom(actor, settings) : SpellPoints._calculateSpellPointsFixed(classItem, updates, actor, settings)
 
     if (SpellPointsMax > 0) {
