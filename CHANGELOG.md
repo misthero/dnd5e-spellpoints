@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.01]
+
+### Bugfix
+
+- Updated DMG link on spellpoints item
+
 ## [2.5.00]
 
 ### New feature
