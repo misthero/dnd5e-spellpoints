@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.02]
+
+### Bugfix
+
+- Check user permission on item updates. [Issue: #134](https://github.com/misthero/dnd5e-spellpoints/issues/134)
+
 ## [2.5.01]
 
 ### Bugfix
@@ -10,7 +16,7 @@
 
 ### New feature
 
-- Optional spell points cost for cantrips: https://github.com/misthero/dnd5e-spellpoints/issues/31
+- Optional spell points cost for cantrips. [Issue: #31](https://github.com/misthero/dnd5e-spellpoints/issues/31)
 
 ## [2.4.40]
 

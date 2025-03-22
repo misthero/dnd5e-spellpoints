@@ -4,6 +4,11 @@ function isset(variable) {
   return (typeof variable !== 'undefined');
 }
 
+function isEmpty(obj) {
+  return Object.keys(obj).length === 0;
+}
+
+
 export class SpellPoints {
   static get settings() {
     return foundry.utils.mergeObject(this.defaultSettings, game.settings.get(SP_MODULE_NAME, 'settings'), { insertKeys: true, insertValues: true });
@@ -101,6 +106,10 @@ export class SpellPoints {
     return (item.type === "feat" || (item.type === "class" && item.type.subtype === "sp"))
       && (item.flags?.core?.sourceId === "Compendium.dnd5e-spellpoints.module-items.Item." + SP_ITEM_ID
         || item.system.source?.custom === this.settings.spResource);
+  }
+
+  static userHasActorOwnership(actor) {
+    return actor.permission == 3;
   }
 
   /**
@@ -332,8 +341,6 @@ export class SpellPoints {
       return [activity, usageConfig, dialogConfig, messageConfig];
     }
 
-    //console.log('checkPreUseActivity', activity, usageConfig, dialogConfig, messageConfig);
-
     const actor = activity.actor;
     const spellPointItem = SpellPoints.getSpellPointsItem(actor);
 
@@ -398,8 +405,6 @@ export class SpellPoints {
     if (usageConfig?.consume?.canUseSpellpoints !== true) {
       return;
     }
-
-    //console.log('checkDialogSpellPoints usageConfig', usageConfig);
 
     // Declare settings as a separate variable because jQuery overrides `this` when in an each() block
     let settings = this.settings;
@@ -628,7 +633,6 @@ export class SpellPoints {
       }
     }
 
-
     let totalSpellcastingLevel = 0
     totalSpellcastingLevel += spellcastingLevels['full'].reduce((sum, level) => sum + level, 0);
     //console.log('totalSpellcastingLevel full', totalSpellcastingLevel);
@@ -651,8 +655,6 @@ export class SpellPoints {
       //console.log('totalSpellcastingLevel full + pact + artificier + half + third MULTI CLASS', totalSpellcastingLevel);
     }
 
-
-
     if (totalSpellcastingLevel == 0)
       return 0;
 
@@ -672,47 +674,51 @@ export class SpellPoints {
    * @param isDifferent - true if the item is being updated, false if it's being dropped
    * @returns True
    */
-  static calculateSpellPoints(item, updates, id) {
+  static classItemUpdateSpellPoints(item, updates, diff) {
+
+    /* updating or dropping a class item */
+    if (item.type !== 'class') {
+      // check if is the spell point feature being dropped.
+      return [item, updates, diff];
+    }
+
     const actor = item.parent;
 
     if (!SpellPoints.isActorCharacter(actor))
-      return [item, updates, id];
+      return [item, updates, diff];
 
-    if (!SpellPoints.settings.spAutoSpellpoints) {
-      return [item, updates, id];
+    // if current user is not the owner of the actor, do nothing
+    if (!SpellPoints.userHasActorOwnership(actor)) {
+      return [item, updates, diff];
     }
 
-    /* updating or dropping a class item */
-
-    if (item.type !== 'class') {
-      // check if is the spell point feature being dropped.
-      return [item, updates, id];
-    }
-
+    // are we changing the levels?
     if (!foundry.utils.getProperty(updates.system, 'levels'))
-      return [item, updates, id];
+      return [item, updates, diff];
 
     SpellPoints.updateSpellPointsMax(item, updates, actor, false);
-    return [item, updates, id];
+
+    return [item, updates, diff];
   }
 
-
+  /** hook on createItem */
   static calculateSpellPointsCreate(item, updates, id) {
     if (SpellPoints.isSpellPointsItem(item)) {
       SpellPoints.processFirstDrop(item);
       return true;
     } else if (item.type == 'class') {
-      SpellPoints.calculateSpellPoints(item, updates, id);
+      SpellPoints.classItemUpdateSpellPoints(item, updates, id);
     }
   }
 
-  static updateSpellPointsMax(classItem, updates, actor, createdItem) {
+  static updateSpellPointsMax(classItem, updates, actor, item) {
     const actorName = actor.name;
     let spellPointsItem;
-    if (createdItem)
-      spellPointsItem = createdItem;
-    else
+    if (item) {
+      spellPointsItem = item;
+    } else {
       spellPointsItem = SpellPoints.getSpellPointsItem(actor);
+    }
     if (!spellPointsItem) {
       // spell points item not found? 
       return;
@@ -737,20 +743,22 @@ export class SpellPoints {
     if (SpellPointsMax > 0) {
       spellPointsItem.update({
         [`system.uses.max`]: SpellPointsMax,
-        [`system.uses.value`]: createdItem ? SpellPointsMax : spellPointsItem.system.uses.value
+        [`system.uses.value`]: item ? SpellPointsMax : spellPointsItem.system.uses.value
       });
 
-      let SpeakTo = game.users.filter(u => u.isGM);
-      let message = game.i18n.format(SP_MODULE_NAME + ".spellPointsFound", { SpellPoints: spellPointsItem.name, Actor: actorName })
-      ChatMessage.create({
-        content: "<i style='color:green;'>" + message + "</i>",
-        speaker: ChatMessage.getSpeaker({ alias: actorName }),
-        isContentVisible: false,
-        isAuthor: true,
-        whisper: SpeakTo
-      });
+      if (!game.user.isGM) {
+        let SpeakTo = game.users.filter(u => u.isGM);
+        let message = game.i18n.format(SP_MODULE_NAME + ".spellPointsFound", { SpellPoints: spellPointsItem.name, Actor: actorName })
+        ChatMessage.create({
+          content: "<i style='color:green;'>" + message + "</i>",
+          speaker: ChatMessage.getSpeaker({ alias: actorName }),
+          isContentVisible: false,
+          isAuthor: true,
+          whisper: SpeakTo
+        });
+      }
     }
-    return spellPointsItem;
+    return updates;
   }
 
   /** hook computeLeveledProgression  */
@@ -772,8 +780,7 @@ export class SpellPoints {
     if (SpellPoints.isSpellPointsItem(item)) {
       let max, value;
       let changed_uses = false;
-      //console.log("checkSpellPointsValues UPDATE", update)
-      // check if changed the item uses prevent value exceed max
+
       if (update.system?.uses?.max) {
         max = update.system.uses.max;
         changed_uses = true;
@@ -817,7 +824,13 @@ export class SpellPoints {
   }
 
   static processFirstDrop(item) {
-    if (SpellPoints.getActorFlagSpellPointItem(item.parent)) {
+    const actor = item.parent;
+
+    if (!SpellPoints.userHasActorOwnership(actor)) {
+      return;
+    }
+
+    if (SpellPoints.getActorFlagSpellPointItem(actor)) {
       // there is already a spellpoints item here.
       ui.notifications.error(game.i18n.format(SP_MODULE_NAME + ".alreadySpItemOwned"));
       item.update({
@@ -826,7 +839,6 @@ export class SpellPoints {
       return;
     }
 
-    const actor = item.parent;
     if (actor == null)
       return;
 
@@ -838,7 +850,6 @@ export class SpellPoints {
       }
     };
     actor.update(updateActor);
-
     SpellPoints.updateSpellPointsMax({}, {}, actor, item)
   }
 
@@ -865,9 +876,6 @@ export class SpellPoints {
    * @returns The return value is the html_checkbox variable.
    */
   static async alterCharacterSheet(app, html, data, type) {
-    //console.log('alterCharacterSheet', data.actor);
-    //console.log('alterCharacterSheet', html);
-    //console.log('alterCharacterSheet type', type);
     if (data.actor.type != "character" && data.actor.type != "npc") {
       return;
     }

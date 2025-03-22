@@ -104,7 +104,7 @@ Hooks.on("renderActivitySheet", async (sheet, html) => {
   SpellPoints.alterActivityDialogSP(sheet, html);
 });
 
-Hooks.on("updateItem", SpellPoints.calculateSpellPoints);
+Hooks.on("updateItem", SpellPoints.classItemUpdateSpellPoints);
 Hooks.on("createItem", SpellPoints.calculateSpellPointsCreate);
 Hooks.on("preDeleteItem", SpellPoints.removeItemFlag);
 Hooks.on("preUpdateItem", SpellPoints.checkSpellPointsValues);
