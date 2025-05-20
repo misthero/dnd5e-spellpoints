@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [3.0.00]
+
+### Foundry V13
+
+- Compatibility release for Foundry VTT v13
+- Bufix and code optimization
+- Switch to application v2
+
 ## [2.5.02]
 
 ### Bugfix

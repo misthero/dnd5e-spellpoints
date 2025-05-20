@@ -115,6 +115,10 @@ Hooks.on("renderActorSheet5eCharacter2", (app, html, data) => {
   SpellPoints.alterCharacterSheet(app, html, data, 'v2');
 });
 
+Hooks.on("renderActorSheetV2", (app, html, data) => {
+  SpellPoints.alterCharacterSheet(app, html, data, 'v2');
+});
+
 Hooks.on("renderActorSheet5eCharacter", (app, html, data) => {
   SpellPoints.alterCharacterSheet(app, html, data, 'v1');
 });
@@ -122,6 +126,8 @@ Hooks.on("renderActorSheet5eCharacter", (app, html, data) => {
 Hooks.on("renderActorSheet5eNPC", (app, html, data) => {
   SpellPoints.alterCharacterSheet(app, html, data, 'npc');
 });
+
+
 
 /**
   * Hook that is triggered after the SpellPointsForm has been rendered. This
@@ -137,6 +143,6 @@ Hooks.on("dnd5e.preActivityConsumption", (item, consume, options, update) => {
   SpellPoints.castSpell(item, consume, options, update);
 })
 
-Hooks.on("renderItemSheet", async (app, html, data) => {
+Hooks.on("renderItemSheet5e", async (app, html, data) => {
   SpellPoints.renderSpellPointsItem(app, html, data);
 })

@@ -63,7 +63,7 @@ export class SpellPoints {
       },
       AM_CUSTOM: {
         isCustom: true,
-        spCustomFormulaBase: 'ceil((2*@spells.pact.level + 1*@spells.spell1.max + 2*@spells.spell2.max + 3*@spells.spell3.max + 4*@spells.spell4.max + 5*@spells.spell5.max + 6*@spells.spell6.max + 7*@spells.spell7.max + 8*@spells.spell8.max + 9*@spells.spell9.max) / 2) + @attributes.spelldc - 8 - @attributes.prof',
+        spCustomFormulaBase: 'ceil((2*@spells.pact.level + 1*@spells.spell1.max + 2*@spells.spell2.max + 3*@spells.spell3.max + 4*@spells.spell4.max + 5*@spells.spell5.max + 6*@spells.spell6.max + 7*@spells.spell7.max + 8*@spells.spell8.max + 9*@spells.spell9.max) / 2) + @attributes.spell.dc - 8 - @attributes.prof',
         spCustomFormulaSlotMultiplier: '0',
         spUseLeveled: false,
         spellPointsCosts: { 0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '12', 7: '14', 8: '24', 9: '27' },
@@ -120,7 +120,9 @@ export class SpellPoints {
    * @return {number} The result of the formula.
    */
   static withActorData(formula, actor) {
-    //console.log('rollFormula', formula);
+    if (!formula || typeof formula !== 'string' || formula.length == 0) {
+      return 0;
+    }
     let dataObject = actor.getRollData();
     dataObject.flags = actor.flags;
     const r = new Roll(formula.toString(), dataObject);
@@ -149,7 +151,6 @@ export class SpellPoints {
     for (let r in _resources) {
       if (_resources[r].label == this.settings.spResource) {
         return { 'values': _resources[r], 'key': r };
-        break;
       }
     }
     return false;
@@ -433,6 +434,9 @@ export class SpellPoints {
     if (usageConfig.consume.spellPoints && !usageConfig?.isCantrip) {
       $('select[name="spell.slot"] option', $(html)).each(function () {
         let optionValue = $(this).val();
+        if (!optionValue || optionValue == '') {
+          return true;
+        }
 
         if (optionValue == 'pact') {
           optionLevel = actor.system.spells.pact.level;
@@ -532,7 +536,7 @@ export class SpellPoints {
       };
 
       const template_file = "modules/dnd5e-spellpoints/templates/spell-points-activity.hbs";
-      const rendered_html = await renderTemplate(template_file, template_data);
+      const rendered_html = await foundry.applications.handlebars.renderTemplate(template_file, template_data);
       $('.tab.activity-consumption', html).prepend(rendered_html);
       return (dialog, html);
     }
@@ -553,10 +557,10 @@ export class SpellPoints {
     let spellPointsFromSlots = 0;
     for (let [slotLvlTxt, slot] of Object.entries(actor.system.spells)) {
       let slotLvl;
-      if (slotLvlTxt == 'pact') {
-        slotLvl = slot.level;
+      if (slotLvlTxt == 'spell0') {
+        slotLvl = 0;
       } else {
-        slotLvl = parseInt(slotLvlTxt.replace(/\D/g, ''));
+        slotLvl = slot.level;
       }
 
       if (!slotLvl || slotLvl == 0) {
@@ -573,7 +577,7 @@ export class SpellPoints {
       return 0;
     }
 
-    SpellPointsMax += spellPointsFromSlots * SpellPoints.withActorData(settings.spCustomFormulaSlotMultiplier, actor);
+    //SpellPointsMax += spellPointsFromSlots * SpellPoints.withActorData(settings.spCustomFormulaSlotMultiplier, actor);
 
     return SpellPointsMax;
   }
@@ -604,13 +608,11 @@ export class SpellPoints {
     const actorClasses = actor.items.filter(i => i.type === "class");
 
     let spellcastingClassCount = 0;
-    const spellcastingLevels = {
-      full: [],
-      half: [],
-      artificer: [],
-      third: [],
-      pact: [],
-    }
+    let spellcastingLevels = {};
+
+    Object.keys(dnd5e.config.spellProgression).forEach((key) => {
+      spellcastingLevels[key] = [];
+    });
 
     for (let c of actorClasses) {
       /* spellcasting: pact; full; half; third; artificier; none; **/
@@ -654,9 +656,6 @@ export class SpellPoints {
       totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => sum + Math.floor(level / 3), 0);
       //console.log('totalSpellcastingLevel full + pact + artificier + half + third MULTI CLASS', totalSpellcastingLevel);
     }
-
-    if (totalSpellcastingLevel == 0)
-      return 0;
 
     if (leveledProgression) {
       return parseInt(this.withActorData(settings.leveledProgressionFormula[totalSpellcastingLevel], actor)) || 0;
@@ -740,10 +739,11 @@ export class SpellPoints {
 
     const SpellPointsMax = isCustom && !spUseLeveled ? SpellPoints._calculateSpellPointsCustom(actor, settings) : SpellPoints._calculateSpellPointsFixed(classItem, updates, actor, settings)
 
-    if (SpellPointsMax > 0) {
+    if (SpellPointsMax !== NaN) {
       spellPointsItem.update({
         [`system.uses.max`]: SpellPointsMax,
-        [`system.uses.value`]: item ? SpellPointsMax : spellPointsItem.system.uses.value
+        [`system.uses.value`]: SpellPointsMax < spellPointsItem.system.uses.value ? SpellPointsMax : spellPointsItem.system.uses.value,
+        [`system.uses.spent`]: SpellPointsMax < spellPointsItem.system.uses.value ? 0 : SpellPointsMax - spellPointsItem.system.uses.value
       });
 
       if (!game.user.isGM) {
@@ -774,7 +774,7 @@ export class SpellPoints {
     }
   }
 
-  /** pre update item */
+  /** preUpdateItem hook */
   /** check if max uses is less than value */
   static checkSpellPointsValues(item, update, difference, id) {
     if (SpellPoints.isSpellPointsItem(item)) {
@@ -868,8 +868,7 @@ export class SpellPoints {
   }
 
   /**
-   * It adds a checkbox to the character sheet that allows the user to enable/disable spell points for
-   * the character
+   * It adds a spell points tracker to the character sheet
    * @param app - The application object.
    * @param html - The HTML of the Actor sheet.
    * @param data - The data object passed to the sheet.
@@ -896,7 +895,7 @@ export class SpellPoints {
         'percent': percent,
       }
       const template_file = "modules/dnd5e-spellpoints/templates/spell-points-sheet-tracker.hbs";
-      const rendered_html = await renderTemplate(template_file, template_data);
+      const rendered_html = await foundry.applications.handlebars.renderTemplate(template_file, template_data);
 
       if (type == 'v2') {
         $('.sidebar .stats', html).append(rendered_html);
@@ -909,7 +908,8 @@ export class SpellPoints {
       $('.config-button.spellPoints').off('click').on('click', function (event) {
         event.preventDefault();
         event.stopPropagation();
-        let config = new ActorSpellPointsConfig(SpellPointsItem);
+
+        let config = new ActorSpellPointsConfig({ document: SpellPointsItem });
         config?.render(true);
       });
     }
@@ -920,10 +920,10 @@ export class SpellPoints {
     const item = data?.item;
 
     if (SpellPoints.isSpellPointsItem(item)) {
-      // this option make the app a little more usable, we keep submit on close and submit on change for checkboxes and select
-      app.options.submitOnChange = false;
+      const itemId = item._id;
+
       $('.item-properties', html_obj).hide();
-      let template_item = item; // data object to pass to the template
+      let template_item = data.document; // data object to pass to the template
       //get global module settings for defaults
       const def = SpellPoints.settings;
       const formulas = SpellPoints.formulas;
@@ -954,137 +954,69 @@ export class SpellPoints {
 
       template_item.flags.spellpoints.spFormulas = Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]));
       const template_file = "modules/dnd5e-spellpoints/templates/spell-points-item.hbs"; // file path for the template file, from Data directory
-      const rendered_html = await renderTemplate(template_file, template_item);
 
-      $('.sheet-body .tab[data-tab="description"] .item-descriptions', html_obj).prepend(rendered_html);
-      $('.tab.active', html_obj).scrollTop(app.options?.prevScroll);
+      foundry.applications.handlebars.renderTemplate(template_file, template_item).then(function (html) {
+        $('.tab[data-tab="description"] .item-descriptions', html_obj).prepend(html);
+        $('.tab.description', html_obj).scrollTop(SpellPoints.scroll);
+        SpellPoints.scroll = 0;
+        // save scroll on interactions
+        html_obj.on('change', function (e) {
+          let scroll = $('.tab.description', html_obj).scrollTop();
+          SpellPoints.scroll = scroll;
+        });
+      })
 
-      $('input[type="checkbox"], select', html_obj).on('change', function () {
-        let scroll = $('.tab.active', html_obj).scrollTop();
-        app.options.prevScroll = scroll;
-        app.submit();
-      });
+
     }
-    return (app, html, data);
+    //return (app, html, data);
 
   }
+  static scroll = 0;
 } /** END SpellPoint Class **/
 
-
 /**
- * A form for configuring actor hit points and bonuses.
+ * Spell Points Configuration
+ * @extends {dnd5e.applications.actor.BaseConfigSheetV2}
  */
-class ActorSpellPointsConfig extends DocumentSheet {
-  constructor(...args) {
-    super(...args);
-
-    /**
-     * Cloned copy of the actor for previewing changes.
-     * @type {Item5e}
-     */
-    this.clone = this.object.clone();
-  }
-
-  /** @inheritDoc */
-  async _onChangeInput(event) {
-    super._onChangeInput(event)
-    const data = foundry.utils.expandObject(this._getSubmitData());
-
-    data.uses.spent = data.uses.max > data.uses.value ? data.uses.max - data.uses.value : 0;
-    const that = this;
-
-    this._updateObject(event, data).then((data) => {
-      that.clone = data;
-      that.render();
+class ActorSpellPointsConfig extends dnd5e.applications.actor.BaseConfigSheetV2 {
+  constructor(options) {
+    foundry.utils.mergeObject(options ?? {}, {
+      classes: [
+        "standard-form", "config-sheet", "themed",
+        "sheet", "dnd5e2", "spellpoints", "application"
+      ],
+      position: { width: 420 },
+      submitOnClose: true,
+      editable: true,
+      submitOnChange: true,
+      closeOnSubmit: false,
+      actions: {
+        updateSpellPointMax: ActorSpellPointsConfig._updateSpellPointMax,
+        deleteRecovery: ActorSpellPointsConfig._deleteRecovery,
+        addRecovery: ActorSpellPointsConfig._addRecovery,
+      },
     });
-    //this.render();
+    super(options);
   }
-
-  /**
-   * Handle performing some sheet action.
-   * @param {PointerEvent} event  The originating event.
-   * @returns {Promise|void}
-   * @protected
-   */
-  _onSheetAction(event) {
-    const target = event.currentTarget;
-    const { action } = target.dataset;
-    switch (action) {
-      case "addRecovery": return this._onAddRecovery();
-      case "deleteRecovery": return this._onDeleteRecovery(target);
-      case "updateSpellPointMax": return this._updateMax();
-    }
-  }
-
-  _updateMax() {
-    const actor = this.clone.parent;
-    const item = SpellPoints.getSpellPointsItem(actor);
-    SpellPoints.updateSpellPointsMax({}, {}, actor, item);
-    this.clone = item;
-    this.render();
-  }
-
-  /**
-   * Create a new recovery profile.
-   * @returns {Promise}
-   * @protected
-   */
-  _onAddRecovery() {
-    const data = foundry.utils.expandObject(this._getSubmitData());
-    data.uses.recovery = [...this.clone.system.uses.recovery, {}];
-    this._updateObject(null, data).then((data) => {
-      this.clone = data;
-      this.render();
-    });
-  }
-
-  /**
-   * Delete a recovery profile.
-   * @param {HTMLElement} target  The deletion event target.
-   * @returns {Promise}
-   * @protected
-   */
-  _onDeleteRecovery(target) {
-    const data = foundry.utils.expandObject(this._getSubmitData());
-    data.uses.recovery = [...this.clone.system.uses.recovery];
-    data.uses.recovery.splice(target.closest("[data-index]").dataset.index, 1);
-    this._updateObject(null, data).then((data) => {
-      this.clone = data;
-      this.render();
-    });
-  }
-
-  /* -------------------------------------------- */
 
   /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["dnd5e2", "dnd5e-spellpoints", "actor-spell-points-config", "sheet", "item"], /** css classes */
-      template: "modules/dnd5e-spellpoints/templates/spell-points-popup-config.hbs",
-      width: 400,
-      height: "auto",
-      title: "TITLE",
-      sheetConfig: false
-    });
-  }
+  static PARTS = {
+    config: {
+      template: "modules/dnd5e-spellpoints/templates/spell-points-popup-config.hbs"
+    }
+  };
 
-  get title() {
-    return `${game.i18n.localize(SP_MODULE_NAME + ".ItemConfig")}: ${this.document.name}`;
-  }
+  /** Build the data context for your HBS template */
+  /** @override */
+  async _preparePartContext(partId, context, options) {
+    context = await super._preparePartContext(partId, context, options);
 
-  /** @inheritdoc */
-  async getData(options) {
-    const context = await super.getData(options);
-
-    context.uses = this.clone.system.uses;
-    context.system = this.clone.system;
-    context.img = this.clone.img;
-    context.name = this.clone.name;
+    context.uses = this.document.system.uses;
+    context.img = this.document.img;
+    context.name = this.document.name;
     context.recovery = game.system.config.limitedUsePeriods;
 
     // Limited Uses
-    context.data = { uses: this.clone.uses };
-    context.hasLimitedUses = this.clone.hasLimitedUses;
     context.recoveryPeriods = [
       ...Object.entries(CONFIG.DND5E.limitedUsePeriods)
         .filter(([, { deprecated }]) => !deprecated)
@@ -1096,7 +1028,7 @@ class ActorSpellPointsConfig extends DocumentSheet {
       { value: "loseAll", label: game.i18n.localize("DND5E.USES.Recovery.Type.LoseAll") },
       { value: "formula", label: game.i18n.localize("DND5E.USES.Recovery.Type.Formula") }
     ];
-    context.usesRecovery = (context.system.uses?.recovery ?? []).map((data, index) => ({
+    context.usesRecovery = (this.document?.system?.uses?.recovery ?? []).map((data, index) => ({
       data,
       //fields: context.fields.uses.fields.recovery.element.fields,
       prefix: `uses.recovery.${index}.`,
@@ -1107,31 +1039,73 @@ class ActorSpellPointsConfig extends DocumentSheet {
     return context;
   }
 
-  /* -------------------------------------------- */
 
-  /** @inheritdoc */
-  _getActorOverrides() {
-    return Object.keys(foundry.utils.flattenObject(this.object.overrides?.system?.attributes || {}));
+  /** Override render so that *every time* the sheet finishes rendering you bind your buttons */
+  async render(force = false, options = {}) {
+    // 1) Let the base class actually render all the parts
+    await super.render(force, options);
+
+    return this; // render overrides should return the Application instance
   }
 
-  /* -------------------------------------------- */
+  /** @override */
+  _processSubmitData(event, form, submitData) {
+    const actor = this.document.parent;
+    const item = SpellPoints.getSpellPointsItem(actor);
 
-  /** @inheritdoc */
-  async _updateObject(event, formData) {
-    const uses = foundry.utils.expandObject(formData).uses;
-    return this.document.update({ "system.uses": uses });;
+    const FormDataExtended = new foundry.applications.ux.FormDataExtended(this.element);
+    const data = foundry.utils.expandObject(FormDataExtended.object);
+
+    data.uses.spent = data.uses.max > data.uses.value ? data.uses.max - data.uses.value : 0;
+    submitData = foundry.utils.mergeObject(submitData?.system?.uses ?? {}, data.uses);
+    const changedUses = foundry.utils.mergeObject(item.system.uses, data.uses);
+    // Check if the uses object has changed
+    this.document.system.uses = changedUses;
+    item.update({ [`system.uses`]: changedUses });
+    super._processSubmitData(event, form, { [`system.uses`]: changedUses });
   }
-
-  /* -------------------------------------------- */
-  /*  Event Listeners and Handlers                */
-  /* -------------------------------------------- */
 
   /** @inheritDoc */
-  activateListeners(html) {
-    super.activateListeners(html);
-    if (this.isEditable) {
-      html.find("button.control-button").on("click", this._onSheetAction.bind(this));
+  async _onChangeInput(event) {
+    //console.log("SpellPoints: _onChangeInput", event);
+  }
+
+  /** Dispatch your three custom actions */
+  _onSheetAction(event) {
+    const action = event.currentTarget.dataset.action;
+    switch (action) {
+      case "addRecovery": return this._onAddRecovery();
+      case "deleteRecovery": return this._onDeleteRecovery(event.currentTarget);
+      case "updateSpellPointMax": return this._onUpdateMax();
     }
   }
 
+
+  static async _addRecovery(event, target) {
+    const uses = foundry.utils.duplicate(this.document.system.uses);
+    uses.recovery = [...(uses.recovery || []), {}];
+    this.document.update({ [`system.uses.recovery`]: uses.recovery });
+  }
+
+
+  static async _deleteRecovery(event, target) {
+    const idx = Number(target.closest("[data-index]").dataset.index);
+    const uses = foundry.utils.duplicate(this.document.system.uses);
+    // Convert object to array if necessary
+    if (!Array.isArray(uses.recovery)) {
+      uses.recovery = Object.values(uses.recovery || {});
+    }
+    uses.recovery.splice(idx, 1);
+    this.document.update({ [`system.uses.recovery`]: uses.recovery });
+  }
+
+  static async _updateSpellPointMax(event, target) {
+    const actor = this.document.parent;
+    const item = SpellPoints.getSpellPointsItem(actor);
+    SpellPoints.updateSpellPointsMax({}, {}, actor, item);
+  }
+
+  get title() {
+    return `${game.i18n.localize("dnd5e-spellpoints.ItemConfig")}: ${this.document.name}`;
+  }
 }

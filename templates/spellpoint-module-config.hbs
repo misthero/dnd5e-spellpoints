@@ -1,312 +1,232 @@
-<form autocomplete="off" class="dnd5e-spellpoints flexrow">
-  <div class="tab active flexcol" data-tab="general">
-    <h1 class="spFormTitle">{{localize "dnd5e-spellpoints.poptitle"}}</h1>
-    <div class="scrollable">
-    
-        <input
-          type="hidden"
-          name="isCustom"
-          data-dtype="Boolean"
-          value="{{isCustom}}"
-        />
+<div class="dnd5e-spellpoints form-container">
+  <header class="window-header spFormTitle sticky">
+    <h2>{{localize "dnd5e-spellpoints.poptitle"}}</h2>
+  </header>
+  <div class="scrollable form-body">
 
-      {{#each spellPointsByLevel as |cost level|}}
-        <input type="hidden" name="spellPointsByLevel.{{level}}" value="{{cost}}"/>
-      {{/each}}
+    <input type="hidden" name="isCustom" data-dtype="Boolean" value="{{isCustom}}" />
 
-      <!--
-      <div class="form-group">
-        <label>{{localize "dnd5e-spellpoints.resourceLabel"}}</label>
-        <input
-          type="text"
-          name="spResource"
-          data-dtype="string"
-          value="{{spResource}}"
-        />
-        <p class="notes">{{localize "dnd5e-spellpoints.resourceNote"}}</p>
-      </div>
-      -->
-      <input
-          type="hidden"
-          name="spResource"
-          data-dtype="string"
-          value="{{spResource}}"
-        />
-        
-      <div class="description new-item">
-        <p>{{localize "dnd5e-spellpoints.newV3ItemUsage"}}</p>
-        <a
-          class="content-link"
-          draggable="true"
-          data-uuid="Compendium.dnd5e-spellpoints.module-items.Item.{{item_id}}"
-          data-id="{{item_id}}"
-          data-type="Item"
-          data-pack="dnd5e-spellpoints.module-items"
-          data-tooltip="Feature Item"
-        ><i class="fas fa-suitcase"></i>Spell Points Item</a>
-      </div>
-      <div class="bordered">
-        <h2>{{localize "dnd5e-spellpoints.spOverrideTitle"}}</h2>
+    {{#each spellPointsByLevel as |cost level|}}
+    <input type="hidden" name="spellPointsByLevel.{{level}}" value="{{cost}}" />
+    {{/each}}
+
+    <input type="hidden" name="spResource" data-dtype="string" value="{{spResource}}" />
+
+    <div class="description new-item">
+      <p>{{localize "dnd5e-spellpoints.itemUsage"}}</p>
+      <a class="content-link" draggable="true" data-uuid="Compendium.dnd5e-spellpoints.module-items.Item.{{item_id}}"
+        data-id="{{item_id}}" data-type="Item" data-pack="dnd5e-spellpoints.module-items" data-tooltip="Feature Item"><i
+          class="fas fa-suitcase"></i>Spell Points Item</a>
+    </div>
+    <!-- Override Instruction-->
+    <div class="bordered">
+      <h4>{{localize "dnd5e-spellpoints.spOverrideTitle"}}</h3>
         <p>{{localize "dnd5e-spellpoints.spOverrideNote1"}}</p>
         <p>{{localize "dnd5e-spellpoints.spOverrideNote2"}}</p>
         <hr>
+        <!-- Only GM Override-->
         <div class="form-group">
           <label>{{localize "dnd5e-spellpoints.spGmOnly"}}</label>
-            <input
-            type="checkbox"
-            name="spGmOnly"
-            data-dtype="Boolean"
-            {{checked spGmOnly}}
-          />
-          <p class="notes">{{localize "dnd5e-spellpoints.spGmOnlyNote"}}</p>
+          <input type="checkbox" name="spGmOnly" data-dtype="Boolean" {{checked spGmOnly}} />
+          <p class="hint">{{localize "dnd5e-spellpoints.spGmOnlyNote"}}</p>
         </div>
+    </div>
+    <!-- Spell points bar Colors -->
+    <h4>{{localize "dnd5e-spellpoints.spResourceBarSetting"}}</h4>
+    <div class="dnd5e2">
+      <div class="color_test dnd5e2 meter"><label class="label"><span class="value">42</span>
+          <span class="separator">/</span><span class="max">42</span></label>
       </div>
-      <!-- Spell points Color -->
-      <h3>{{localize "dnd5e-spellpoints.spResourceBarSetting"}}</h3>
-      <div class="dnd5e2">
-        <div class="color_test dnd5e2 meter"><label class="label"><span class="value">42</span><span class="separator">/</span><span class="max">42</span></label></div>
-      </div>
-      <div class="form-group" style="gap:15px;">
-        <div class="form-group">
-          <label>{{localize "dnd5e-spellpoints.spResourceBarLeftColor"}}: </label> <input type="color" value="{{spColorL}}" name="spColorL" /> <i class="notes"> Default: #3a0e5f </i>
-        </div>
-        <div class="form-group">
-          <label>{{localize "dnd5e-spellpoints.spResourceBarRightColor"}}: </label> <input type="color" value="{{spColorR}}" name="spColorR" /> <i class="notes"> Default: #8a40c7 </i>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>
-          {{localize "dnd5e-spellpoints.spResourceBarAnimate"}}
-        </label>
-        <input
-          type="checkbox"
-          name="spAnimateBar"
-          data-dtype="Boolean"
-          {{checked spAnimateBar}}
-        />
-      </div>
-      <hr>
-      <!-- Choose Preset -->
-      <div class="form-group">
-        <label>{{localize "dnd5e-spellpoints.formulaLabel"}}</label>
-        <select name="spFormula" style="flex: 1">
-          {{#select spFormula}}
-            {{#each spFormulas as |name key|}}
-              <option value="{{key}}">{{name}}</option>
-            {{/each}}
-          {{/select}}
-        </select>
-        <p class="notes">{{localize "dnd5e-spellpoints.formulaNote"}}</p>
-      </div>
+    </div>
 
+
+    <div class="form-group" style="gap:15px;">
+      <div class="form-group">
+        <label>{{localize "dnd5e-spellpoints.spResourceBarLeftColor"}}: </label> <input type="color"
+          value="{{spColorL}}" name="spColorL" /> <i class="hint"> Default: #3a0e5f </i>
+      </div>
+      <div class="form-group">
+        <label>{{localize "dnd5e-spellpoints.spResourceBarRightColor"}}: </label> <input type="color"
+          value="{{spColorR}}" name="spColorR" /> <i class="hint"> Default: #8a40c7 </i>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>
+        {{localize "dnd5e-spellpoints.spResourceBarAnimate"}}
+      </label>
+      <input type="checkbox" name="spAnimateBar" data-dtype="Boolean" {{checked spAnimateBar}} />
+    </div>
+    <hr>
+    <!-- Choose FORMULA Preset -->
+    <h4>{{localize "dnd5e-spellpoints.spFormulaPreset"}}</h4>
+    <div class="form-group">
+      <label for="spFormula" data-action="changeForumla">{{localize "dnd5e-spellpoints.formulaLabel"}}</label>
+      <select name="spFormula" id="spFormula" style="flex: 1" data-action="changeForumla">
+        {{selectOptions spFormulas selected=spFormula }}
+      </select>
+      <p class="hint">{{localize "dnd5e-spellpoints.formulaNote"}}</p>
+    </div>
+
+    <hr>
+    <div class="progression">
       <!-- Enable automatic progression calculation -->
-      <h2>{{localize "dnd5e-spellpoints.progressionTitle"}}</h2>
+      <h4>{{localize "dnd5e-spellpoints.progressionTitle"}}</h4>
       <div class="form-group">
         <label>{{localize "dnd5e-spellpoints.autoLabel"}}</label>
-        <input
-          type="checkbox"
-          name="spAutoSpellpoints"
-          data-dtype="Boolean"
-          {{checked spAutoSpellpoints}}
-        />
-        <p class="notes">{{localize "dnd5e-spellpoints.autoNote"}}</p>
+        <input type="checkbox" name="spAutoSpellpoints" data-dtype="Boolean" {{checked spAutoSpellpoints}} />
+        <p class="hint">{{localize "dnd5e-spellpoints.autoNote"}}</p>
       </div>
-
-      
-      {{#if spAutoSpellpoints}}
-        
-        {{#if isCustom}}
-          <!-- Edit Forumla -->
-          <div class="spell-points bordered">
-            <h3>{{localize "dnd5e-spellpoints.spellPointsFormula"}}</h3>
-            <!-- Switch to Leveled progression -->
-            <div class="form-group">
-              <label for="spUseLeveled">{{localize
-                  "dnd5e-spellpoints.useLeveledProgression"
-                }}</label>
-              <input
-                id="spUseLeveled"
-                type="checkbox"
-                name="spUseLeveled"
-                data-dtype="Boolean"
-                {{checked spUseLeveled}}
-              />
-            </div>
-            
-            {{#if spUseLeveled}}
-              <p class="notes">{{localize "dnd5e-spellpoints.useLeveledProgressionNote"}}</p>
-              <!-- Leveled progression -->
-              <h5>{{localize "dnd5e-spellpoints.leveledProgressionTitle" SpellPoints=spResource}}</h5>
-              <div class="form-group spell-points-level-header">
-                <label><i>{{localize "dnd5e-spellpoints.leveledProgressionLevel" }}</i></label>
-                <div><i>{{localize "dnd5e-spellpoints.leveledProgressionGained" SpellPoints=spResource}}</i></div>
-              </div>
-              {{#each leveledProgressionFormula as |sp level|}}
-                <div class="form-group spell-points-level">
-                  <label>{{spFormat
-                      "dnd5e-spellpoints.spAtLevel"
-                      characterLevel=level
-                    }}</label>
-                  <div>
-                    <textarea
-                      placeholder="0"
-                      class="spellPoints"
-                      rows="1"
-                      name="leveledProgressionFormula.{{level}}"
-                    >{{sp}}</textarea>
-                  </div>
-                </div>
-              {{/each}}
-              <p class="notes">{{localize "dnd5e-spellpoints.leveledNotes"}}</p>
-              <hr>
-              <h5>{{localize "dnd5e-spellpoints.casterProg"}}</h5>
-              <div class="notes">{{localize "dnd5e-spellpoints.casterProgNotes"}}</div>
-              <div class="form-group spell-points">
-                {{#each spellcastingTypes as |values type|}}
-                <div class="spell-points-types">
-                  <label>
-                    {{localize values.label}}
-                  </label> 
-                  <span>1 / <input type="number" class="uninput" name="spellcastingTypes.{{type}}.value" min="1" value="{{values.value}}" data-dtype="Number" inputmode="numeric" pattern="[0-9+=\\\-]*"></span>
-                </div>
-                {{/each}}
-                
-              </div>
-              
-            {{else}}
-              <!-- Single Formula Progression -->
-              <h5>{{localize "dnd5e-spellpoints.formulaBaseLabel"}}</h5>
-              <div class="form-group spell-points">
-                <div>
-                  <textarea
-                    class="spellPoints"
-                    rows="1"
-                    name="spCustomFormulaBase"
-                  >{{spCustomFormulaBase}}</textarea>
-                </div>
-                <p class="notes">{{localize
-                    "dnd5e-spellpoints.formulaBaseNote"
-                  }}</p>
-              </div>
-            {{/if}}
-          </div>
-        {{/if}}
-      {{/if}}
-
-      <!-- Spell cost per spell level -->
-      <h3>{{localize "dnd5e-spellpoints.spellPointsCostsTitle" SpellPoints=spResource}}</h3>
-      <div class="form-group" style="gap:10px;">
-        <div><i>{{localize "dnd5e-spellpoints.spellLevelHeader"}}</i></div>
-        <div><i>{{localize "dnd5e-spellpoints.neededToCastHeader" SpellPoints=spResource}}</i></div>
-        <div></div>
-      </div>
-      {{#each spellPointsCosts as |cost level|}}
-        <div class="form-group" style="gap:10px;">
-          <div>
-            <label>{{spFormat
-                "dnd5e-spellpoints.costLabel"
-                slotLevel=level
-              }}</label>
-          </div>
-          <div>
-            <textarea
-              class="spellPoints"
-              rows="1"
-              {{#ifCond ../spFormula "==" "DMG"}} readonly {{/ifCond}}
-              name="spellPointsCosts.{{level}}"
-            >{{cost}}</textarea>
-          </div>
-          <div class="resource_name"> {{../spResource}}</div>
-        </div>
-      {{/each}}
-      <p class="notes">{{localize "dnd5e-spellpoints.spellPointsCostsNote"}}</p>
-      <!-- Spell cost multiplier -->
-      <div class="form-group spell-points">
-        <div>
-          <label>{{localize "dnd5e-spellpoints.formulaSlotLabel"}}</label>
-        </div>
-        <div>
-          <textarea
-            class="spellPoints"
-            rows="1"
-            placeholder="@abilities.cha.mod"
-            name="spCustomFormulaSlotMultiplier"
-            {{#ifCond spFormula "==" "DMG"}} readonly {{/ifCond}}
-          >{{spCustomFormulaSlotMultiplier}}</textarea>
-        </div>
-        <p class="notes">{{localize "dnd5e-spellpoints.formulaSlotNote"}}</p>
-      </div>
-
-      <hr />
-      <!-- Other Settings -->
-      <h3>{{localize "dnd5e-spellpoints.otherSettingsTitle"}}</h3>
-      <!-- Enable Warlock -->
-      <!-- Private chat message switch -->
-      <div class="form-group">
-        <label><i class="fas fa-comments"></i>
-          {{localize "dnd5e-spellpoints.chatMessagePrivateLabel"}}</label>
-        <input
-          type="checkbox"
-          name="chatMessagePrivate"
-          data-dtype="Boolean"
-          {{checked chatMessagePrivate}}
-        />
-        <p class="notes">
-          {{localize "dnd5e-spellpoints.chatMessagePrivateNote"}}
-        </p>
-      </div>
-
-      <hr />
-      <!-- Advanced Magic gritty variant -->
-      <h3>{{localize "dnd5e-spellpoints.AMTitle"}}</h3>
-      <p class="notes"><i>{{localize "dnd5e-spellpoints.AMNotes"}}</i></p>
-      <p class="notes">
-        {{localize "dnd5e-spellpoints.AMInstructions"}}
-        <a
-          href="https://www.dmsguild.com/product/272967/Advanced-Magic--Spell-Points-System-5e"
-        >{{localize "dnd5e-spellpoints.AMLinkLabel"}}</a>
-        {{localize "dnd5e-spellpoints.AMInstructions2"}}
-      </p>
-      <div class="form-group">
-        <label>{{localize "dnd5e-spellpoints.enableVariantLabel"}}</label>
-        <input
-          type="checkbox"
-          name="spEnableVariant"
-          data-dtype="Boolean"
-          {{checked spEnableVariant}}
-        />
-        <p class="notes">{{localize "dnd5e-spellpoints.enableVariantNote"}}</p>
-      </div>
-      {{#if spEnableVariant}}
-        <!-- Advanced Magic gritty variant life cost-->
-        <div class="form-group">
-          <div><label>{{localize
-                "dnd5e-spellpoints.spLifeCostLabel"
-              }}</label></div>
-          <div>
-            <textarea
-              class="spellPoints"
-              rows="1"
-              name="spLifeCost"
-            >{{spLifeCost}}</textarea>
-          </div>
-          <p class="notes">{{localize "dnd5e-spellpoints.spLifeCostNote"}}</p>
-        </div>
-      {{/if}}
-      
-    
     </div>
-    <footer>
-      <div class="form-group" style="margin: 10px">
-        <button type="submit" name="submit">
-          <i class="fas fa-save"></i>
-          {{localize "dnd5e-spellpoints.save"}}
-        </button>
-        <button type="button" name="reset">
-          <i class="fas fa-undo"></i>
-          {{localize "dnd5e-spellpoints.reset"}}
-        </button>
+
+
+    <div id="autoSpellpoints" class="{{#if spAutoSpellpoints}}show{{else}}hide{{/if}}">
+
+      <!-- Edit Forumla -->
+      <div class="spell-points customFormula bordered {{#if isCustom}}show{{else}}hide{{/if}}">
+        <h4>{{localize "dnd5e-spellpoints.spellPointsFormula"}}</h4>
+        <!-- Switch to Leveled progression -->
+        <div class="form-group">
+          <label for="spUseLeveled">{{localize
+            "dnd5e-spellpoints.useLeveledProgression"
+            }}</label>
+          <input id="spUseLeveled" type="checkbox" name="spUseLeveled" data-dtype="Boolean" {{checked spUseLeveled}} />
+        </div>
+
+
+        <div id="useLeveled" class="{{#if spUseLeveled}}show{{else}}hide{{/if}}">
+          <p class="hint">{{localize "dnd5e-spellpoints.useLeveledProgressionNote"}}</p>
+          <!-- Leveled progression -->
+          <h5>{{localize "dnd5e-spellpoints.leveledProgressionTitle" SpellPoints=spResource}}</h5>
+          <div class="form-group spell-points-level-header">
+            <label><i>{{localize "dnd5e-spellpoints.leveledProgressionLevel" }}</i></label>
+            <div><i>{{localize "dnd5e-spellpoints.leveledProgressionGained" SpellPoints=spResource}}</i></div>
+          </div>
+          {{#each leveledProgressionFormula as |sp level|}}
+          <div class="form-group spell-points-level">
+            <label>{{spFormat
+              "dnd5e-spellpoints.spAtLevel"
+              characterLevel=level
+              }}</label>
+            <div>
+              <textarea placeholder="0" class="spellPointsTextArea" rows="1"
+                name="leveledProgressionFormula.{{level}}">{{sp}}</textarea>
+            </div>
+          </div>
+          {{/each}}
+          <p class="hint">{{localize "dnd5e-spellpoints.leveledNotes"}}</p>
+          <hr>
+          <h5>{{localize "dnd5e-spellpoints.casterProg"}}</h5>
+          <div class="hint">{{localize "dnd5e-spellpoints.casterProgNotes"}}</div>
+          <div class="form-group spell-points">
+            {{#each spellcastingTypes as |values type|}}
+            <div class="spell-points-types">
+              <label>
+                {{localize values.label}}
+              </label>
+              <span>1 / <input type="number" class="uninput" name="spellcastingTypes.{{type}}.value" min="1"
+                  value="{{values.value}}" data-dtype="Number" inputmode="numeric" pattern="[0-9+=\\\-]*"></span>
+            </div>
+            {{/each}}
+
+          </div>
+        </div>
+
+
+        <div id="useSingleFormula" class="{{#if spUseLeveled}}hide{{else}}show{{/if}}">
+          <!-- Single Formula Progression -->
+          <h5>{{localize "dnd5e-spellpoints.formulaBaseLabel"}}</h5>
+          <div class="form-group spell-points">
+            <div>
+              <textarea class="spellPointsTextArea" rows="1"
+                name="spCustomFormulaBase">{{spCustomFormulaBase}}</textarea>
+            </div>
+            <p class="hint">{{localize
+              "dnd5e-spellpoints.formulaBaseNote"
+              }}</p>
+          </div>
+        </div>
+
       </div>
-    </footer>
+    </div>
+
+    <hr>
+    <!-- Spell cost per spell level -->
+    <h4>{{localize "dnd5e-spellpoints.spellPointsCostsTitle" SpellPoints=spResource}}</h4>
+    <div class="form-group" style="gap:10px;">
+      <div><i>{{localize "dnd5e-spellpoints.spellLevelHeader"}}</i></div>
+      <div><i>{{localize "dnd5e-spellpoints.neededToCastHeader" SpellPoints=spResource}}</i></div>
+      <div></div>
+    </div>
+    {{#each spellPointsCosts as |cost level|}}
+    <div class="form-group" style="gap:10px;">
+      <div>
+        <label>{{spFormat
+          "dnd5e-spellpoints.costLabel"
+          slotLevel=level
+          }}</label>
+      </div>
+      <div>
+        <textarea class="spellPointsTextArea spCosts" rows="1" {{#ifCond ../spFormula "==" "DMG" }} readonly {{/ifCond}}
+          name="spellPointsCosts.{{level}}">{{cost}}</textarea>
+      </div>
+      <div class="resource_name"> {{../spResource}}</div>
+    </div>
+    {{/each}}
+    <p class="hint">{{localize "dnd5e-spellpoints.spellPointsCostsNote"}}</p>
+    <!-- Spell cost multiplier -->
+    <div class="form-group spell-points hide">
+      <div>
+        <label>{{localize "dnd5e-spellpoints.formulaSlotLabel"}}</label>
+      </div>
+      <div>
+        <textarea class="spellPointsTextArea multiplier" rows="1" placeholder="@abilities.cha.mod"
+          name="spCustomFormulaSlotMultiplier" {{#ifCond spFormula "==" "DMG" }} readonly
+          {{/ifCond}}>{{spCustomFormulaSlotMultiplier}}</textarea>
+      </div>
+      <p class="hint">{{localize "dnd5e-spellpoints.formulaSlotNote"}}</p>
+    </div>
+
+    <hr />
+    <!-- Other Settings -->
+    <h4>{{localize "dnd5e-spellpoints.otherSettingsTitle"}}</h4>
+    <!-- Enable Warlock -->
+    <!-- Private chat message switch -->
+    <div class="form-group">
+      <label><i class="fas fa-comments"></i>
+        {{localize "dnd5e-spellpoints.chatMessagePrivateLabel"}}</label>
+      <input type="checkbox" name="chatMessagePrivate" data-dtype="Boolean" {{checked chatMessagePrivate}} />
+      <p class="hint">
+        {{localize "dnd5e-spellpoints.chatMessagePrivateNote"}}
+      </p>
+    </div>
+
+    <hr />
+    <!-- Advanced Magic gritty variant -->
+    <h3 class="purple">{{localize "dnd5e-spellpoints.AMTitle"}}</h3>
+    <p class="hint"><i>{{localize "dnd5e-spellpoints.AMNotes"}}</i></p>
+    <p class="hint">
+      {{localize "dnd5e-spellpoints.AMInstructions"}}
+      <a href="https://www.dmsguild.com/product/272967/Advanced-Magic--Spell-Points-System-5e">{{localize
+        "dnd5e-spellpoints.AMLinkLabel"}}</a>
+      {{localize "dnd5e-spellpoints.AMInstructions2"}}
+    </p>
+    <div class="form-group">
+      <label>{{localize "dnd5e-spellpoints.enableVariantLabel"}}</label>
+      <input type="checkbox" name="spEnableVariant" data-dtype="Boolean" {{checked spEnableVariant}} />
+      <p class="hint">{{localize "dnd5e-spellpoints.enableVariantNote"}}</p>
+    </div>
+
+    <div id="grittyVariant" class="{{#if spEnableVariant}}show{{else}}hide{{/if}}">
+      <!-- Advanced Magic gritty variant life cost-->
+      <div class="form-group">
+        <div><label>{{localize
+            "dnd5e-spellpoints.spLifeCostLabel"
+            }}</label></div>
+        <div>
+          <textarea class="spellPointsTextArea" rows="1" name="spLifeCost">{{spLifeCost}}</textarea>
+        </div>
+        <p class="hint">{{localize "dnd5e-spellpoints.spLifeCostNote"}}</p>
+      </div>
+    </div>
   </div>
-</form>
+</div>

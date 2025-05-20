@@ -12,31 +12,45 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 
 /**
-* SPELL POINTS APPLICATION SETTINGS FORM
+* SPELL POINTS APPLICATION SETTINGS FORM V2
 */
-export class SpellPointsForm extends FormApplication {
-
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      title: game.i18n.localize('dnd5e-spellpoints.form-title'),
-      id: 'spellpoints-form',
-      template: `modules/${SP_MODULE_NAME}/templates/spellpoint-module-config.hbs`,
-      width: 700,
-      height: 600,
-      //closeOnSubmit: true,
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+export class SpellPointsForm extends HandlebarsApplicationMixin(ApplicationV2) {
+  static DEFAULT_OPTIONS = {
+    id: "spellpoints-form",
+    classes: ["dnd5e-spellpoints", "spellpoints-form"],
+    actions: {
+      reset: SpellPointsForm.onReset,
+    },
+    form: {
+      handler: SpellPointsForm.#onSubmit,
+      closeOnSubmit: false,
       submitOnChange: true,
-      resizable: true
-    });
-  }
+      submitOnClose: true,
+    },
+    position: {
+      width: 778,
+      height: 680,
+    },
+    tag: "form",
+    window: {
+      contentClasses: ["spellpoints-config", "standard-form"],
+      icon: "fas fa-praying-hands",
+      title: "dnd5e-spellpoints.form-title",
+      resizable: true,
+    }
+  };
 
-  /**
-   * Get the data used for filling out the Form. This is composed of the following
-   * in order of priority
-   *   1) Settings defined by the user
-   *   2) Default settings
-   *   3) The available formulas
-   */
-  async getData(options) {
+  static PARTS = {
+    form: {
+      template: `modules/dnd5e-spellpoints/templates/spellpoint-module-config.hbs`,
+    },
+    footer: {
+      template: "templates/generic/form-footer.hbs",
+    }
+  };
+
+  _prepareContext() {
     let data = foundry.utils.mergeObject(
       {
         spFormulas: Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]))
@@ -46,68 +60,68 @@ export class SpellPointsForm extends FormApplication {
     this.reset = false;
     data.item_id = SP_ITEM_ID;
     SpellPoints.setSpColors();
+    data.buttons = [
+      { type: "submit", icon: "fa-solid fa-save", label: "SETTINGS.Save" },
+      { type: "reset", action: "reset", icon: "fa-solid fa-undo", label: "SETTINGS.Reset" },
+    ]
     return data;
   }
 
-  async getLink() {
-    let link = await TextEditor.enrichHTML("@UUID[Compendium.dnd5e-spellpoints.module-items.Item." + SP_ITEM_ID + "]{Spell Points}");
-  }
-
-  onReset() {
-    this.reset = true;
-    this.render();
-  }
-
-  /**
-   * Edits the visiblity of html elements within the Form based on whether the
-   * current formula is a custom formula.
-   * @param {boolean} isCustom A boolean flag that marks if the current formula is a custom formula.
-   */
-  setCustomOnlyVisibility(isCustom) {
-    const displayValue = isCustom ? 'block' : 'none';
-    const customElements = this.element[0].querySelectorAll('.spell-points-custom-only');
-    for (let elementIndex = 0, customElement; customElement = customElements[elementIndex]; elementIndex++) {
-      customElement.style.display = displayValue;
+  async _onRender(context, options) {
+    // The form element is available as this.form
+    // Restore scroll position if available
+    if (this._pendingScrollTop !== undefined && this.form) {
+      const scrollable = this.form.querySelector('.dnd5e-spellpoints .scrollable');
+      if (scrollable) scrollable.scrollTop = this._pendingScrollTop;
+      this._pendingScrollTop = undefined;
     }
   }
 
-  _updateObject(event, formData, hideMessage) {
-    var that = this;
-    return __awaiter(this, void 0, void 0, function* () {
-      let settings = foundry.utils.mergeObject(SpellPoints.settings, formData, { insertKeys: true, insertValues: true });
-      yield game.settings.set(SP_MODULE_NAME, 'settings', settings);
-      that.render();
-      if (!hideMessage) {
-        ui.notifications.info(game.i18n.format(SP_MODULE_NAME + ".settingSaved"));
-      }
+  _onChangeForm(options, event) {
+    super._onChangeForm(options, event);
+  }
+
+  static async #onSubmit(event, form, formData) {
+
+    // Save scroll position
+    const scrollable = form.querySelector('.dnd5e-spellpoints .scrollable');
+    const scrollTop = scrollable ? scrollable.scrollTop : 0;
+
+    // Store scroll position for restoration
+    this._pendingScrollTop = scrollTop;
+
+    const expandForm = foundry.utils.expandObject(formData.object);
+
+    let formulaOverrides = {};
+    if (event.target.name == "spFormula") {
+      formulaOverrides = SpellPoints.formulas[expandForm.spFormula];
+    }
+
+    let settings = foundry.utils.mergeObject(SpellPoints.settings, expandForm, { insertKeys: true, insertValues: true });
+    settings = foundry.utils.mergeObject(settings, formulaOverrides, { insertKeys: true, insertValues: true });
+    await game.settings.set(SP_MODULE_NAME, 'settings', settings).then(() => {
+      this.render();
+    });
+
+    if (event.type === "submit") this.close();
+
+  }
+
+  static async onReset(event, form) {
+    const confirm = await foundry.applications.api.DialogV2.confirm({
+      window: { title: game.i18n.format(SP_MODULE_NAME + ".settingResetConfirmTitle") },
+      content: game.i18n.format(SP_MODULE_NAME + ".settingResetConfirmText"),
+    });
+    if (!confirm) return;
+
+    const defaultSettings = foundry.utils.mergeObject(SpellPoints.settings, SpellPoints.defaultSettings, { insertKeys: true, insertValues: true, overwrite: true, recursive: true, performDeletions: true });
+    game.settings.set(
+      SP_MODULE_NAME, 'settings', defaultSettings
+    ).then(() => {
+      ui.notifications.info(game.i18n.format(SP_MODULE_NAME + ".settingReset"));
+      this.reset = true;
+      this.render();
     });
   }
 
-  activateListeners(html) {
-    super.activateListeners(html);
-    html.find('button[name="reset"]').click(this.onReset.bind(this));
-  }
-
-  /**
-   * Method executed whenever an input is changed within the Form. This method
-   * watches only for changes in the spFormula select box. When a different
-   * formula is selected, it will overwrite all fields specified by that formula.
-   * The visiblity of custom formulas is also set based on if the new formula is
-   * a custom formula.
-   * @param {object} event The data detailing the change in the form.
-   */
-  _onChangeInput(event) {
-    var $form_element = $('form', $(event.delegateTarget));
-    const spFormData = new FormData($form_element[0]);
-
-    let newSettings = this._getSubmitData(spFormData);
-    const input_name = event.originalEvent.target.name
-    if (input_name == "spFormula") {
-      const input_value = event.originalEvent.target.value;
-      const formulaOverrides = SpellPoints.formulas[input_value];
-      newSettings = foundry.utils.mergeObject(newSettings, formulaOverrides);
-    }
-
-    this._updateObject(event, newSettings, true);
-  }
-} /** end SpellPointForm **/
+}

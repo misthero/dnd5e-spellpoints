@@ -2,7 +2,6 @@
     "dnd5e-spellpoints.actorNoSP": "{ActorName} não tem nenhum recurso com o nome {SpellPoints}",
     "dnd5e-spellpoints.actorNoSPV3": "{ActorName} não tem um Item 'Característica' com um rótulo personalizado com o nome {SpellPoints}",
     "dnd5e-spellpoints.alreadySpItemOwned": "Já existe um item de spell point neste personagem. Por favor, delete a duplicata.",
-    "dnd5e-spellpoints.AM": "Advanced Magic (homebrew)",
     "dnd5e-spellpoints.AM_CUSTOM": "Advanced Magic (Personalizado)",
     "dnd5e-spellpoints.AMInstructions": "Este módulo te permite personalizar o custo de Spell Points e habilitar outras opções abaixo não usadas nas regras originais. Você pode encontrar um sistema alternativo disponível gratuitamente em ",
     "dnd5e-spellpoints.AMInstructions2": "As opções que você vê abaixo são parte das regras explicadas neste módulo.",
@@ -19,8 +18,6 @@
     "dnd5e-spellpoints.chatMessagePrivateNote": "Habilitando esta opção faz com que surjam mensagens no chat informando quantos Spell Points foram usados. Será visualizado apenas pelo MJ e o jogador que conjurou a magia, outros jogadores não verão a mensagem.",
     "dnd5e-spellpoints.consumeSpellSlotInput": "Consumir {SpellPoints}",
     "dnd5e-spellpoints.costLabel": "Custo de {SpellPoints} para Magias de Nível {slotLevel}.",
-    "dnd5e-spellpoints.createNewResource": "Por favor crie um novo recurso chamado {SpellPoints}",
-    "dnd5e-spellpoints.createNewResourceV3": "Por favor, crie um Item 'Característica' com um rótulo personalizado com o nome: '{SpellPoints}'",
     "dnd5e-spellpoints.currentSpellPointsOverride": "{SpellPoints} Atuais",
     "dnd5e-spellpoints.CUSTOM": "Fórmula Personalizada",
     "dnd5e-spellpoints.DMG": "Dungeon Master Guide",
@@ -49,7 +46,7 @@
     "dnd5e-spellpoints.leveledProgressionGained": "{SpellPoints} Máximos.",
     "dnd5e-spellpoints.maxSpellPointsOverride": "{SpellPoints} Máximos.",
     "dnd5e-spellpoints.neededToCastHeader": "{SpellPoints} Necessários para Conjurar.",
-    "dnd5e-spellpoints.newV3ItemUsage": "Desde que o sistema D&D atualizou para a v3, o uso de 'recursos' foi descontinuado. Você deve agora adicionar o item (incluído no compendium deste módulo) para todo personagem que precisa usar Spell Points ao invés de espaços de magia. O seguinte é um atalho para o item:",
+    "dnd5e-spellpoints.itemUsage": "Adicione o feat na ficha do personagem para dar a ele a possibilidade de usar Pontos de Magia / Mana / Spell Points.",
     "dnd5e-spellpoints.notEnoughSp": "{ActorName} não tem {SpellPoints} suficiente para conjurar esta magia.",
     "dnd5e-spellpoints.oldResourceFound": "Encontrou um antigo recurso de Spell Point.",
     "dnd5e-spellpoints.oldResourceFoundDesc": "Um antigo recurso foi encontrado neste personagem para usar {SpellPoints}. Você gostaria de importar as informações do recurso e deletá-lo?",
@@ -91,5 +88,9 @@
     "dnd5e-spellpoints.spResourceBarAnimate": "Barra de Recurso Animada",
     "dnd5e-spellpoints.updateSpellPointMax": "Calcular Máx. {SpellPoints}",
     "dnd5e-spellpoints.updateSpellPointMaxTooltip": "Redefine o valor máximo de acordo com sua configuração.",
-    "dnd5e-spellpoints.spClassSubtype": "Spell Points"
+    "dnd5e-spellpoints.spClassSubtype": "Spell Points",
+    "dnd5e-spellpoints.spFormulaPreset": "Escolha o preset de fórmula",
+    "dnd5e-spellpoints.settingReset": "Configurações padrão restauradas.",
+    "dnd5e-spellpoints.settingResetConfirmTitle": "Redefinir Configuração do Spell Points System 5e.",
+    "dnd5e-spellpoints.settingResetConfirmText": "Todas as configurações serão redefinidas para o padrão. Tem certeza de que deseja fazer isso?"
 }
