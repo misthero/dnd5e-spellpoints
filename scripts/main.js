@@ -44,12 +44,16 @@ Handlebars.registerHelper("spFormat", (path, ...args) => {
   return game.i18n.format(path, args[0].hash);
 });
 
-Hooks.on('ready', () => {
+
+Hooks.on('ready', async (x, y, z) => {
   checkUpdate();
 })
 
+
 Hooks.on('init', () => {
   console.log('SpellPoints init');
+  console.log(`SpellPoints module version: ${game.modules.get(SP_MODULE_NAME).version}`);
+  console.log(window);
 
   // add a class feature subtype
   game.dnd5e.config.featureTypes.class.subtypes.sp = game.i18n.format(SP_MODULE_NAME + ".spClassSubtype");
@@ -128,7 +132,6 @@ Hooks.on("renderActorSheet5eNPC", (app, html, data) => {
 });
 
 
-
 /**
   * Hook that is triggered after the SpellPointsForm has been rendered. This
   * sets the visiblity of the custom formula fields based on if the current
@@ -145,4 +148,9 @@ Hooks.on("dnd5e.preActivityConsumption", (item, consume, options, update) => {
 
 Hooks.on("renderItemSheet5e", async (app, html, data) => {
   SpellPoints.renderSpellPointsItem(app, html, data);
+})
+
+
+Hooks.on("dnd5e.prepareLeveledSlots", async (slots, actor, modified) => {
+  SpellPoints.prepareLeveledSlots(slots, actor, modified);
 })
