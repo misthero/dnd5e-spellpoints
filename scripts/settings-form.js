@@ -123,5 +123,4 @@ export class SpellPointsForm extends HandlebarsApplicationMixin(ApplicationV2) {
       this.render();
     });
   }
-
 }

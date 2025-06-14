@@ -31,7 +31,7 @@
           <p class="hint">{{localize "dnd5e-spellpoints.spGmOnlyNote"}}</p>
         </div>
     </div>
-    <!-- Spell points bar Colors -->
+    <!-- Spell points bar Preview -->
     <h4>{{localize "dnd5e-spellpoints.spResourceBarSetting"}}</h4>
     <div class="dnd5e2">
       <div class="color_test dnd5e2 meter"><label class="label"><span class="value">42</span>
@@ -39,7 +39,7 @@
       </div>
     </div>
 
-
+    <!-- Spell points bar Preview -->
     <div class="form-group" style="gap:15px;">
       <div class="form-group">
         <label>{{localize "dnd5e-spellpoints.spResourceBarLeftColor"}}: </label> <input type="color"
@@ -50,11 +50,19 @@
           value="{{spColorR}}" name="spColorR" /> <i class="hint"> Default: #8a40c7 </i>
       </div>
     </div>
+    <!-- Spell points bar Animate -->
     <div class="form-group">
       <label>
         {{localize "dnd5e-spellpoints.spResourceBarAnimate"}}
       </label>
       <input type="checkbox" name="spAnimateBar" data-dtype="Boolean" {{checked spAnimateBar}} />
+    </div>
+    <!-- Spell points bar Active -->
+    <div class="form-group">
+      <label>
+        {{localize "dnd5e-spellpoints.spResourceBarActive"}}
+      </label>
+      <input type="checkbox" name="spActivateBar" data-dtype="Boolean" {{checked spActivateBar}} />
     </div>
     <hr>
     <!-- Choose FORMULA Preset -->
@@ -130,7 +138,6 @@
 
           </div>
         </div>
-
 
         <div id="useSingleFormula" class="{{#if spUseLeveled}}hide{{else}}show{{/if}}">
           <!-- Single Formula Progression -->

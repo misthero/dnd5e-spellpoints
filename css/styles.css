@@ -2,6 +2,7 @@
   --sp-left-color: #3a0e5f;
   --sp-right-color: #8a40c7;
   --sp-animation-name: scroll;
+  --border-width: 3px;
 }
 
 .spError {

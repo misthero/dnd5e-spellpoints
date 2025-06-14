@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.1.00]
+
+### New Features
+
+- Active Effects integration, you can now alter the spellpoints on the character sheet using active effects. Check the readme for more info.
+- Possibility to disable the default spellpoints bar on actor sheet in case you prefer other modules handling that like: [5e Resource trackers](https://foundryvtt.com/packages/dnd5e-item-resources).
+
 ## [3.0.00]
 
 ### Foundry V13

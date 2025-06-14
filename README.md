@@ -123,6 +123,31 @@ You can test out a formula by rolling it in chat while selecting a token. The fo
 
 It is also possible to add a module or create your own module that edits or adds information to `actor.system`. This new information will be available to the formulas with no concerns over compatibility.
 
+___
+
+## Active Effects
+
+To enable active effects for the spellpoints item, use the attribute key `dnd5espellpoints`. This key serves as an alias for the spellpoints item on the actor.
+
+Additionally, set the **Change Mode** to `Custom`. By default, the provided value will override the property. To modify the property instead, prepend:
+
+- `+` to add the value
+- `-` to subtract the value
+- `*` to multiply by the value
+
+### Active Effect Examples
+
+| Attribute Key                              | Change Mode | Value                         | Expected Result                         |
+|:--------------------------------------------|:------------|:------------------------------|:----------------------------------------|
+| `dnd5espellpoints.system.uses.max`         | Custom      | `5`                           | Set the maximum uses to 5               |
+| `dnd5espellpoints.system.uses.max`         | Custom      | `+5`                          | Increase the maximum uses by 5          |
+| `dnd5espellpoints.system.uses.max`         | Custom      | `-5`                          | Decrease the maximum uses by 5          |
+| `dnd5espellpoints.system.uses.max`         | Custom      | `*5`                          | Multiply the maximum uses by 5          |
+
+You can also use formulas in the Value field. For example, `+floor(@abilities.cha.value/4)` adds the Charisma modifier to the spellpoints total.
+
+___
+
 ## To do
 
 - Add configurable limit to number of times a spell slot can be generated per day. This would reproduce the limit within the DMG that only allows creatures to make one 6th+ level slot per day of the same level.

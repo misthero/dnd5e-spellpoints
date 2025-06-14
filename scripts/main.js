@@ -44,12 +44,15 @@ Handlebars.registerHelper("spFormat", (path, ...args) => {
   return game.i18n.format(path, args[0].hash);
 });
 
-Hooks.on('ready', () => {
+
+Hooks.on('ready', async (x, y, z) => {
   checkUpdate();
 })
 
+
 Hooks.on('init', () => {
   console.log('SpellPoints init');
+  console.log(`SpellPoints module version: ${game.modules.get(SP_MODULE_NAME).version}`);
 
   // add a class feature subtype
   game.dnd5e.config.featureTypes.class.subtypes.sp = game.i18n.format(SP_MODULE_NAME + ".spClassSubtype");
@@ -109,7 +112,7 @@ Hooks.on("createItem", SpellPoints.calculateSpellPointsCreate);
 Hooks.on("preDeleteItem", SpellPoints.removeItemFlag);
 Hooks.on("preUpdateItem", SpellPoints.checkSpellPointsValues);
 
-//Hooks.on("dnd5e.computeLeveledProgression", SpellPoints.calculateSpellPointsProgression);
+Hooks.on("applyActiveEffect", SpellPoints.listenApplyActiveEffects);
 
 Hooks.on("renderActorSheet5eCharacter2", (app, html, data) => {
   SpellPoints.alterCharacterSheet(app, html, data, 'v2');
@@ -128,7 +131,6 @@ Hooks.on("renderActorSheet5eNPC", (app, html, data) => {
 });
 
 
-
 /**
   * Hook that is triggered after the SpellPointsForm has been rendered. This
   * sets the visiblity of the custom formula fields based on if the current
@@ -136,7 +138,6 @@ Hooks.on("renderActorSheet5eNPC", (app, html, data) => {
   */
 Hooks.on('renderSpellPointsForm', (spellPointsForm, html, data) => {
   const isCustom = (data.isCustom || "").toString().toLowerCase() == "true"
-  //spellPointsForm.setCustomOnlyVisibility(isCustom)
 })
 // dnd 3.2 changed the params from item, consume, options, update to item, config, options 
 Hooks.on("dnd5e.preActivityConsumption", (item, consume, options, update) => {
@@ -145,4 +146,9 @@ Hooks.on("dnd5e.preActivityConsumption", (item, consume, options, update) => {
 
 Hooks.on("renderItemSheet5e", async (app, html, data) => {
   SpellPoints.renderSpellPointsItem(app, html, data);
+})
+
+
+Hooks.on("dnd5e.prepareLeveledSlots", async (slots, actor, modified) => {
+  SpellPoints.prepareLeveledSlots(slots, actor, modified);
 })

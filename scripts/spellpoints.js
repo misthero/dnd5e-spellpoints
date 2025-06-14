@@ -8,6 +8,42 @@ function isEmpty(obj) {
   return Object.keys(obj).length === 0;
 }
 
+/**
+ * Extracts the mathematical operator from the start of a string
+ * @param {string} str - The input string to check
+ * @returns {string|null} The operator if found, null if no operator
+ */
+function extractOperator(str) {
+  // List of valid operators to check
+  const operators = ['+', '-', '*', '/', '%'];
+
+  // Remove leading whitespace and get first character
+  const trimmed = str.trim();
+  const firstChar = trimmed.charAt(0);
+
+  // Return the operator if found, null otherwise
+  return operators.includes(firstChar) ? firstChar : null;
+}
+
+
+/**
+ * Applies a mathematical operator to two numeric values and returns the result.
+ *
+ * @param {number} value1 - The first operand.
+ * @param {string} operator - The operator to apply ('+', '-', '*', '/', '%').
+ * @param {number} value2 - The second operand.
+ * @returns {number} The result of applying the operator to the operands.
+ */
+function applyOperator(value1, operator, value2) {
+  switch (operator) {
+    case '+': return value1 + value2;
+    case '-': return value1 - value2;
+    case '*': return value1 * value2;
+    case '/': return value1 / value2;
+    case '%': return value1 % value2;
+    default: return value1 + value2; // Default to addition if operator not recognized
+  }
+}
 
 export class SpellPoints {
   static get settings() {
@@ -37,7 +73,8 @@ export class SpellPoints {
       spGmOnly: true,
       spColorL: '#3a0e5f',
       spColorR: '#8a40c7',
-      spAnimateBar: true
+      spAnimateBar: true,
+      spActivateBar: true
     };
   }
 
@@ -130,19 +167,27 @@ export class SpellPoints {
     return r.total;
   }
 
+  /** find the spellpoints item on actor */
   static getSpellPointsItem(actor) {
     let items = foundry.utils.getProperty(actor, "collections.items");
     const item_id = SpellPoints.getActorFlagSpellPointItem(actor);
-    if (items[item_id])
-      return items[item_id];
-    let features = items.filter(i => i.type == 'feat' || i.type == 'class' && i.type.subtype == 'sp');
-    // get the item with source custom label = Spell Points
-    let sp = features.filter(s => s.system.source.custom == this.settings.spResource);
-
-    if (typeof sp == 'undefined') {
-      return false;
+    let foundItem = false;
+    if (items[item_id]) {
+      foundItem = items[item_id];
     }
-    return sp[0];
+    if (!foundItem) {
+      let features = items.filter(i => i.type == 'feat' || (i.type == 'class' && i.type.subtype == 'sp'));
+      // get the item with source custom label = Spell Points
+      let sp = features.filter(s => s.system.source.custom == this.settings.spResource);
+
+      if (typeof sp == 'undefined') {
+        return false;
+      } else {
+        foundItem = sp[0];
+      }
+    }
+
+    return foundItem;
   }
 
   /** check what resource is spellpoints on this actor **/
@@ -187,7 +232,7 @@ export class SpellPoints {
     let settings = moduleSettings;
 
     if (spellPointItem.flags?.spellpoints?.override) {
-      settings = spellPointItem.flags?.spellpoints?.config !== 'undefined' ? spellPointItem.flags?.spellpoints.config : settings;
+      settings = spellPointItem.flags?.spellpoints?.config ?? settings;
     }
 
     /** check if this is a spell casting **/
@@ -216,7 +261,13 @@ export class SpellPoints {
     /** find the spell level just cast */
     const spellLvl = consumeConfig.isCantrip ? 0 : options.data.flags.dnd5e.use.spellLevel;
 
-    let actualSpellPoints = spellPointItem.system.uses.value;
+    const currentUses = spellPointItem.system.uses;
+    let remainingUses = {
+      'value': currentUses.max - currentUses.spent,
+      'spent': currentUses.spent,
+    }
+
+    let actualSpellPoints = remainingUses.value;
 
     /* get spell cost in spellpoints */
     const spellPointCost = this.withActorData(settings.spellPointsCosts[spellLvl], actor);
@@ -244,7 +295,7 @@ export class SpellPoints {
     /** update spellpoints **/
     if (actualSpellPoints - spellPointCost >= 0) {
       /* character has enough spellpoints */
-      spellPointItem.system.uses.spent = spellPointItem.system.uses.spent + spellPointCost;
+      remainingUses.spent += spellPointCost;
 
       ChatMessage.create({
         content: "<i style='color:green;'>" +
@@ -264,7 +315,7 @@ export class SpellPoints {
       /** check if actor can cast using HP **/
       if (settings.spEnableVariant) {
         // spell point resource is 0 but character can still cast.
-        spellPointItem.system.uses.spent = spellPointItem.system.uses.max
+        remainingUses.spent = currentUses.max;
 
         const hpMaxLost = spellPointCost * SpellPoints.withActorData(settings.spLifeCost, actor);
         const hpActual = actor.system.attributes.hp.value;
@@ -324,14 +375,54 @@ export class SpellPoints {
     options.hasConsumption = false;
     consumeConfig.hasConsumption = false;
 
-    updateItem.system.uses = spellPointItem.system.uses;
-    spellPointItem.update(updateItem);
+    remainingUses.value = currentUses.max - remainingUses.spent;
 
+    updateItem.system.uses.spent = remainingUses.spent;
+
+    spellPointItem.update(updateItem);
     actor.update(updateActor);
 
     return [item, consumeConfig, options];
   }
 
+  static async prepareLeveledSlots(slots, actor, modified) {
+    //console.warn("SpellPoints.prepareLeveledSlots:", slots, actor, modified);
+  }
+
+  /**
+   * Handles the application of active effects related to spell points on an actor.
+   * If the effect key includes "dnd5espellpoints.", it modifies the corresponding property
+   * on the actor's spell points item according to the provided formula and operator.
+   *
+   * @param {Actor} actor - The actor to which the active effect is being applied.
+   * @param {Object} AE - The active effect data, expected to contain a `key` property.
+   * @param {*} current - The current value before the effect is applied (unused).
+   * @param {string} formula - The formula string used to calculate the modification.
+   * @param {Array} changes - The list of changes being applied (unused).
+   */
+  static listenApplyActiveEffects(actor, AE, current, formula, changes) {
+
+    if (AE.key.includes("dnd5espellpoints.")) {
+      const item = SpellPoints.getSpellPointsItem(actor);
+      if (!item) return;
+
+      const operator = extractOperator(formula);
+      let rollData = actor.getRollData();
+
+      const path = AE.key.replace("dnd5espellpoints.", "");
+
+      // get the property to modify from the item
+      let propertyValue = foundry.utils.getProperty(item, path);
+
+      const currentValue = Roll.create(propertyValue.toString(), rollData).evaluateSync().total;
+      const mod = Roll.create(formula, rollData).evaluateSync().total;
+      let newValue = mod;
+      if (operator) {
+        newValue = applyOperator(currentValue, operator, mod);
+      }
+      foundry.utils.setProperty(item, path, newValue);
+    }
+  }
 
   /*
    * prepare the spellpoints configuration.
@@ -428,7 +519,8 @@ export class SpellPoints {
 
     let optionLevel = 'none';
     let cost = 0;
-    let actualSpellPoints = spellPointItem.system.uses.value;
+
+    let actualSpellPoints = spellPointItem.system.uses.max - spellPointItem.system.uses.spent;
 
     /** Replace list of spell slots with list of spell point costs **/
     if (usageConfig.consume.spellPoints && !usageConfig?.isCantrip) {
@@ -577,8 +669,6 @@ export class SpellPoints {
       return 0;
     }
 
-    //SpellPointsMax += spellPointsFromSlots * SpellPoints.withActorData(settings.spCustomFormulaSlotMultiplier, actor);
-
     return SpellPointsMax;
   }
 
@@ -620,7 +710,9 @@ export class SpellPoints {
       if (spellcasting == 'none') {
         // check subclasses
         let subclass = c.subclass;
-        spellcasting = subclass.system.spellcasting.progression;
+        if (subclass && subclass?.system && subclass?.system?.spellcasting) {
+          spellcasting = subclass.system.spellcasting.progression;
+        }
       }
 
       let level = c.system.levels;
@@ -635,25 +727,59 @@ export class SpellPoints {
       }
     }
 
-    let totalSpellcastingLevel = 0
-    totalSpellcastingLevel += spellcastingLevels['full'].reduce((sum, level) => sum + level, 0);
-    //console.log('totalSpellcastingLevel full', totalSpellcastingLevel);
+    // --- Use correct divisors depending on formula ---
+    const divisorSource = (settings.spFormula === 'DMG')
+      ? SpellPoints.defaultSettings.spellcastingTypes
+      : settings.spellcastingTypes;
+
+    let totalSpellcastingLevel = 0;
+
+    // Always add 'full' using its custom divisor
+    totalSpellcastingLevel += spellcastingLevels['full'].reduce((sum, level) => {
+      const divisor = Number(divisorSource['full']?.value) || 1;
+      return sum + (divisor === 1 ? level : Math.floor(level / divisor));
+    }, 0);
+
+    // by default pact magic is not included in the total spellcasting level
+    // Only include 'pact' if the formula is NOT 'DMG'
     if (settings.spFormula != 'DMG') {
-      // by default pact magic is not included in the total spellcasting level
-      totalSpellcastingLevel += spellcastingLevels['pact'].reduce((sum, level) => sum + level, 0);
+      totalSpellcastingLevel += spellcastingLevels['pact'].reduce((sum, level) => {
+        const divisor = Number(divisorSource['pact']?.value) || 1;
+        return sum + (divisor === 1 ? level : Math.floor(level / divisor));
+      }, 0);
       //console.log('totalSpellcastingLevel full + pact', totalSpellcastingLevel);
     }
-    totalSpellcastingLevel += spellcastingLevels['artificer'].reduce((sum, level) => sum + Math.ceil(level / 2), 0);
-    //console.log('totalSpellcastingLevel full + pact + artificier', totalSpellcastingLevel);
+
+    // Add 'artificer' using its custom divisor (default 1, but often 2)
+    totalSpellcastingLevel += spellcastingLevels['artificer'].reduce((sum, level) => {
+      const divisor = Number(divisorSource['artificer']?.value) || 1;
+      // Artificer always rounds up
+      return sum + (divisor === 1 ? level : Math.ceil(level / divisor));
+    }, 0);
+
     // Half and third casters only round up if they do not multiclass into other spellcasting classes and if they
     // have enough levels to obtain the spellcasting feature.
     if (spellcastingClassCount == 1 && (spellcastingLevels['half'][0] >= 2 || spellcastingLevels['third'][0] >= 3)) {
-      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => sum + Math.ceil(level / 2), 0);
-      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => sum + Math.ceil(level / 3), 0);
+      // Single-class: round up
+      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => {
+        const divisor = Number(divisorSource['half']?.value) || 2;
+        return sum + (divisor === 1 ? level : Math.ceil(level / divisor));
+      }, 0);
+      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => {
+        const divisor = Number(divisorSource['third']?.value) || 3;
+        return sum + (divisor === 1 ? level : Math.ceil(level / divisor));
+      }, 0);
       //console.log('totalSpellcastingLevel full + pact + artificier + half + third SINGLE CLASS', totalSpellcastingLevel);
     } else {
-      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => sum + Math.floor(level / 2), 0);
-      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => sum + Math.floor(level / 3), 0);
+      // Multiclass: round down
+      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => {
+        const divisor = Number(divisorSource['half']?.value) || 2;
+        return sum + (divisor === 1 ? level : Math.floor(level / divisor));
+      }, 0);
+      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => {
+        const divisor = Number(divisorSource['third']?.value) || 3;
+        return sum + (divisor === 1 ? level : Math.floor(level / divisor));
+      }, 0);
       //console.log('totalSpellcastingLevel full + pact + artificier + half + third MULTI CLASS', totalSpellcastingLevel);
     }
 
@@ -673,31 +799,31 @@ export class SpellPoints {
    * @param isDifferent - true if the item is being updated, false if it's being dropped
    * @returns True
    */
-  static classItemUpdateSpellPoints(item, updates, diff) {
+  static async classItemUpdateSpellPoints(item, update, action, id) {
 
     /* updating or dropping a class item */
     if (item.type !== 'class') {
       // check if is the spell point feature being dropped.
-      return [item, updates, diff];
+      return [item, update, action, id];
     }
 
     const actor = item.parent;
 
     if (!SpellPoints.isActorCharacter(actor))
-      return [item, updates, diff];
+      return [item, update, action, id];
 
     // if current user is not the owner of the actor, do nothing
     if (!SpellPoints.userHasActorOwnership(actor)) {
-      return [item, updates, diff];
+      return [item, update, action, id];
     }
 
     // are we changing the levels?
-    if (!foundry.utils.getProperty(updates.system, 'levels'))
-      return [item, updates, diff];
+    if (!foundry.utils.getProperty(update.system, 'levels'))
+      return [item, update, action, id];
 
-    SpellPoints.updateSpellPointsMax(item, updates, actor, false);
+    SpellPoints.updateSpellPointsMax(item, update, actor, false);
 
-    return [item, updates, diff];
+    return [item, update, action, id];
   }
 
   /** hook on createItem */
@@ -706,11 +832,14 @@ export class SpellPoints {
       SpellPoints.processFirstDrop(item);
       return true;
     } else if (item.type == 'class') {
-      SpellPoints.classItemUpdateSpellPoints(item, updates, id);
+      const spellPointsItem = SpellPoints.getSpellPointsItem(item.parent);
+      if (spellPointsItem) {
+        SpellPoints.classItemUpdateSpellPoints(item, updates, id);
+      }
     }
   }
 
-  static updateSpellPointsMax(classItem, updates, actor, item) {
+  static async updateSpellPointsMax(classItem, updates, actor, item) {
     const actorName = actor.name;
     let spellPointsItem;
     if (item) {
@@ -740,10 +869,12 @@ export class SpellPoints {
     const SpellPointsMax = isCustom && !spUseLeveled ? SpellPoints._calculateSpellPointsCustom(actor, settings) : SpellPoints._calculateSpellPointsFixed(classItem, updates, actor, settings)
 
     if (SpellPointsMax !== NaN) {
-      spellPointsItem.update({
+      const newItemSpent = SpellPointsMax < spellPointsItem.system.uses.value ? 0 : SpellPointsMax - spellPointsItem.system.uses.value;
+      const newItemValue = SpellPointsMax < spellPointsItem.system.uses.value ? SpellPointsMax : spellPointsItem.system.uses.value;
+      await spellPointsItem.update({
         [`system.uses.max`]: SpellPointsMax,
-        [`system.uses.value`]: SpellPointsMax < spellPointsItem.system.uses.value ? SpellPointsMax : spellPointsItem.system.uses.value,
-        [`system.uses.spent`]: SpellPointsMax < spellPointsItem.system.uses.value ? 0 : SpellPointsMax - spellPointsItem.system.uses.value
+        [`system.uses.value`]: newItemValue,
+        [`system.uses.spent`]: newItemSpent,
       });
 
       if (!game.user.isGM) {
@@ -770,38 +901,40 @@ export class SpellPoints {
   static removeItemFlag(item, dialog, id) {
     let actor = item.parent;
     if (item._id == SpellPoints.getActorFlagSpellPointItem(actor)) {
-      actor.update({ [`flags.dnd5espellpoints.item`]: '' });
+      actor.update({ [`flags.dnd5espellpoints.-=item`]: null });
     }
   }
 
   /** preUpdateItem hook */
   /** check if max uses is less than value */
   static checkSpellPointsValues(item, update, difference, id) {
-    if (SpellPoints.isSpellPointsItem(item)) {
-      let max, value;
-      let changed_uses = false;
+    if (!SpellPoints.isSpellPointsItem(item)) return;
 
-      if (update.system?.uses?.max) {
-        max = update.system.uses.max;
-        changed_uses = true;
-      } else {
-        max = item.system.uses.max
+    let max, value;
+    let changed_uses = false;
+
+    if (update.system?.uses?.max) {
+      max = update.system.uses.max;
+      changed_uses = true;
+    } else {
+      max = item.system.uses.max
+    }
+
+    if (update.system?.uses?.value) {
+      value = update.system.uses.value;
+      changed_uses = true;
+    } else {
+      value = item.system.uses.value
+    }
+
+    if (changed_uses) {
+      if (value > max) {
+        update.system.uses.value = max
       }
+    }
 
-      if (update.system?.uses?.value) {
-        value = update.system.uses.value;
-        changed_uses = true;
-      } else {
-        value = item.system.uses.value
-      }
-
-      if (changed_uses) {
-        if (value > max) {
-          update.system.uses.value = max
-        }
-      }
-
-      //get global module settings for defaults
+    if (!isset(item.flags?.spellpoints?.config)) {
+      // get global module settings for defaults
       const def = SpellPoints.settings;
       const formulas = SpellPoints.formulas;
       // store current item configuration
@@ -812,15 +945,14 @@ export class SpellPoints {
 
       conf.isCustom = formulas[preset].isCustom;
 
-      if (!isset(item.flags?.spellpoints?.config)) {
-        update.flags.spellpoints = {
-          [`config`]: item.flags?.spellpoints?.override ? conf : {},
-          [`override`]: item.flags?.spellpoints?.override
-        };
-      }
-
-      return [item, update, difference, id];
+      update.flags.spellpoints = {
+        [`config`]: item.flags?.spellpoints?.override ? conf : {},
+        [`override`]: item.flags?.spellpoints?.override
+      };
     }
+
+    return [item, update, difference, id];
+
   }
 
   static processFirstDrop(item) {
@@ -878,11 +1010,16 @@ export class SpellPoints {
     if (data.actor.type != "character" && data.actor.type != "npc") {
       return;
     }
+    if (!SpellPoints.settings.spActivateBar) {
+      return;
+    }
     const actor = data.actor;
     const SpellPointsItem = this.getSpellPointsItem(actor);
     if (SpellPointsItem) {
-      const value = SpellPointsItem.system.uses.value;
       const max = SpellPointsItem.system.uses.max;
+      const spent = SpellPointsItem.system.uses.spent;
+      const value = max - spent;
+
       let percent = value / max * 100 > 100 ? 100 : value / max * 100;
       const template_data = {
         'isV2': type == 'v2',
@@ -915,6 +1052,7 @@ export class SpellPoints {
     }
   }
 
+  /* It renders the spell points item config in the item sheet. */
   static async renderSpellPointsItem(app, html, data) {
     const html_obj = $(html);
     const item = data?.item;
@@ -956,6 +1094,7 @@ export class SpellPoints {
       const template_file = "modules/dnd5e-spellpoints/templates/spell-points-item.hbs"; // file path for the template file, from Data directory
 
       foundry.applications.handlebars.renderTemplate(template_file, template_item).then(function (html) {
+        html_obj.addClass('spellpoints-item-sheet');
         $('.tab[data-tab="description"] .item-descriptions', html_obj).prepend(html);
         $('.tab.description', html_obj).scrollTop(SpellPoints.scroll);
         SpellPoints.scroll = 0;
@@ -988,7 +1127,7 @@ class ActorSpellPointsConfig extends dnd5e.applications.actor.BaseConfigSheetV2 
       position: { width: 420 },
       submitOnClose: true,
       editable: true,
-      submitOnChange: true,
+      submitOnChange: false,
       closeOnSubmit: false,
       actions: {
         updateSpellPointMax: ActorSpellPointsConfig._updateSpellPointMax,
@@ -1006,12 +1145,14 @@ class ActorSpellPointsConfig extends dnd5e.applications.actor.BaseConfigSheetV2 
     }
   };
 
-  /** Build the data context for your HBS template */
+  /** Build the data context for spell-points-popup-config template */
   /** @override */
   async _preparePartContext(partId, context, options) {
     context = await super._preparePartContext(partId, context, options);
+    const actor = this.document.parent;
 
     context.uses = this.document.system.uses;
+    context.uses.value = context.uses.max - context.uses.spent;
     context.img = this.document.img;
     context.name = this.document.name;
     context.recovery = game.system.config.limitedUsePeriods;
@@ -1028,46 +1169,40 @@ class ActorSpellPointsConfig extends dnd5e.applications.actor.BaseConfigSheetV2 
       { value: "loseAll", label: game.i18n.localize("DND5E.USES.Recovery.Type.LoseAll") },
       { value: "formula", label: game.i18n.localize("DND5E.USES.Recovery.Type.Formula") }
     ];
-    context.usesRecovery = (this.document?.system?.uses?.recovery ?? []).map((data, index) => ({
+
+    let recovery = this.document.system.uses.recovery ?? [];
+    if (!Array.isArray(recovery)) recovery = Object.values(recovery ?? {});
+    context.usesRecovery = recovery.map((data, index) => ({
       data,
-      //fields: context.fields.uses.fields.recovery.element.fields,
       prefix: `uses.recovery.${index}.`,
-      source: context.uses.recovery[index] ?? data,
+      source: context.uses?.recovery[index] ?? data,
       formulaOptions: data.period === "recharge" ? data.recharge?.options : null
     }));
+
 
     return context;
   }
 
 
-  /** Override render so that *every time* the sheet finishes rendering you bind your buttons */
-  async render(force = false, options = {}) {
-    // 1) Let the base class actually render all the parts
-    await super.render(force, options);
-
-    return this; // render overrides should return the Application instance
-  }
-
   /** @override */
-  _processSubmitData(event, form, submitData) {
-    const actor = this.document.parent;
-    const item = SpellPoints.getSpellPointsItem(actor);
-
-    const FormDataExtended = new foundry.applications.ux.FormDataExtended(this.element);
+  async _processSubmitData(event, form, submitData) {
+    const item = this.document;
+    const FormDataExtended = new foundry.applications.ux.FormDataExtended(form);
     const data = foundry.utils.expandObject(FormDataExtended.object);
+    // Calculate spent based on max and value
+    data.uses.spent = data.uses.max - data.uses.value;
 
-    data.uses.spent = data.uses.max > data.uses.value ? data.uses.max - data.uses.value : 0;
+    // Merge the submitted data with the existing uses
     submitData = foundry.utils.mergeObject(submitData?.system?.uses ?? {}, data.uses);
-    const changedUses = foundry.utils.mergeObject(item.system.uses, data.uses);
-    // Check if the uses object has changed
-    this.document.system.uses = changedUses;
-    item.update({ [`system.uses`]: changedUses });
-    super._processSubmitData(event, form, { [`system.uses`]: changedUses });
-  }
 
-  /** @inheritDoc */
-  async _onChangeInput(event) {
-    //console.log("SpellPoints: _onChangeInput", event);
+    // Merge the changes with the item's system.uses
+    const changedUses = foundry.utils.mergeObject(item.system.uses, data.uses);
+
+    // Await the super's _processSubmitData and then re-render
+    await super._processSubmitData(event, form, { [`system.uses`]: changedUses });
+    this.document.system.uses = changedUses;
+    // Refresh the data context and re-render the sheet
+    this.render();
   }
 
   /** Dispatch your three custom actions */
@@ -1081,14 +1216,14 @@ class ActorSpellPointsConfig extends dnd5e.applications.actor.BaseConfigSheetV2 
   }
 
 
-  static async _addRecovery(event, target) {
+  static _addRecovery(event, target) {
     const uses = foundry.utils.duplicate(this.document.system.uses);
     uses.recovery = [...(uses.recovery || []), {}];
     this.document.update({ [`system.uses.recovery`]: uses.recovery });
   }
 
 
-  static async _deleteRecovery(event, target) {
+  static _deleteRecovery(event, target) {
     const idx = Number(target.closest("[data-index]").dataset.index);
     const uses = foundry.utils.duplicate(this.document.system.uses);
     // Convert object to array if necessary
@@ -1100,9 +1235,11 @@ class ActorSpellPointsConfig extends dnd5e.applications.actor.BaseConfigSheetV2 
   }
 
   static async _updateSpellPointMax(event, target) {
-    const actor = this.document.parent;
-    const item = SpellPoints.getSpellPointsItem(actor);
-    SpellPoints.updateSpellPointsMax({}, {}, actor, item);
+    const uses = foundry.utils.duplicate(this.document.system.uses);
+    const item = this.document;
+    const actor = item.parent;
+    await SpellPoints.updateSpellPointsMax({}, {}, actor, item);
+    this.render(true);
   }
 
   get title() {
