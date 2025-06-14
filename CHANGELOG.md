@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [3.1.00]
+## [3.1.01]
 
 ### New Features
 

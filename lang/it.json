@@ -84,5 +84,6 @@
     "dnd5e-spellpoints.spResourceBarLeftColor": "Colore Sinistro",
     "dnd5e-spellpoints.spResourceBarRightColor": "Colore Destro",
     "dnd5e-spellpoints.spResourceBarAnimate": "Barra delle risorse animata",
-    "dnd5e-spellpoints.settingSaved": "Impostazioni salvate!"
+    "dnd5e-spellpoints.settingSaved": "Impostazioni salvate!",
+    "dnd5e-spellpoints.spResourceBarActive": "Mostra la barra di Punti Magia nella scheda del personaggio."
 }

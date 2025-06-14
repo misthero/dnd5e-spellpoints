@@ -92,5 +92,6 @@
     "dnd5e-spellpoints.spResourceBarAnimate": "Animate resource bar",
     "dnd5e-spellpoints.updateSpellPointMax": "Calculate Max {SpellPoints}",
     "dnd5e-spellpoints.updateSpellPointMaxTooltip": "Reset the max value according to your configuration.",
-    "dnd5e-spellpoints.spClassSubtype": "Spell Points"
+    "dnd5e-spellpoints.spClassSubtype": "Spell Points",
+    "dnd5e-spellpoints.spResourceBarActive": "View the spellpoints resource bar on the character sheet"
 }
