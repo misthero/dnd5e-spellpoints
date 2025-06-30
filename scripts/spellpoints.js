@@ -126,12 +126,10 @@ export class SpellPoints {
   }
 
   static isActorCharacter(actor) {
-    const isActor = foundry.utils.getProperty(actor, "type") == "character";
-    let isNPC = false;
-    if (this.settings.enableForNpc && !isActor) {
-      isNPC = foundry.utils.getProperty(actor, "type") == "npc";
-    }
-    return isNPC || isActor;
+    // Get the actor type once
+    const type = foundry.utils.getProperty(actor, "type");
+    // Return true if type is "character" or "npc"
+    return type === "character" || type === "npc";
   }
 
   static getActorFlagSpellPointItem(actor) {
@@ -214,8 +212,6 @@ export class SpellPoints {
 
   static castSpell(item, consumeConfig, options) {
     // ('SP CAST SPELL item', item);
-    //console.log('SP CAST SPELL consume', consume);
-    //console.log('SP CAST SPELL options', options);
 
     if (!consumeConfig.consume?.spellPoints || !item.consumption.spellSlot) {
       return [item, consumeConfig, options];
@@ -579,8 +575,6 @@ export class SpellPoints {
     /** Calculate spell point cost and warn user if they have none left */
     let spellPointCost = 0;
 
-
-
     if (preparation == 'pact') {
       spellPointCost = cost;
     } else {
@@ -682,7 +676,7 @@ export class SpellPoints {
    * @param {object} actor The actor used for variables.
    * @return {number} The calculated maximum spell points.
    */
-  static _calculateSpellPointsFixed(item, updates, actor, settings) {
+  static _calculateSpellPointsFixed(classItem, updates, actor, settings) {
     /* not an update? **/
     let changedClassLevel = null;
     let changedClassID = null;
@@ -691,11 +685,37 @@ export class SpellPoints {
 
     if (foundry.utils.getProperty(updates.system, 'levels')) {
       changedClassLevel = foundry.utils.getProperty(updates.system, 'levels');
-      changedClassID = foundry.utils.getProperty(item, '_id');
+      changedClassID = foundry.utils.getProperty(classItem, '_id');
       levelUpdated = true;
     }
+
+    let spellcastingNpc, spellcastingNpcLevel = false;
+    //check if actor is a npc with spellcasting
+    if (actor.type === 'npc') {
+      if (actor.system?.attributes?.spell.level > 0) {
+        spellcastingNpc = true;
+        spellcastingNpcLevel = actor.system.attributes.spell.level;
+      } else {
+        return 0;
+      }
+    }
+
     // check for multiclasses
     const actorClasses = actor.items.filter(i => i.type === "class");
+
+    if (actorClasses.length == 0 && !spellcastingNpc) {
+      // no classes, no spellcasting
+      return 0;
+    }
+
+    if (spellcastingNpc && actorClasses.length == 0) {
+      // no classes, but spellcasting npc
+      if (leveledProgression) {
+        return parseInt(this.withActorData(settings.leveledProgressionFormula[spellcastingNpcLevel], actor)) || 0;
+      } else {
+        return parseInt(settings.spellPointsByLevel[spellcastingNpcLevel]) || 0;
+      }
+    }
 
     let spellcastingClassCount = 0;
     let spellcastingLevels = {};
@@ -703,6 +723,7 @@ export class SpellPoints {
     Object.keys(dnd5e.config.spellProgression).forEach((key) => {
       spellcastingLevels[key] = [];
     });
+
 
     for (let c of actorClasses) {
       /* spellcasting: pact; full; half; third; artificier; none; **/
@@ -747,7 +768,6 @@ export class SpellPoints {
         const divisor = Number(divisorSource['pact']?.value) || 1;
         return sum + (divisor === 1 ? level : Math.floor(level / divisor));
       }, 0);
-      //console.log('totalSpellcastingLevel full + pact', totalSpellcastingLevel);
     }
 
     // Add 'artificer' using its custom divisor (default 1, but often 2)
@@ -769,7 +789,6 @@ export class SpellPoints {
         const divisor = Number(divisorSource['third']?.value) || 3;
         return sum + (divisor === 1 ? level : Math.ceil(level / divisor));
       }, 0);
-      //console.log('totalSpellcastingLevel full + pact + artificier + half + third SINGLE CLASS', totalSpellcastingLevel);
     } else {
       // Multiclass: round down
       totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => {
@@ -780,7 +799,6 @@ export class SpellPoints {
         const divisor = Number(divisorSource['third']?.value) || 3;
         return sum + (divisor === 1 ? level : Math.floor(level / divisor));
       }, 0);
-      //console.log('totalSpellcastingLevel full + pact + artificier + half + third MULTI CLASS', totalSpellcastingLevel);
     }
 
     if (leveledProgression) {
@@ -788,6 +806,39 @@ export class SpellPoints {
     }
 
     return parseInt(settings.spellPointsByLevel[totalSpellcastingLevel]) || 0
+  }
+
+  /**
+   * Conditionally updates the spell points for a given npc actor based on specific update actions.
+   *
+   * This method checks if the actor is a character and if the user has ownership before proceeding.
+   * It updates the spell points if the action is an advancement or if the actor's spellcasting level
+   * or spellcasting attribute has changed.
+   *
+   * @param {Actor} actor - The actor whose spell points may need to be updated.
+   * @param {Object} update - The update data that may contain changes to the actor's system attributes.
+   * @param {Object} action - The action object, which may indicate if this is an advancement.
+   * @param {string} id - The identifier for the update or action.
+   * @returns {Promise<void>} Resolves when the spell points update process is complete or skipped.
+   */
+  static async maybeUpdateSpellPoints(actor, update, action, id) {
+    // Only proceed if actor is a character and user has ownership
+    if (!SpellPoints.isActorCharacter(actor) || !SpellPoints.userHasActorOwnership(actor)) {
+      return;
+    }
+
+    // Helper to update spell points if the item exists
+    const updateIfItemExists = () => {
+      const spellPointsItem = SpellPoints.getSpellPointsItem(actor);
+      if (spellPointsItem) {
+        SpellPoints.updateSpellPointsMax({}, {}, actor, spellPointsItem);
+      }
+    };
+
+    // If spellcasting level increased, update spell points (NPCs)
+    if (update?.system?.attributes?.spell?.level > 0) {
+      updateIfItemExists();
+    }
   }
 
   /**
@@ -799,31 +850,30 @@ export class SpellPoints {
    * @param isDifferent - true if the item is being updated, false if it's being dropped
    * @returns True
    */
-  static async classItemUpdateSpellPoints(item, update, action, id) {
-
+  static async classItemUpdateSpellPoints(classItem, update, action, id) {
     /* updating or dropping a class item */
-    if (item.type !== 'class') {
+    if (classItem.type !== 'class') {
       // check if is the spell point feature being dropped.
-      return [item, update, action, id];
+      return [classItem, update, action, id];
     }
 
-    const actor = item.parent;
+    const actor = classItem.parent;
 
     if (!SpellPoints.isActorCharacter(actor))
-      return [item, update, action, id];
+      return [classItem, update, action, id];
 
     // if current user is not the owner of the actor, do nothing
     if (!SpellPoints.userHasActorOwnership(actor)) {
-      return [item, update, action, id];
+      return [classItem, update, action, id];
     }
 
     // are we changing the levels?
     if (!foundry.utils.getProperty(update.system, 'levels'))
-      return [item, update, action, id];
+      return [classItem, update, action, id];
 
-    SpellPoints.updateSpellPointsMax(item, update, actor, false);
+    SpellPoints.updateSpellPointsMax(classItem, update, actor, false);
 
-    return [item, update, action, id];
+    return [classItem, update, action, id];
   }
 
   /** hook on createItem */
@@ -831,25 +881,19 @@ export class SpellPoints {
     if (SpellPoints.isSpellPointsItem(item)) {
       SpellPoints.processFirstDrop(item);
       return true;
-    } else if (item.type == 'class') {
-      const spellPointsItem = SpellPoints.getSpellPointsItem(item.parent);
-      if (spellPointsItem) {
-        SpellPoints.classItemUpdateSpellPoints(item, updates, id);
-      }
     }
   }
 
-  static async updateSpellPointsMax(classItem, updates, actor, item) {
+  static async updateSpellPointsMax(classItem, updates, actor, spellPointsItem) {
     const actorName = actor.name;
-    let spellPointsItem;
-    if (item) {
-      spellPointsItem = item;
-    } else {
-      spellPointsItem = SpellPoints.getSpellPointsItem(actor);
-    }
+
     if (!spellPointsItem) {
-      // spell points item not found? 
-      return;
+      // get the spell points item from the actor
+      spellPointsItem = SpellPoints.getSpellPointsItem(actor);
+      if (!spellPointsItem) {
+        // spell points item not found? 
+        return;
+      }
     }
 
     let settings;
@@ -866,6 +910,7 @@ export class SpellPoints {
     const isCustom = settings.isCustom;
     const spUseLeveled = settings.spUseLeveled;
 
+    // choose the correct formula based on settings
     const SpellPointsMax = isCustom && !spUseLeveled ? SpellPoints._calculateSpellPointsCustom(actor, settings) : SpellPoints._calculateSpellPointsFixed(classItem, updates, actor, settings)
 
     if (SpellPointsMax !== NaN) {
