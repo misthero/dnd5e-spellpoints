@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.1.03]
+
+### Bugfixes
+
+- Npc spellcasting detection and spellpoints calculation.
+- Fix regression where spellpoints cost for spell was 0 when module was first installed and configuration was never changed.
+
 ## [3.1.01]
 
 ### New Features
