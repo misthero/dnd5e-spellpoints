@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.03]
+
+- Bugfix, NPC spell casting and spellpoints calculation.
+
 ## [2.5.02]
 
 ### Bugfix

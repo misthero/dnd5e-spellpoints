@@ -105,6 +105,7 @@ Hooks.on("renderActivitySheet", async (sheet, html) => {
 });
 
 Hooks.on("updateItem", SpellPoints.classItemUpdateSpellPoints);
+Hooks.on("updateActor", SpellPoints.maybeUpdateSpellPoints); // this is used for npcd
 Hooks.on("createItem", SpellPoints.calculateSpellPointsCreate);
 Hooks.on("preDeleteItem", SpellPoints.removeItemFlag);
 Hooks.on("preUpdateItem", SpellPoints.checkSpellPointsValues);

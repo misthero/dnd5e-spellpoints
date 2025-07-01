@@ -89,12 +89,8 @@ export class SpellPoints {
   }
 
   static isActorCharacter(actor) {
-    const isActor = foundry.utils.getProperty(actor, "type") == "character";
-    let isNPC = false;
-    if (this.settings.enableForNpc && !isActor) {
-      isNPC = foundry.utils.getProperty(actor, "type") == "npc";
-    }
-    return isNPC || isActor;
+    const type = foundry.utils.getProperty(actor, "type");
+    return type === "npc" || type === "character";
   }
 
   static getActorFlagSpellPointItem(actor) {
@@ -588,7 +584,7 @@ export class SpellPoints {
    * @param {object} actor The actor used for variables.
    * @return {number} The calculated maximum spell points.
    */
-  static _calculateSpellPointsFixed(item, updates, actor, settings) {
+  static _calculateSpellPointsFixed(classItem, updates, actor, settings) {
     /* not an update? **/
     let changedClassLevel = null;
     let changedClassID = null;
@@ -597,20 +593,45 @@ export class SpellPoints {
 
     if (foundry.utils.getProperty(updates.system, 'levels')) {
       changedClassLevel = foundry.utils.getProperty(updates.system, 'levels');
-      changedClassID = foundry.utils.getProperty(item, '_id');
+      changedClassID = foundry.utils.getProperty(classItem, '_id');
       levelUpdated = true;
     }
+
+    let spellcastingNpc, spellcastingNpcLevel = false;
+    //check if actor is a npc with spellcasting
+    if (actor.type === 'npc') {
+      if (actor.system?.attributes?.spell.level > 0) {
+        spellcastingNpc = true;
+        spellcastingNpcLevel = actor.system.attributes.spell.level;
+      } else {
+        return 0;
+      }
+    }
+
     // check for multiclasses
     const actorClasses = actor.items.filter(i => i.type === "class");
 
-    let spellcastingClassCount = 0;
-    const spellcastingLevels = {
-      full: [],
-      half: [],
-      artificer: [],
-      third: [],
-      pact: [],
+    if (actorClasses.length == 0 && !spellcastingNpc) {
+      // no classes, no spellcasting
+      return 0;
     }
+
+    if (spellcastingNpc && actorClasses.length == 0) {
+      // no classes, but spellcasting npc
+      if (leveledProgression) {
+        return parseInt(this.withActorData(settings.leveledProgressionFormula[spellcastingNpcLevel], actor)) || 0;
+      } else {
+        return parseInt(settings.spellPointsByLevel[spellcastingNpcLevel]) || 0;
+      }
+    }
+
+    let spellcastingClassCount = 0;
+    let spellcastingLevels = {};
+
+    Object.keys(dnd5e.config.spellProgression).forEach((key) => {
+      spellcastingLevels[key] = [];
+    });
+
 
     for (let c of actorClasses) {
       /* spellcasting: pact; full; half; third; artificier; none; **/
@@ -618,7 +639,9 @@ export class SpellPoints {
       if (spellcasting == 'none') {
         // check subclasses
         let subclass = c.subclass;
-        spellcasting = subclass.system.spellcasting.progression;
+        if (subclass && subclass?.system && subclass?.system?.spellcasting) {
+          spellcasting = subclass.system.spellcasting.progression;
+        }
       }
 
       let level = c.system.levels;
@@ -633,36 +656,97 @@ export class SpellPoints {
       }
     }
 
-    let totalSpellcastingLevel = 0
-    totalSpellcastingLevel += spellcastingLevels['full'].reduce((sum, level) => sum + level, 0);
-    //console.log('totalSpellcastingLevel full', totalSpellcastingLevel);
+    // --- Use correct divisors depending on formula ---
+    const divisorSource = (settings.spFormula === 'DMG')
+      ? SpellPoints.defaultSettings.spellcastingTypes
+      : settings.spellcastingTypes;
+
+    let totalSpellcastingLevel = 0;
+
+    // Always add 'full' using its custom divisor
+    totalSpellcastingLevel += spellcastingLevels['full'].reduce((sum, level) => {
+      const divisor = Number(divisorSource['full']?.value) || 1;
+      return sum + (divisor === 1 ? level : Math.floor(level / divisor));
+    }, 0);
+
+    // by default pact magic is not included in the total spellcasting level
+    // Only include 'pact' if the formula is NOT 'DMG'
     if (settings.spFormula != 'DMG') {
-      // by default pact magic is not included in the total spellcasting level
-      totalSpellcastingLevel += spellcastingLevels['pact'].reduce((sum, level) => sum + level, 0);
-      //console.log('totalSpellcastingLevel full + pact', totalSpellcastingLevel);
+      totalSpellcastingLevel += spellcastingLevels['pact'].reduce((sum, level) => {
+        const divisor = Number(divisorSource['pact']?.value) || 1;
+        return sum + (divisor === 1 ? level : Math.floor(level / divisor));
+      }, 0);
     }
-    totalSpellcastingLevel += spellcastingLevels['artificer'].reduce((sum, level) => sum + Math.ceil(level / 2), 0);
-    //console.log('totalSpellcastingLevel full + pact + artificier', totalSpellcastingLevel);
+
+    // Add 'artificer' using its custom divisor (default 1, but often 2)
+    totalSpellcastingLevel += spellcastingLevels['artificer'].reduce((sum, level) => {
+      const divisor = Number(divisorSource['artificer']?.value) || 1;
+      // Artificer always rounds up
+      return sum + (divisor === 1 ? level : Math.ceil(level / divisor));
+    }, 0);
+
     // Half and third casters only round up if they do not multiclass into other spellcasting classes and if they
     // have enough levels to obtain the spellcasting feature.
     if (spellcastingClassCount == 1 && (spellcastingLevels['half'][0] >= 2 || spellcastingLevels['third'][0] >= 3)) {
-      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => sum + Math.ceil(level / 2), 0);
-      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => sum + Math.ceil(level / 3), 0);
-      //console.log('totalSpellcastingLevel full + pact + artificier + half + third SINGLE CLASS', totalSpellcastingLevel);
+      // Single-class: round up
+      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => {
+        const divisor = Number(divisorSource['half']?.value) || 2;
+        return sum + (divisor === 1 ? level : Math.ceil(level / divisor));
+      }, 0);
+      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => {
+        const divisor = Number(divisorSource['third']?.value) || 3;
+        return sum + (divisor === 1 ? level : Math.ceil(level / divisor));
+      }, 0);
     } else {
-      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => sum + Math.floor(level / 2), 0);
-      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => sum + Math.floor(level / 3), 0);
-      //console.log('totalSpellcastingLevel full + pact + artificier + half + third MULTI CLASS', totalSpellcastingLevel);
+      // Multiclass: round down
+      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => {
+        const divisor = Number(divisorSource['half']?.value) || 2;
+        return sum + (divisor === 1 ? level : Math.floor(level / divisor));
+      }, 0);
+      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => {
+        const divisor = Number(divisorSource['third']?.value) || 3;
+        return sum + (divisor === 1 ? level : Math.floor(level / divisor));
+      }, 0);
     }
-
-    if (totalSpellcastingLevel == 0)
-      return 0;
 
     if (leveledProgression) {
       return parseInt(this.withActorData(settings.leveledProgressionFormula[totalSpellcastingLevel], actor)) || 0;
     }
 
     return parseInt(settings.spellPointsByLevel[totalSpellcastingLevel]) || 0
+  }
+
+  /**
+   * Conditionally updates the spell points for a given npc actor based on specific update actions.
+   *
+   * This method checks if the actor is a character and if the user has ownership before proceeding.
+   * It updates the spell points if the action is an advancement or if the actor's spellcasting level
+   * or spellcasting attribute has changed.
+   *
+   * @param {Actor} actor - The actor whose spell points may need to be updated.
+   * @param {Object} update - The update data that may contain changes to the actor's system attributes.
+   * @param {Object} action - The action object, which may indicate if this is an advancement.
+   * @param {string} id - The identifier for the update or action.
+   * @returns {Promise<void>} Resolves when the spell points update process is complete or skipped.
+   */
+  static async maybeUpdateSpellPoints(actor, update, action, id) {
+    // Only proceed if actor is a character and user has ownership
+    if (!SpellPoints.isActorCharacter(actor) || !SpellPoints.userHasActorOwnership(actor)) {
+      return;
+    }
+
+    // Helper to update spell points if the item exists
+    const updateIfItemExists = () => {
+      const spellPointsItem = SpellPoints.getSpellPointsItem(actor);
+      if (spellPointsItem) {
+        SpellPoints.updateSpellPointsMax({}, {}, actor, spellPointsItem);
+      }
+    };
+
+    // If spellcasting level increased, update spell points (NPCs)
+    if (update?.system?.attributes?.spell?.level > 0) {
+      updateIfItemExists();
+    }
   }
 
   /**
@@ -711,17 +795,16 @@ export class SpellPoints {
     }
   }
 
-  static updateSpellPointsMax(classItem, updates, actor, item) {
+  static async updateSpellPointsMax(classItem, updates, actor, spellPointsItem) {
     const actorName = actor.name;
-    let spellPointsItem;
-    if (item) {
-      spellPointsItem = item;
-    } else {
-      spellPointsItem = SpellPoints.getSpellPointsItem(actor);
-    }
+
     if (!spellPointsItem) {
-      // spell points item not found? 
-      return;
+      // get the spell points item from the actor
+      spellPointsItem = SpellPoints.getSpellPointsItem(actor);
+      if (!spellPointsItem) {
+        // spell points item not found? 
+        return;
+      }
     }
 
     let settings;
@@ -738,12 +821,16 @@ export class SpellPoints {
     const isCustom = settings.isCustom;
     const spUseLeveled = settings.spUseLeveled;
 
+    // choose the correct formula based on settings
     const SpellPointsMax = isCustom && !spUseLeveled ? SpellPoints._calculateSpellPointsCustom(actor, settings) : SpellPoints._calculateSpellPointsFixed(classItem, updates, actor, settings)
 
-    if (SpellPointsMax > 0) {
-      spellPointsItem.update({
+    if (SpellPointsMax !== NaN) {
+      const newItemSpent = SpellPointsMax < spellPointsItem.system.uses.value ? 0 : SpellPointsMax - spellPointsItem.system.uses.value;
+      const newItemValue = SpellPointsMax < spellPointsItem.system.uses.value ? SpellPointsMax : spellPointsItem.system.uses.value;
+      await spellPointsItem.update({
         [`system.uses.max`]: SpellPointsMax,
-        [`system.uses.value`]: item ? SpellPointsMax : spellPointsItem.system.uses.value
+        [`system.uses.value`]: newItemValue,
+        [`system.uses.spent`]: newItemSpent,
       });
 
       if (!game.user.isGM) {
