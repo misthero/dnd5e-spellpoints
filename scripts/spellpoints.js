@@ -155,6 +155,7 @@ export class SpellPoints {
    * @return {number} The result of the formula.
    */
   static withActorData(formula, actor) {
+    formula = formula.toString();
     if (!formula || typeof formula !== 'string' || formula.length == 0) {
       return 0;
     }
@@ -533,6 +534,7 @@ export class SpellPoints {
         }
 
         cost = SpellPoints.withActorData(settings.spellPointsCosts[optionLevel], actor);
+
         if (settings.spFormula == 'DMG' && optionValue == 'pact') {
           // do nothing
         } else {
