@@ -147,7 +147,35 @@ Additionally, set the **Change Mode** to `Custom`. By default, the provided valu
 You can also use formulas in the Value field. For example, `+floor(@abilities.cha.value/4)` adds the Charisma modifier to the spellpoints total.
 
 ___
+### Macro Helpers
 
+You can interact with spell points from a macro or a third-party module using two helper methods exposed by this module:
+
+- `getSpellPointsItem` — Retrieve the spellpoints item data for a given actor.
+- `alterSpellPoints` — Change the spell points item's current uses and/or maximum uses for a given actor.
+
+#### Example Usage
+
+Get the spell points item for an actor:
+
+```js
+const item = getSpellPointsItem(actor);
+console.log(item);
+```
+
+Change the uses of the item or the uses.max or both.
+
+```js
+// remove a random number between 1 and 20 from the current item uses.
+alterSpellPoints(actor, '-1d20');
+// set the uses to 10
+alterSpellPoints(actor, '10');
+// add 10 to the current `uses.max`
+alterSpellPoints(actor, null, '+10');
+// set the current remaining uses to 5 and the max uses to 10.
+alterSpellPoints(actor, '5', '10'); 
+```
+___
 ## To do
 
 - Add configurable limit to number of times a spell slot can be generated per day. This would reproduce the limit within the DMG that only allows creatures to make one 6th+ level slot per day of the same level.

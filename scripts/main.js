@@ -91,6 +91,10 @@ Hooks.on('init', () => {
 
   SpellPoints.setSpColors();
 
+  // helper function to use in macros or other scripts
+  window.getSpellPointsItem = SpellPoints.getSpellPointsItem.bind(SpellPoints);
+  window.alterSpellPoints = SpellPoints.alterSpellPoints.bind(SpellPoints);
+
 });
 
 /** spell launch dialog **/

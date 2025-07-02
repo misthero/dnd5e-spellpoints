@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [3.2.00]
+
+### Added macro helper functions
+
+- two methods are exposed to modules or macros
+- `getSpellPointsItem` to retrieve the spellpoints item data from an actor
+- `alterSpellPoints` to change spellpoints item uses from an actor
+
 ## [3.1.03]
 
 ### Bugfixes
