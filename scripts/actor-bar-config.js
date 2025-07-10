@@ -1,3 +1,5 @@
+import { SpellPoints } from "./spellpoints.js";
+
 /**
  * Spell Points Configuration
  * @extends {dnd5e.applications.actor.BaseConfigSheetV2}

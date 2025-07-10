@@ -55,6 +55,31 @@ export class SpellPoints {
    * Get default settings object.
    */
   static get defaultSettings() {
+
+
+
+    let dndSpellProgression = CONFIG.DND5E.spellProgression;
+
+    // Define default values for each progression type
+    const progressionValues = {
+      full: 1,
+      half: 2,
+      third: 3,
+      artificer: 1,
+      pact: 1,
+      none: 0,
+    };
+
+    // Build spellcastingTypes dynamically from spellProgression
+    const spellProgression = {};
+    for (const [key, label] of Object.entries(dndSpellProgression)) {
+      spellProgression[key] = {
+        value: progressionValues[key] ?? 0,
+        label
+      };
+    }
+
+
     return {
       spResource: 'Spell Points',
       spAutoSpellpoints: true,
@@ -69,8 +94,8 @@ export class SpellPoints {
       spCustomFormulaBase: '0',
       spCustomFormulaSlotMultiplier: '1',
       spUseLeveled: false,
-      spellcastingTypes: { 'full': { 'value': 1, 'label': "DND5E.SpellProgFull" }, 'half': { 'value': 2, 'label': "DND5E.SpellProgHalf" }, 'third': { 'value': 3, 'label': "DND5E.SpellProgThird" }, 'artificier': { 'value': 1, 'label': "DND5E.SpellProgArt" }, 'pact': { 'value': 1, 'label': "DND5E.SpellProgPact" } },
-      leveledProgressionFormula: { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "", 10: "", 11: "", 12: "", 13: "", 14: "", 15: "", 16: "", 17: "", 18: "", 19: "", 20: "" },
+      spellProgression: spellProgression,
+      leveledProgressionFormula: { 1: "0", 2: "0", 3: "0", 4: "0", 5: "0", 6: "0", 7: "", 8: "0", 9: "0", 10: "0", 11: "0", 12: "0", 13: "0", 14: "0", 15: "0", 16: "0", 17: "0", 18: "0", 19: "0", 20: "0" },
       spGmOnly: true,
       spColorL: '#3a0e5f',
       spColorR: '#8a40c7',
@@ -79,10 +104,37 @@ export class SpellPoints {
     };
   }
 
+
   /**
    * Get a map of formulas to override values specific to those formulas.
    */
   static get formulas() {
+    const maxlevel = CONFIG.DND5E.maxLevel;
+    const slotLevels = CONFIG.DND5E.spellLevels;
+
+    // Helper to build a level table up to maxlevel, only including valid keys
+    function buildLevelTable(table) {
+      const built = {};
+      for (let lvl = 1; lvl <= maxlevel; lvl++) {
+        built[lvl] = table[lvl] ?? 0;
+      }
+      return built;
+    }
+
+    // Helper to build spellPointsCosts to match current spellLevels, only including valid keys
+    function buildSpellPointsCosts(costs) {
+      const built = {};
+      for (const lvl of Object.keys(slotLevels)) {
+        built[lvl] = costs[lvl] ?? 0;
+      }
+      return built;
+    }
+
+    // Prepare extended tables for custom formulas
+    const leveledProgression = buildLevelTable(this.defaultSettings.leveledProgressionFormula);
+    const spellPointsByLevel = buildLevelTable(this.defaultSettings.spellPointsByLevel);
+    const spellPointsCosts = buildSpellPointsCosts(this.defaultSettings.spellPointsCosts);
+
     return {
       DMG: {
         isCustom: false,
@@ -96,20 +148,21 @@ export class SpellPoints {
         spCustomFormulaBase: '0',
         spCustomFormulaSlotMultiplier: '1',
         spUseLeveled: true,
-        spellPointsCosts: this.defaultSettings.spellPointsCosts,
-        leveledProgressionFormula: this.defaultSettings.spellPointsByLevel
+        spellPointsCosts: spellPointsCosts,
+        leveledProgressionFormula: spellPointsByLevel
       },
       AM_CUSTOM: {
         isCustom: true,
         spCustomFormulaBase: 'ceil((2*@spells.pact.level + 1*@spells.spell1.max + 2*@spells.spell2.max + 3*@spells.spell3.max + 4*@spells.spell4.max + 5*@spells.spell5.max + 6*@spells.spell6.max + 7*@spells.spell7.max + 8*@spells.spell8.max + 9*@spells.spell9.max) / 2) + @attributes.spell.dc - 8 - @attributes.prof',
         spCustomFormulaSlotMultiplier: '0',
         spUseLeveled: false,
-        spellPointsCosts: { 0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '12', 7: '14', 8: '24', 9: '27' },
-        leveledProgressionFormula: this.defaultSettings.leveledProgressionFormula
+        spellPointsCosts: buildSpellPointsCosts({ 0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '12', 7: '14', 8: '24', 9: '27' }),
+        leveledProgressionFormula: leveledProgression
       },
       CUSTOM: {
         isCustom: true,
-        leveledProgressionFormula: this.defaultSettings.leveledProgressionFormula,
+        leveledProgressionFormula: leveledProgression,
+        spellPointsCosts: spellPointsCosts,
         spCustomFormulaBase: '',
         spUseLeveled: false
       }
@@ -777,7 +830,7 @@ export class SpellPoints {
     }
 
     // check for multiclasses
-    const actorClasses = actor.items.filter(i => i.type === "class");
+    const actorClasses = actor.classes;
 
     if (actorClasses.length == 0 && !spellcastingNpc) {
       // no classes, no spellcasting
@@ -800,84 +853,64 @@ export class SpellPoints {
       spellcastingLevels[key] = [];
     });
 
-
-    for (let c of actorClasses) {
-      /* spellcasting: pact; full; half; third; artificier; none; **/
-      let spellcasting = c.system.spellcasting.progression;
-      if (spellcasting == 'none') {
+    Object.keys(actorClasses).forEach(c => {
+      const actorClass = actorClasses[c];
+      /* progression: pact; full; half; third; artificier; none; **/
+      let progression = actorClass.system.spellcasting.progression;
+      if (progression == 'none') {
         // check subclasses
-        let subclass = c.subclass;
+        let subclass = actorClass.subclass;
         if (subclass && subclass?.system && subclass?.system?.spellcasting) {
-          spellcasting = subclass.system.spellcasting.progression;
+          progression = subclass.system.spellcasting.progression;
         }
       }
 
-      let level = c.system.levels;
+      let level = actorClass.system.levels;
 
       // get updated class new level
-      if (levelUpdated && c._id == changedClassID)
+      if (levelUpdated && actorClass._id == changedClassID)
         level = changedClassLevel;
 
-      if (spellcastingLevels[spellcasting] != undefined) {
-        spellcastingLevels[spellcasting].push(level);
+      if (spellcastingLevels[progression] != undefined) {
+        spellcastingLevels[progression].push(level);
         spellcastingClassCount++;
       }
-    }
+    })
 
-    // --- Use correct divisors depending on formula ---
-    const divisorSource = (settings.spFormula === 'DMG')
-      ? SpellPoints.defaultSettings.spellcastingTypes
-      : settings.spellcastingTypes;
-
+    // --- Dynamically sum all progressions from CONFIG.DND5E.spellProgression ---
     let totalSpellcastingLevel = 0;
+    const divisorSource = (settings.spFormula === 'DMG')
+      ? SpellPoints.defaultSettings.spellProgression
+      : settings.spellProgression;
 
-    // Always add 'full' using its custom divisor
-    totalSpellcastingLevel += spellcastingLevels['full'].reduce((sum, level) => {
-      const divisor = Number(divisorSource['full']?.value) || 1;
-      return sum + (divisor === 1 ? level : Math.floor(level / divisor));
-    }, 0);
+    // Loop through all progression keys present in the config
+    for (const key of Object.keys(divisorSource)) {
+      // Skip 'none' progression or any progression with divisor 0
+      if (key === 'none') continue;
+      if (key === 'pact' && settings.spFormula === 'DMG') continue; // Exclude pact for DMG
+      const rawDivisor = Number(divisorSource[key]?.value);
+      if (!rawDivisor) continue; // skip if 0 or NaN
+      const divisor = rawDivisor;
 
-    // by default pact magic is not included in the total spellcasting level
-    // Only include 'pact' if the formula is NOT 'DMG'
-    if (settings.spFormula != 'DMG') {
-      totalSpellcastingLevel += spellcastingLevels['pact'].reduce((sum, level) => {
-        const divisor = Number(divisorSource['pact']?.value) || 1;
-        return sum + (divisor === 1 ? level : Math.floor(level / divisor));
-      }, 0);
+      // Get all class levels for this progression
+      const levels = spellcastingLevels[key] || [];
+      // For 'artificer', always round up; for others, round down unless single-class
+      let sum = 0;
+      if (key === 'artificer') {
+        sum = levels.reduce((acc, lvl) => acc + (divisor === 1 ? lvl : Math.ceil(lvl / divisor)), 0);
+      } else if (key === 'half' || key === 'third') {
+        if (spellcastingClassCount === 1 && ((key === 'half' && levels[0] >= 2) || (key === 'third' && levels[0] >= 3))) {
+          sum = levels.reduce((acc, lvl) => acc + (divisor === 1 ? lvl : Math.ceil(lvl / divisor)), 0);
+        } else {
+          sum = levels.reduce((acc, lvl) => acc + (divisor === 1 ? lvl : Math.floor(lvl / divisor)), 0);
+        }
+      } else {
+        sum = levels.reduce((acc, lvl) => acc + (divisor === 1 ? lvl : Math.floor(lvl / divisor)), 0);
+      }
+      totalSpellcastingLevel += sum;
     }
 
-    // Add 'artificer' using its custom divisor (default 1, but often 2)
-    totalSpellcastingLevel += spellcastingLevels['artificer'].reduce((sum, level) => {
-      const divisor = Number(divisorSource['artificer']?.value) || 1;
-      // Artificer always rounds up
-      return sum + (divisor === 1 ? level : Math.ceil(level / divisor));
-    }, 0);
-
-    // Half and third casters only round up if they do not multiclass into other spellcasting classes and if they
-    // have enough levels to obtain the spellcasting feature.
-    if (spellcastingClassCount == 1 && (spellcastingLevels['half'][0] >= 2 || spellcastingLevels['third'][0] >= 3)) {
-      // Single-class: round up
-      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => {
-        const divisor = Number(divisorSource['half']?.value) || 2;
-        return sum + (divisor === 1 ? level : Math.ceil(level / divisor));
-      }, 0);
-      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => {
-        const divisor = Number(divisorSource['third']?.value) || 3;
-        return sum + (divisor === 1 ? level : Math.ceil(level / divisor));
-      }, 0);
-    } else {
-      // Multiclass: round down
-      totalSpellcastingLevel += spellcastingLevels['half'].reduce((sum, level) => {
-        const divisor = Number(divisorSource['half']?.value) || 2;
-        return sum + (divisor === 1 ? level : Math.floor(level / divisor));
-      }, 0);
-      totalSpellcastingLevel += spellcastingLevels['third'].reduce((sum, level) => {
-        const divisor = Number(divisorSource['third']?.value) || 3;
-        return sum + (divisor === 1 ? level : Math.floor(level / divisor));
-      }, 0);
-    }
-
-    if (leveledProgression) {
+    if (leveledProgression && totalSpellcastingLevel > 0) {
       return parseInt(await this.withActorData(settings.leveledProgressionFormula[totalSpellcastingLevel], actor)) || 0;
     }
 
@@ -1160,12 +1193,35 @@ export class SpellPoints {
       const template_file = "modules/dnd5e-spellpoints/templates/spell-points-sheet-tracker.hbs";
       const rendered_html = await foundry.applications.handlebars.renderTemplate(template_file, template_data);
 
-      if (type == 'v2') {
-        $('.sidebar .stats', html).append(rendered_html);
+      let sidebarClasses = '.sidebar .stats'
+      let append = true;
+
+      let container = $('<div class="sp-bar-container"></div>');
+
+      container.append(rendered_html);
+
+      if (app.classList.value.includes('tidy5e-sheet')) {
+        // Tidy5e specific handling
+        sidebarClasses = '.attributes .side-panel';
+        append = false;
+      } else if (type == 'v2') {
+        sidebarClasses = '.sidebar .stats';
       } else if (type == 'npc') {
-        $('.sheet-body .sidebar', html).prepend(rendered_html);
+        sidebarClasses = '.sheet-body .sidebar';
+        append = false;
       } else {
-        $('.header-details .attributes', html).append(rendered_html);
+        sidebarClasses = '.header-details .attributes';
+      }
+
+      if ($(sidebarClasses + ' .sp-bar-container', html).length > 0) {
+        // If the sp bar container already exists, clear it
+        $(sidebarClasses + ' .sp-bar-container', html).remove();
+      }
+
+      if (append) {
+        $(sidebarClasses, html).append(container);
+      } else {
+        $(sidebarClasses, html).prepend(container);
       }
 
       $('.config-button.spellPoints').off('click').on('click', function (event) {
@@ -1176,6 +1232,22 @@ export class SpellPoints {
         config?.render(true);
       });
     }
+  }
+
+  static filterLevelKeys(obj, maxLevel) {
+    const filtered = {};
+    for (let lvl = 1; lvl <= maxLevel; lvl++) {
+      if (obj[lvl] !== undefined) filtered[lvl] = obj[lvl];
+    }
+    return filtered;
+  }
+
+  static filterSpellLevelKeys(obj, spellLevels) {
+    const filtered = {};
+    for (const lvl of Object.keys(spellLevels)) {
+      if (obj[lvl] !== undefined) filtered[lvl] = obj[lvl];
+    }
+    return filtered;
   }
 
   /* It renders the spell points item config in the item sheet. */
@@ -1205,6 +1277,19 @@ export class SpellPoints {
         // changed formula preset, update spellpoints default
         conf = foundry.utils.mergeObject(conf, formulas[preset], { recursive: true, overwrite: true });
         conf.previousFormula = preset;
+      }
+
+      const maxLevel = CONFIG.DND5E.maxLevel;
+      const spellLevels = CONFIG.DND5E.spellLevels;
+
+      if (conf.spellPointsByLevel) {
+        conf.spellPointsByLevel = SpellPoints.filterLevelKeys(conf.spellPointsByLevel, maxLevel);
+      }
+      if (conf.leveledProgressionFormula) {
+        conf.leveledProgressionFormula = SpellPoints.filterLevelKeys(conf.leveledProgressionFormula, maxLevel);
+      }
+      if (conf.spellPointsCosts) {
+        conf.spellPointsCosts = SpellPoints.filterSpellLevelKeys(conf.spellPointsCosts, spellLevels);
       }
 
       if (!isset(template_item.flags?.spellpoints?.config)) {

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.2.10]
+
+- Introduces dynamic handling of custom spellcasting type and progression based on: CONFIG.DND5E.spellProgression; CONFIG.DND5E.maxLevel; CONFIG.DND5E.spellLevels.
+- updates templates for improved styling and compatibility. 
+- tidy5e sheet compatibility
+
 ## [3.2.00]
 
 ### Added macro helper functions

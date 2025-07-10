@@ -1,0 +1,449 @@
+:root {
+  --sp-left-color: #3a0e5f;
+  --sp-right-color: #8a40c7;
+  --sp-animation-name: scroll;
+  --border-width: 3px;
+}
+
+.spError {
+  text-align: center;
+  color: #b50e0e;
+  padding: 5px;
+  background: #0001;
+  border-radius: 3px;
+  -webkit-font-smoothing: subpixel-antialiased;
+  border: 1px solid;
+  margin: 5px 0;
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  box-shadow: 0 1px 1px #0003;
+}
+
+.spEnable {
+  flex: 0 0 1em;
+  text-align: center;
+  padding: 0.2em;
+  opacity: 0.8;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.spEnable>label {
+  cursor: pointer;
+}
+
+.visually-hidden {
+  visibility: hidden;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden;
+  position: absolute;
+}
+
+input.spEnableInput.visually-hidden+.spEnableCheck:before {
+  content: "\f111";
+  font-weight: 100;
+}
+
+input.spEnableInput.visually-hidden:checked+.spEnableCheck:before {
+  content: "\f00c";
+  font-weight: 600;
+}
+
+.spEnable .no-edit {
+  display: none;
+}
+
+.tidy5e-sheet .spEnable .no-edit {
+  opacity: 0.5;
+  cursor: not-allowed;
+  display: inline-block;
+  flex: 0;
+  white-space: nowrap;
+  font-style: italic;
+}
+
+.tidy5e-sheet.allow-edit .spEnable .no-edit {
+  display: none;
+}
+
+.tidy5e-sheet .spEnable .edit-allowed {
+  display: none;
+}
+
+.tidy5e-sheet.allow-edit .spEnable .edit-allowed {
+  display: block;
+}
+
+textarea.spellPointsTextArea {
+  width: 100%;
+  resize: vertical;
+  min-height: 2em;
+}
+
+textarea.spellPointsTextArea[name="spCustomFormulaBase"] {
+  min-height: 5em;
+}
+
+div.spell-points-hidden {
+  display: none;
+}
+
+/** character sheet resouce bar **/
+
+.sp-bar-container {
+  margin-top: 0.5rem;
+}
+
+.meter-group.sp-bar .meter {
+  --meter-background: var(--dnd5e-color-light-gray);
+  border: 1px solid var(--dnd5e-color-gold);
+  border-radius: 4px;
+  background: var(--meter-background);
+  font-family: var(--dnd5e-font-roboto);
+  font-weight: bold;
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.25);
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.meter-group.sp-bar .meter.progress,
+.meter-group.sp-bar .meter .progress {
+  --bar-percentage: 0%;
+  --border-width: 3px;
+  overflow: hidden;
+}
+
+.meter-group.sp-bar .meter .label {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  position: relative;
+  padding-inline-start: 8px;
+  padding-inline-end: 12px;
+  color: var(--color-text-light-0);
+}
+
+.meter-group.sp-bar .meter.progress::before,
+.meter-group.sp-bar .meter .progress::before {
+  content: "";
+  position: absolute;
+  block-size: 100%;
+  inline-size: var(--bar-percentage);
+  box-shadow: 0 0 6px var(--dnd5e-shadow-45);
+  clip-path: polygon(0 0, calc(100% + 6px) 0, calc(100% + 6px) 100%, 0 100%);
+}
+
+.meter-group.sp-bar .progress:before {
+  border-color: var(--bar-first-color);
+  inline-size: var(--bar-percentage);
+  background: linear-gradient(to right, var(--bar-first-color), var(--bar-second-color), var(--bar-first-color));
+  animation: var(--bar-animation-name) 5s linear infinite;
+  background-size: 200% 100%;
+  border-style: solid;
+  border-width: 0 var(--border-width) 0 0;
+}
+
+form.dnd5e-spellpoints .color_test,
+.sheet.actor .sheet-body .sidebar .card .meter.sp-points .progress::before,
+.sheet.actor .side-panel .meter.sp-points .progress::before,
+.sheet.actor .sidebar .meter.sp-points .progress::before {
+  background: linear-gradient(to right, var(--sp-left-color), var(--sp-right-color), var(--sp-left-color));
+  border-right: var(--border-width) solid var(--sp-left-color);
+  border-radius: 4px 0 0 4px;
+  background-size: 200% 100%;
+}
+
+.tidy5e-sheet .sp-bar {
+  font-size: 13px;
+  line-height: 1.2em;
+  text-transform: uppercase;
+  font-family: "Roboto Condensed";
+}
+
+.meter-group.sp-bar .label {
+  display: flex;
+}
+
+.tidy5e-sheet .sp-bar .label {
+  font-size: 11px;
+  letter-spacing: 0.8px;
+}
+
+.tidy5e-sheet .config-button.spellPoints {
+  display: none;
+  margin-left: auto;
+  font-size: 0.7rem;
+}
+
+.tidy5e-sheet.sheet-mode-edit .config-button.spellPoints {
+  display: block;
+}
+
+.tidy5e-sheet .resource-bar-container+.sp-bar-container {
+  margin-top: 0;
+}
+
+.sp-bar-container+.resource-bar-container .resource-bar:first-child {
+  margin-top: 0;
+}
+
+.tidy5e-sheet.application:where(.classic):not(.minimized) {
+  background: var(--t5e-sheet-background, var(--t5e-parchment-background));
+}
+
+#spellpoints-form input[type="color"] {
+  padding: 0;
+  background: transparent;
+  border: 0 none;
+  line-height: 0;
+}
+
+form.dnd5e-spellpoints .color_test {
+  border-radius: 4px !important;
+  min-height: 15px;
+  padding: 2px 6px;
+  border: 1px solid var(--dnd5e-color-gold);
+}
+
+.window-app.spellpoints-cast {
+  height: auto !important;
+  overflow: hidden;
+}
+
+#spellpoints-form .description.new-item {
+  border: 1px solid #24a795;
+  margin: 5px;
+  padding: 0 10px 10px;
+  border-radius: 5px;
+  background: #00a9aa33;
+  text-align: center;
+}
+
+#spellpoints-form {
+  min-width: min(600px, 100vw);
+}
+
+#spellpoints-form .form-body, #spellpoints-form .form-container {
+  height: calc(100% - 3.4rem);
+}
+
+#spellpoints-form .form-body {
+  padding-bottom: 3rem;
+}
+
+#spellpoints-form .window-content {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#spellpoints-form .spFormTitle {
+  position: sticky;
+  top: 0;
+  padding: 5px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  background: #00000024;
+  margin-left: -1rem;
+  margin-right: -1rem;
+}
+
+#spellpoints-form .spFormTitle>* {
+  margin: 0;
+}
+
+#spellpoints-form footer {
+  position: sticky;
+  bottom: 0;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  margin-bottom: -1px;
+  margin-top: 1rem;
+  backdrop-filter: blur(8px);
+  background: #00000024;
+  z-index: 5;
+  height: 5rem;
+  padding: 5px 1rem;
+}
+
+#spellpoints-form .window-content {
+  height: 100%;
+}
+
+input.number-lg.spellpoints_value {
+  margin-right: 10px;
+}
+
+form .form-group .form-fields>input[type="checkbox"][name="consume.spellPoints"] {
+  flex: none;
+  margin: 0;
+}
+
+.spellpoints-form .hide, .item-config .hide {
+  display: none;
+}
+
+.purple {
+  color: #8a40c7;
+}
+
+/** item config **/
+
+.spellpoints.item-config {
+  margin: 0 0 20px;
+  border: 4px double var(--dnd5e-color-gold);
+  padding: 10px;
+  border-radius: 4px;
+  opacity: 0.8;
+}
+
+.editable .spellpoints.item-config {
+  opacity: 1;
+}
+
+textarea.spellPointsTextArea[readonly] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: var(--color-text-dark-5);
+}
+
+.form-group.spellpoints-costs {
+  margin-bottom: 3px;
+}
+
+.spellpoints.item-config .accordion-content {
+  padding: 5px;
+}
+
+.spellpoints-properties .checkbox input[name="flags.spellpoints.override"] {
+  top: 0;
+  /* font-size: 3em; */
+  width: 20px;
+  height: 20px;
+}
+
+body form .spellpoints.item-config input[type="checkbox"] {
+  border: 0 none;
+}
+
+body form .spellpoints.item-config input[type="checkbox"]::before,
+body form .spellpoints.item-config {
+  --checkbox-background-color: #64306a;
+  --checkbox-checked-color: #ca8010;
+}
+
+body form .spellpoints.item-config input[type="checkbox"]::after {
+  font-size: 1.4rem;
+}
+
+.spellpoints.item-config .spellpoints-costs>label {
+  flex: 3;
+}
+
+.bordered {
+  border: 1px solid #796161;
+  padding: 10px;
+  margin: 15px 0;
+  background: #449ac514;
+  border-radius: 3px;
+}
+
+.spell-points-types {
+  text-align: center;
+}
+
+.spell-points-types span {
+  display: block;
+}
+
+.spell-points-types input {
+  width: 2em;
+}
+
+form.dnd5e-spellpoints .color_test,
+.progress.sp-points:before {
+  -webkit-animation: var(--sp-animation-name) 5s linear infinite;
+  -moz-animation: var(--sp-animation-name) 5s linear infinite;
+  -o-animation: var(--sp-animation-name) 5s linear infinite;
+  animation: var(--sp-animation-name) 5s linear infinite;
+}
+
+.dnd5e-spellpoints.actor-spell-points-config .header-button.control.close {
+  text-indent: -999em;
+}
+
+.dnd5e-spellpoints.actor-spell-points-config .header-button.control.close i {
+  text-indent: 0;
+  position: absolute;
+}
+
+.sp-popup .sp-number {
+  height: 100%;
+  font-size: 3em !important;
+  border: 1px solid #830dab66 !important;
+  /* box-shadow: 0 0 15px #900db9 inset; */
+}
+
+.actor-spell-points-config .sheet-footer {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+}
+
+
+
+@-webkit-keyframes scroll {
+  0% {
+    background-position: 0 0
+  }
+
+  100% {
+    background-position: -200% 0%
+  }
+}
+
+@-moz-keyframes scroll {
+  0% {
+    background-position: 0 0
+  }
+
+  100% {
+    background-position: -200% 0%
+  }
+}
+
+@-o-keyframes scroll {
+  0% {
+    background-position: 0 0
+  }
+
+  100% {
+    background-position: -200% 0%
+  }
+}
+
+@keyframes scroll {
+  0% {
+    background-position: 0 0
+  }
+
+  100% {
+    background-position: -200% 0%
+  }
+}
+
+.spellpoints.application a.header-button.control.close {
+  text-indent: -999em;
+  line-height: 0;
+  margin: 0;
+}
+
+.spellpoints.application a.header-button.control.close>i {
+  text-indent: 0;
+}
