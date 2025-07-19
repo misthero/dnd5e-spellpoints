@@ -209,7 +209,7 @@ export class SpellPoints {
    * @return {number} The result of the formula.
    */
   static async withActorData(formula, actor) {
-    formula = formula.toString();
+    formula = formula.toString().replace(/\n/g, " ");
     if (!formula || typeof formula !== 'string' || formula.length == 0) {
       return 0;
     }
