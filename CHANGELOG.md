@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.2.11]
+
+- Remove nelines from formulas, thx to [@mclemente](https://github.com/mclemente)
+
 ## [3.2.10]
 
 - Introduces dynamic handling of custom spellcasting type and progression based on: CONFIG.DND5E.spellProgression; CONFIG.DND5E.maxLevel; CONFIG.DND5E.spellLevels.
