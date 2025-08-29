@@ -82,7 +82,7 @@ export class SpellPointsForm extends HandlebarsApplicationMixin(ApplicationV2) {
     // Filter out spell levels not in CONFIG.DND5E.spellLevels
     const spellProgression = CONFIG.DND5E.spellProgression;
     if (data.spellProgression) {
-      data.spellProgression = SpellPointsForm.filterSpellLevelKeys(data.spellProgression, spellProgression);
+      data.spellProgression = foundry.utils.mergeObject(data.spellProgression, spellProgression, { insertKeys: true, insertValues: true });
     }
 
     this.reset = false;

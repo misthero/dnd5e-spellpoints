@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.2.12]
+
+- Resolved a bug that prevented opening the spellpoints configuration by updating the spell progression merging logic.
+
 ## [3.2.11]
 
 - Remove nelines from formulas, thx to [@mclemente](https://github.com/mclemente)
