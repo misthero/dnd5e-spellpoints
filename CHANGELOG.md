@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.2.20]
+
+- New feature: bind the spellpoint item to an actor resource (primary, seconday, tertiary);
+- Inline edit of the spellpoints value directly clicking on the spellpoints bar.
+
 ## [3.2.12]
 
 - Resolved a bug that prevented opening the spellpoints configuration by updating the spell progression merging logic.

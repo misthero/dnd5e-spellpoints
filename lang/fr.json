@@ -92,5 +92,9 @@
   "dnd5e-spellpoints.spResourceBarLeftColor": "Couleur gauche",
   "dnd5e-spellpoints.spResourceBarRightColor": "Couleur droite",
   "dnd5e-spellpoints.spResourceBarAnimate": "Animer la barre de ressource",
-  "dnd5e-spellpoints.settingSaved": "Paramètres sauvegardés !"
+  "dnd5e-spellpoints.spResourceBarActive": "Afficher la barre de ressources des points de sort sur la fiche de personnage",
+  "dnd5e-spellpoints.settingSaved": "Paramètres sauvegardés !",
+  "dnd5e-spellpoints.spResourceBind": "Liez l'élément Points de Sorts à une ressource d'acteur.",
+  "dnd5e-spellpoints.spResourceBindNote": "Choisissez une ressource à lier ou laissez vide pour désactiver la liaison. Chaque fois que l'élément Points de Sorts est mis à jour, la ressource liée sur la fiche de personnage sera également mise à jour. Chaque fois que la ressource est mise à jour, l'élément Points de Sorts sera également mis à jour.",
+  "dnd5e-spellpoints.spResourceBindWarn": "Avertissement : Lier à une ressource écrasera les valeurs de la ressource pour chaque acteur avec l'élément Points de Sorts. De plus, la ressource liée apparaîtra dans la liste des favoris de la fiche de personnage. Cela ne peut pas être empêché."
 }

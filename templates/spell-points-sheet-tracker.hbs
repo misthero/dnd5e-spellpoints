@@ -15,6 +15,8 @@
         <span class="separator"> / </span>
         <span class="max">{{max}}</span>
       </div>
+      <input hidden type="text" data-dtype="Number" name="sp_value_{{_id}}" class="sp_value seamless-input"
+        value="{{value}}">
     </div>
   </div>
   {{else if isNPC}}
@@ -34,6 +36,8 @@
           <span class="separator"> / </span>
           <span class="max">{{max}}</span>
         </div>
+        <input hidden type="text" data-dtype="Number" name="sp_value_{{_id}}" class="sp_value seamless-input"
+          value="{{value}}">
       </div>
     </div>
     {{else}}

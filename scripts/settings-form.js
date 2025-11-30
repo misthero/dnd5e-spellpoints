@@ -65,6 +65,11 @@ export class SpellPointsForm extends HandlebarsApplicationMixin(ApplicationV2) {
       this.reset ? foundry.utils.mergeObject(SpellPoints.settings, SpellPoints.defaultSettings, { insertKeys: true, insertValues: true, overwrite: true, recursive: true, performDeletions: true }) : foundry.utils.mergeObject(SpellPoints.settings, { requireSave: false })
     );
 
+    data.spResource = "Spell Points";
+
+    data.spResources = { primary: 'primary', secondary: 'secondary', tertiary: 'tertiary' };
+    data.spResourceBind = "" || data.spResourceBind || SpellPoints.settings.spResourceBind;
+
     // Filter out levels above CONFIG.DND5E.maxLevel
     const maxLevel = CONFIG.DND5E.maxLevel;
     if (data.spellPointsByLevel) {

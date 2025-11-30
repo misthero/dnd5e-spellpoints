@@ -85,5 +85,8 @@
     "dnd5e-spellpoints.spResourceBarRightColor": "Colore Destro",
     "dnd5e-spellpoints.spResourceBarAnimate": "Barra delle risorse animata",
     "dnd5e-spellpoints.settingSaved": "Impostazioni salvate!",
-    "dnd5e-spellpoints.spResourceBarActive": "Mostra la barra di Punti Magia nella scheda del personaggio."
+    "dnd5e-spellpoints.spResourceBarActive": "Mostra la barra di risorse dei punti magia nella scheda del personaggio.",
+    "dnd5e-spellpoints.spResourceBind": "Collega l'elemento Punti Magia a una risorsa dell'attore.",
+    "dnd5e-spellpoints.spResourceBindNote": "Scegli una risorsa da collegare o lascia vuoto per disabilitare il collegamento. Ogni volta che l'elemento Punti Magia viene aggiornato, verrà aggiornata anche la risorsa collegata nella scheda del personaggio. Ogni volta che la risorsa viene aggiornata, verrà aggiornato anche l'elemento Punti Magia.",
+    "dnd5e-spellpoints.spResourceBindWarn": "Avviso: Il collegamento a una risorsa sovrascriverà i valori della risorsa per ogni attore con l'elemento Punti Magia. Inoltre, la risorsa collegata apparirà nell'elenco dei preferiti della scheda del personaggio. Questo non può essere impedito."
 }

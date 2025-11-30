@@ -92,5 +92,9 @@
   "dnd5e-spellpoints.spResourceBarLeftColor": "Color izquierdo",
   "dnd5e-spellpoints.spResourceBarRightColor": "Color derecho",
   "dnd5e-spellpoints.spResourceBarAnimate": "Barra de recurso animada",
-  "dnd5e-spellpoints.settingSaved": "¡Configuraciones guardadas!"
+  "dnd5e-spellpoints.spResourceBarActive": "Ver la barra de recursos de puntos de hechizo en la hoja de personaje",
+  "dnd5e-spellpoints.settingSaved": "¡Configuraciones guardadas!",
+  "dnd5e-spellpoints.spResourceBind": "Vincula el elemento de Puntos de Hechizo a un recurso del actor.",
+  "dnd5e-spellpoints.spResourceBindNote": "Elige un recurso para vincular, o deja en blanco para deshabilitar la vinculación. Cada vez que se actualice el elemento de Puntos de Hechizo, también se actualizará el recurso vinculado en la hoja de personaje. Cada vez que se actualice el recurso, también se actualizará el elemento de Puntos de Hechizo.",
+  "dnd5e-spellpoints.spResourceBindWarn": "Advertencia: Vincular a un recurso sobrescribirá los valores del recurso en cada actor con el elemento de Puntos de Hechizo. Además, el recurso vinculado aparecerá en la lista de favoritos de la hoja de personaje. Esto no se puede evitar."
 }

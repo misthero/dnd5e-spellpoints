@@ -2,7 +2,7 @@
   --sp-left-color: #3a0e5f;
   --sp-right-color: #8a40c7;
   --sp-animation-name: scroll;
-  --border-width: 3px;
+  --sp-border-width: 0px;
 }
 
 .spError {
@@ -95,11 +95,16 @@ div.spell-points-hidden {
   margin-top: 0.5rem;
 }
 
+.tidy5e-sheet input.seamless-input {
+  background: transparent;
+  border: 0;
+  text-align: left;
+}
+
+.tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter,
 .meter-group.sp-bar .meter {
-  --meter-background: var(--dnd5e-color-light-gray);
   border: 1px solid var(--dnd5e-color-gold);
   border-radius: 4px;
-  background: var(--meter-background);
   font-family: var(--dnd5e-font-roboto);
   font-weight: bold;
   box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.25);
@@ -107,13 +112,16 @@ div.spell-points-hidden {
   display: flex;
   align-items: center;
   overflow: hidden;
+  height: 1.5rem;
 }
 
-.meter-group.sp-bar .meter.progress,
-.meter-group.sp-bar .meter .progress {
+.tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter.progress,
+.meter-group.sp-bar .meter.progress, .meter-group.sp-bar .meter .progress {
   --bar-percentage: 0%;
-  --border-width: 3px;
+  --sp-border-width: 0px;
   overflow: hidden;
+  align-items: center;
+  display: flex;
 }
 
 .meter-group.sp-bar .meter .label {
@@ -127,24 +135,25 @@ div.spell-points-hidden {
   color: var(--color-text-light-0);
 }
 
-.meter-group.sp-bar .meter.progress::before,
-.meter-group.sp-bar .meter .progress::before {
+.tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter .progress:before,
+.tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter.progress::before,
+.meter-group.sp-bar .meter.progress::before, .meter-group.sp-bar .meter .progress::before {
   content: "";
   position: absolute;
-  block-size: 100%;
-  inline-size: var(--bar-percentage);
-  box-shadow: 0 0 6px var(--dnd5e-shadow-45);
-  clip-path: polygon(0 0, calc(100% + 6px) 0, calc(100% + 6px) 100%, 0 100%);
+  inline-size: calc(var(--bar-percentage) - 2px);
+  box-shadow: inset 0 1px 0 1px var(--dnd5e-highlight-40);
+  inset: 1px auto 1px 1px;
+  border-radius: 2px;
+  height: calc(100% - 2px);
+  border-right: 0;
 }
 
 .meter-group.sp-bar .progress:before {
-  border-color: var(--bar-first-color);
-  inline-size: var(--bar-percentage);
-  background: linear-gradient(to right, var(--bar-first-color), var(--bar-second-color), var(--bar-first-color));
-  animation: var(--bar-animation-name) 5s linear infinite;
+  border-color: var(--sp-left-color);
+  inline-size: var(--sp-percentage);
+  background: linear-gradient(to right, var(--sp-left-color), var(--sp-right-color), var(--sp-left-color));
+  animation: var(--sp-animation-name) 5s linear infinite;
   background-size: 200% 100%;
-  border-style: solid;
-  border-width: 0 var(--border-width) 0 0;
 }
 
 form.dnd5e-spellpoints .color_test,
@@ -152,9 +161,17 @@ form.dnd5e-spellpoints .color_test,
 .sheet.actor .side-panel .meter.sp-points .progress::before,
 .sheet.actor .sidebar .meter.sp-points .progress::before {
   background: linear-gradient(to right, var(--sp-left-color), var(--sp-right-color), var(--sp-left-color));
-  border-right: var(--border-width) solid var(--sp-left-color);
-  border-radius: 4px 0 0 4px;
   background-size: 200% 100%;
+}
+
+.progress.sp-points>label {
+  cursor: pointer;
+}
+
+.progress.sp-points input.sp_value {
+  position: relative;
+  z-index: 2;
+  text-align: left;
 }
 
 .tidy5e-sheet .sp-bar {
@@ -166,6 +183,7 @@ form.dnd5e-spellpoints .color_test,
 
 .meter-group.sp-bar .label {
   display: flex;
+  cursor: pointer;
 }
 
 .tidy5e-sheet .sp-bar .label {

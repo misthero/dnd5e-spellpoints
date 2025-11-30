@@ -65,6 +65,19 @@
       <input type="checkbox" name="spActivateBar" data-dtype="Boolean" {{checked spActivateBar}} />
     </div>
     <hr>
+    <!-- Spell points bind Resources -->
+    <div class="form-group">
+      <label>
+        {{localize "dnd5e-spellpoints.spResourceBind"}}
+      </label>
+      <select name="spResourceBind" id="spResourceBind" style="flex: 1">
+        <option value=""> - </option>
+        {{selectOptions spResources selected=spResourceBind }}
+      </select>
+      <p class="hint">{{localize "dnd5e-spellpoints.spResourceBindNote"}}</p>
+      <p class="warning">{{localize "dnd5e-spellpoints.spResourceBindWarn"}}</p>
+    </div>
+    <hr>
     <!-- Choose FORMULA Preset -->
     <h4>{{localize "dnd5e-spellpoints.spFormulaPreset"}}</h4>
     <div class="form-group">

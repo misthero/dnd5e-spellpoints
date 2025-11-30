@@ -92,5 +92,9 @@
     "dnd5e-spellpoints.spFormulaPreset": "Escolha o preset de fórmula",
     "dnd5e-spellpoints.settingReset": "Configurações padrão restauradas.",
     "dnd5e-spellpoints.settingResetConfirmTitle": "Redefinir Configuração do Spell Points System 5e.",
-    "dnd5e-spellpoints.settingResetConfirmText": "Todas as configurações serão redefinidas para o padrão. Tem certeza de que deseja fazer isso?"
+    "dnd5e-spellpoints.settingResetConfirmText": "Todas as configurações serão redefinidas para o padrão. Tem certeza de que deseja fazer isso?",
+    "dnd5e-spellpoints.spResourceBarActive": "Exibir a barra de recursos de pontos de magia na ficha do personagem",
+    "dnd5e-spellpoints.spResourceBind": "Vincule o item de Pontos de Magia a um recurso do ator.",
+    "dnd5e-spellpoints.spResourceBindNote": "Escolha um recurso para vincular ou deixe em branco para desativar a vinculação. Cada vez que o item de Pontos de Magia for atualizado, o recurso vinculado na ficha do personagem também será atualizado. Cada vez que o recurso for atualizado, o item de Pontos de Magia também será atualizado.",
+    "dnd5e-spellpoints.spResourceBindWarn": "Aviso: Vincular a um recurso sobrescreverá os valores do recurso em cada ator com o item de Pontos de Magia. Além disso, o recurso vinculado aparecerá na lista de favoritos da ficha do personagem. Isso não pode ser evitado."
 }

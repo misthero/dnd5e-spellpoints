@@ -56,8 +56,6 @@ export class SpellPoints {
    */
   static get defaultSettings() {
 
-
-
     let dndSpellProgression = CONFIG.DND5E.spellProgression;
 
     // Define default values for each progression type
@@ -100,7 +98,8 @@ export class SpellPoints {
       spColorL: '#3a0e5f',
       spColorR: '#8a40c7',
       spAnimateBar: true,
-      spActivateBar: true
+      spActivateBar: true,
+      spResourceBind: "",
     };
   }
 
@@ -254,6 +253,27 @@ export class SpellPoints {
     return foundItem;
   }
 
+  static async updateSpellPointItem(item, value = null, max = null, spent = null) {
+    if (!item) {
+      return;
+    }
+    if (!max) {
+      max = item.system.uses.max;
+    }
+    if (!value) {
+      value = item.system.uses.value;
+    }
+    if (!spent) {
+      spent = max - value;
+    }
+    item.update({
+      [`system.uses.max`]: max,
+      [`system.uses.value`]: value,
+      [`system.uses.spent`]: spent
+    });
+
+  }
+
   /**
    * Alters the spell points for a given actor by updating the associated spell point item.
    *
@@ -275,7 +295,7 @@ export class SpellPoints {
     if (!spellPointItem) return;
 
     // Prepare update object
-    let update = { system: { uses: {} } };
+    let newValues = { max: null, value: null, spent: null };
 
     let currentMax = await SpellPoints.withActorData(spellPointItem.system.uses.max, actor);
 
@@ -288,7 +308,7 @@ export class SpellPoints {
       } else {
         currentMax = maxValue;
       }
-      update.system.uses.max = currentMax;
+      newValues.max = currentMax;
     }
 
     let currentUses = spellPointItem.system.uses.value;
@@ -304,13 +324,13 @@ export class SpellPoints {
       }
       // Clamp the value between 0 and max
       currentUses = Math.max(0, Math.min(currentUses, currentMax));
-      update.system.uses.value = currentUses;
-      update.system.uses.spent = currentMax - currentUses;
+      newValues.value = currentUses;
+      newValues.spent = currentMax - currentUses;
     }
 
     // Only update if there is something to change
-    if (Object.keys(update.system.uses).length > 0) {
-      spellPointItem.update(update);
+    if (Object.values(newValues).some(v => v !== null)) {
+      SpellPoints.updateSpellPointItem(spellPointItem, newValues.value, newValues.max, newValues.spent);
     }
   }
 
@@ -407,11 +427,6 @@ export class SpellPoints {
       }
     };
 
-    let updateItem = {
-      'system': {
-        'uses': {}
-      }
-    };
 
     // actor.update(updateActor);
     /** update spellpoints **/
@@ -472,7 +487,6 @@ export class SpellPoints {
           });
         }
       } else {
-
         ChatMessage.create({
           content: "<i style='color:red;'>" + game.i18n.format(SP_MODULE_NAME + ".notEnoughSp", { ActorName: actor.name, SpellPoints: moduleSettings.spResource }) + "</i>",
           speaker: ChatMessage.getSpeaker({ alias: actor.name }),
@@ -499,9 +513,9 @@ export class SpellPoints {
 
     remainingUses.value = currentUses.max - remainingUses.spent;
 
-    updateItem.system.uses.spent = remainingUses.spent;
-
-    spellPointItem.update(updateItem);
+    //updateItem.system.uses.spent = remainingUses.spent;
+    SpellPoints.updateSpellPointItem(spellPointItem, remainingUses.value, null, null);
+    //spellPointItem.update(updateItem);
     actor.update(updateActor);
 
     return [item, consumeConfig, options];
@@ -528,6 +542,11 @@ export class SpellPoints {
       const item = SpellPoints.getSpellPointsItem(actor);
       if (!item) return;
 
+      // Validate that formula is a string
+      if (typeof formula !== "string") {
+        formula = formula.toString();
+      }
+
       const operator = extractOperator(formula);
       let rollData = actor.getRollData();
 
@@ -545,6 +564,28 @@ export class SpellPoints {
       foundry.utils.setProperty(item, path, newValue);
     }
   }
+
+  /** Replace the activity usage */
+  /*static async preActivityUse(activity, usageConfig, dialogConfig, messageConfig) {
+    if (!SpellPoints.settings.spResourceBind || SpellPoints.settings.spResourceBind === "") {
+      return [activity, usageConfig, dialogConfig, messageConfig];
+    }
+
+    const targetIndex = activity.consumption?.targets?.findIndex(target => target.target === SpellPoints.settings.spResourceBind);
+
+    if (targetIndex !== -1) {
+      console.log(`Found target at index ${targetIndex} with target ${SpellPoints.settings.spResourceBind}`);
+      const SPitem = SpellPoints.getSpellPointsItem(activity.actor);
+      if (!SPitem) {
+        return [activity, usageConfig, dialogConfig, messageConfig];
+      }
+      // Modify the target properties as needed
+      activity.consumption.targets[targetIndex].target = SPitem.id;
+      activity.consumption.targets[targetIndex].type = "itemUses";
+
+      return [activity, usageConfig, dialogConfig, messageConfig];
+    }
+  }*/
 
   /*
    * prepare the spellpoints configuration.
@@ -936,17 +977,37 @@ export class SpellPoints {
       return;
     }
 
-    // Helper to update spell points if the item exists
-    const updateIfItemExists = () => {
-      const spellPointsItem = SpellPoints.getSpellPointsItem(actor);
-      if (spellPointsItem) {
-        SpellPoints.updateSpellPointsMax({}, {}, actor, spellPointsItem);
+    const spellPointsItem = SpellPoints.getSpellPointsItem(actor);
+
+    const trackedResource = SpellPoints.settings.spResourceBind;
+    if (spellPointsItem && trackedResource && trackedResource !== '') {
+      if (isset(update?.system?.resources?.[trackedResource].max)
+        && update.system.resources[trackedResource].max !== spellPointsItem.system.uses.max) {
+        const max = parseInt(update.system.resources[trackedResource].max, 10);
+        const spent = max - parseInt(spellPointsItem.system.uses.value, 10);
+        const itemUpdate = {
+          'system.uses.max': update.system.resources[trackedResource].max,
+          'system.uses.value': spellPointsItem.system.uses.value,
+          'system.uses.spent': Math.max(0, spent),
+        };
+        await spellPointsItem.update(itemUpdate);
+        return;
       }
-    };
+      if (isset(update?.system?.resources?.[trackedResource].value)
+        && update.system.resources[trackedResource].value !== spellPointsItem.system.uses.value) {
+        const value = parseInt(update.system.resources[trackedResource].value, 10);
+        const itemUpdate = {
+          'system.uses.value': update.system.resources[trackedResource].value,
+          'system.uses.spent': spellPointsItem.system.uses.max - value,
+        };
+        await spellPointsItem.update(itemUpdate);
+        return;
+      }
+    }
 
     // If spellcasting level increased, update spell points (NPCs)
-    if (update?.system?.attributes?.spell?.level >= 0) {
-      updateIfItemExists();
+    if (spellPointsItem && update?.system?.attributes?.spell?.level >= 0) {
+      SpellPoints.updateSpellPointsMax({}, {}, actor, spellPointsItem);
     }
   }
 
@@ -1027,14 +1088,16 @@ export class SpellPoints {
     if (SpellPointsMax !== NaN) {
       const newItemSpent = SpellPointsMax < spellPointsItem.system.uses.value ? 0 : SpellPointsMax - spellPointsItem.system.uses.value;
       const newItemValue = SpellPointsMax < spellPointsItem.system.uses.value ? SpellPointsMax : spellPointsItem.system.uses.value;
-      const updates = {
+      /*const updates = {
         [`system.uses.max`]: SpellPointsMax,
         [`system.uses.value`]: newItemValue,
         [`system.uses.spent`]: newItemSpent,
-      };
+      };*/
+
+      await SpellPoints.updateSpellPointItem(spellPointsItem, newItemValue, SpellPointsMax, newItemSpent);
 
       // update the spell points item
-      await spellPointsItem.update(updates);
+      //await spellPointsItem.update(updates);
 
       if (!game.user.isGM) {
         let SpeakTo = game.users.filter(u => u.isGM);
@@ -1069,7 +1132,7 @@ export class SpellPoints {
   static checkSpellPointsValues(item, update, difference, id) {
     if (!SpellPoints.isSpellPointsItem(item)) return;
 
-    let max, value;
+    let max, value, spent;
     let changed_uses = false;
 
     if (update.system?.uses?.max) {
@@ -1086,9 +1149,18 @@ export class SpellPoints {
       value = item.system.uses.value
     }
 
+    if (update.system?.uses?.spent) {
+      spent = update.system.uses.spent;
+      changed_uses = true;
+    } else {
+      spent = item.system.uses.spent
+    }
+
     if (changed_uses) {
       if (value > max) {
+        value = max;
         update.system.uses.value = max
+        update.system.uses.spent = 0;
       }
     }
 
@@ -1110,8 +1182,65 @@ export class SpellPoints {
       };
     }
 
+    SpellPoints.maybeUpdateTrackedResource(item, max, value);
     return [item, update, difference, id];
+  }
 
+  /* update the tracked resource if needed */
+  static maybeUpdateTrackedResource(item, max, value) {
+    const trackedResource = SpellPoints.settings.spResourceBind;
+    const actor = item.parent;
+    // Define the possible resources
+    const resources = ["primary", "secondary", "tertiary"];
+
+    // Get the current values of the tracked resource
+    const currentResource = actor.system.resources[trackedResource];
+    const currentLabel = currentResource?.label || "";
+    const currentMax = currentResource?.max || 0;
+    const currentValue = currentResource?.value || 0;
+
+    // Check if the tracked resource already matches the desired values
+    const isTrackedResourceUnchanged =
+      currentLabel === item.name &&
+      currentMax === max &&
+      currentValue === value;
+
+    // Check if any other resource has the same label as the tracked resource
+    const hasConflictingLabels = resources.some(resource => {
+      if (resource !== trackedResource) {
+        const resourceLabel = actor.system.resources[resource]?.label;
+        return resourceLabel === item.name;
+      }
+      return false;
+    });
+
+    // If nothing changed and no conflicts exist, skip the update
+    if (isTrackedResourceUnchanged && !hasConflictingLabels) {
+      return;
+    }
+
+    let updateActor = {};
+    // Prepare the update object
+    if (!isTrackedResourceUnchanged) {
+      updateActor = {
+        [`system.resources.${trackedResource}.label`]: item.name,
+        [`system.resources.${trackedResource}.max`]: max,
+        [`system.resources.${trackedResource}.value`]: value
+      };
+    }
+
+    // Clean up conflicting labels in other resources
+    resources.forEach(resource => {
+      if (resource !== trackedResource) {
+        const resourceLabel = actor.system.resources[resource]?.label;
+        if (resourceLabel === item.name) {
+          updateActor[`system.resources.${resource}.label`] = "";
+        }
+      }
+    });
+
+    // Perform the update
+    actor.update(updateActor);
   }
 
   static processFirstDrop(item) {
@@ -1151,11 +1280,7 @@ export class SpellPoints {
     let value = actor.system.resources[`${spellPointResource.key}`].value;
     let updateActor = { [`system.resources.${spellPointResource.key}.label`]: "" };
     actor.update(updateActor);
-    item.update({
-      [`system.uses.max`]: max,
-      [`system.uses.value`]: value,
-      [`system.uses.spent`]: max - value
-    })
+    SpellPoints.updateSpellPointItem(item, value, max, max - value);
   }
 
   /**
@@ -1190,6 +1315,7 @@ export class SpellPoints {
         'value': value,
         'percent': percent,
       }
+
       const template_file = "modules/dnd5e-spellpoints/templates/spell-points-sheet-tracker.hbs";
       const rendered_html = await foundry.applications.handlebars.renderTemplate(template_file, template_data);
 
@@ -1201,11 +1327,11 @@ export class SpellPoints {
       container.append(rendered_html);
 
       if (app.classList.value.includes('tidy5e-sheet')) {
-        // Tidy5e specific handling
-        sidebarClasses = '.attributes .side-panel';
+        // Tidy5e CLASSIC specific handling
+        sidebarClasses = '.attributes .side-panel, .tidy-tab.favorites';
         append = false;
       } else if (type == 'v2') {
-        sidebarClasses = '.sidebar .stats';
+        sidebarClasses = '.sidebar .stats > .meter-group:last';
       } else if (type == 'npc') {
         sidebarClasses = '.sheet-body .sidebar';
         append = false;
@@ -1219,7 +1345,7 @@ export class SpellPoints {
       }
 
       if (append) {
-        $(sidebarClasses, html).append(container);
+        $(sidebarClasses, html).after(container);
       } else {
         $(sidebarClasses, html).prepend(container);
       }
@@ -1231,7 +1357,45 @@ export class SpellPoints {
         let config = new ActorSpellPointsConfig({ document: SpellPointsItem });
         config?.render(true);
       });
+
+      $('.progress.sp-points .label', html).off('click').on('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        $('.progress.sp-points .label', html).attr('hidden', 'hidden');
+        let input = $('.progress.sp-points input.sp_value', html);
+        input.removeAttr('hidden');
+        input.focus();
+        input.select();
+      });
+
+      $('.progress.sp-points input.sp_value', html)
+        .off('blur')
+        .on('blur', async (event) => {
+          await SpellPoints.handleSPBarValueChange(SpellPointsItem, event, html, max);
+        })
+        .off('keydown')
+        .on('keydown', async (event) => {
+          if (event.key === "Enter") {
+            //await SpellPoints.handleSPBarValueChange(SpellPointsItem, event, html, max);
+            event.target.blur();
+          }
+        });
     }
+  }
+
+  static async handleSPBarValueChange(item, event, html, max) {
+    let newValue = parseInt($(event.target).val());
+    if (isNaN(newValue) || newValue < 0) {
+      newValue = 0;
+    }
+    if (newValue > max) {
+      newValue = max;
+    }
+    let spent = max - newValue;
+    await SpellPoints.updateSpellPointItem(item, newValue, max, spent);
+    let label = $('.progress.sp-points .label', html);
+    label.removeAttr('hidden');
+    $(event.target).attr('hidden', 'hidden');
   }
 
   static filterLevelKeys(obj, maxLevel) {

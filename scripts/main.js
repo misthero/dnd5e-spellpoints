@@ -5,7 +5,7 @@ import { checkUpdate } from "./update.js";
 export const SP_MODULE_NAME = 'dnd5e-spellpoints';
 export const SP_ITEM_ID = 'LUSjG8364p7LFY1u';
 
-//CONFIG.debug.hooks = true;
+// CONFIG.debug.hooks = true;
 
 (function () {
   function checkCondition(v1, operator, v2) {
@@ -47,6 +47,9 @@ Handlebars.registerHelper("spFormat", (path, ...args) => {
 
 Hooks.on('ready', async (x, y, z) => {
   checkUpdate();
+  /*CONFIG.Actor.trackableAttributes.character.bar = [...CONFIG.Actor.trackableAttributes.character.bar, 'dnd5eSpellPoints'];
+  CONFIG.Actor.trackableAttributes.npc.bar = [...CONFIG.Actor.trackableAttributes.npc.bar, 'dnd5eSpellPoints'];*/
+  //CONFIG.DND5E.consumableResources = [...(CONFIG.DND5E.consumableResources || []), 'dnd5eSpellPoints'];
 })
 
 
@@ -94,7 +97,6 @@ Hooks.on('init', () => {
   // helper function to use in macros or other scripts
   window.getSpellPointsItem = SpellPoints.getSpellPointsItem.bind(SpellPoints);
   window.alterSpellPoints = SpellPoints.alterSpellPoints.bind(SpellPoints);
-
 });
 
 /** spell launch dialog **/
@@ -116,7 +118,6 @@ Hooks.on("updateActor", SpellPoints.maybeUpdateSpellPoints); // this is used for
 Hooks.on("createItem", SpellPoints.calculateSpellPointsCreate);
 Hooks.on("preDeleteItem", SpellPoints.removeItemFlag);
 Hooks.on("preUpdateItem", SpellPoints.checkSpellPointsValues);
-
 Hooks.on("applyActiveEffect", SpellPoints.listenApplyActiveEffects);
 
 Hooks.on("renderActorSheet5eCharacter2", (app, html, data) => {

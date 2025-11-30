@@ -93,5 +93,8 @@
     "dnd5e-spellpoints.updateSpellPointMax": "Calculate Max {SpellPoints}",
     "dnd5e-spellpoints.updateSpellPointMaxTooltip": "Reset the max value according to your configuration.",
     "dnd5e-spellpoints.spClassSubtype": "Spell Points",
-    "dnd5e-spellpoints.spResourceBarActive": "View the spellpoints resource bar on the character sheet"
+    "dnd5e-spellpoints.spResourceBarActive": "View the spellpoints resource bar on the character sheet",
+    "dnd5e-spellpoints.spResourceBind": "Bind the Spell Points Item to an actor resource.",
+    "dnd5e-spellpoints.spResourceBindNote": "Choose a resource to bind to, or leave blank to disable binding. Each time the Spell Points Item is updated, it will also update the bound resource on the character sheet. Each time the resource is updated, the Spell Points Item will also be updated.",
+    "dnd5e-spellpoints.spResourceBindWarn": "Warning: Binding to a resource will overwrite the resource values on every actor with the Spell Points Item. Also the binded resource will appear on the character sheet favorites list. This cannot be prevented."
 }
