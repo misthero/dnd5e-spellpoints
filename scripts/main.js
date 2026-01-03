@@ -113,12 +113,12 @@ Hooks.on("renderActivitySheet", async (sheet, html) => {
   SpellPoints.alterActivityDialogSP(sheet, html);
 });
 
-Hooks.on("updateItem", SpellPoints.classItemUpdateSpellPoints);
-Hooks.on("updateActor", SpellPoints.maybeUpdateSpellPoints); // this is used for npcd
-Hooks.on("createItem", SpellPoints.calculateSpellPointsCreate);
-Hooks.on("preDeleteItem", SpellPoints.removeItemFlag);
-Hooks.on("preUpdateItem", SpellPoints.checkSpellPointsValues);
-Hooks.on("applyActiveEffect", SpellPoints.listenApplyActiveEffects);
+Hooks.on("updateItem", SpellPoints.spOnUpdateItem);
+Hooks.on("updateActor", SpellPoints.spOnUpdateActor);
+Hooks.on("createItem", SpellPoints.spOnCreateItem);
+Hooks.on("preDeleteItem", SpellPoints.spPreDeleteItem);
+Hooks.on("preUpdateItem", SpellPoints.spPreUpdateItem);
+Hooks.on("dnd5e.prepareSpellSlots", SpellPoints.updateActiveEffect);
 
 Hooks.on("renderActorSheet5eCharacter2", (app, html, data) => {
   SpellPoints.alterCharacterSheet(app, html, data, 'v2');

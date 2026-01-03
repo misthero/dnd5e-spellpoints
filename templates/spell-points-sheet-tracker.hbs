@@ -2,9 +2,11 @@
 <div class="meter-group sp-bar">
   <div class="label roboto-condensed-upper"><span>{{name}}</span>
     {{#if editable}}
-    <a class="config-button spellPoints" data-action="spellPoints" data-tooltip="{{localize "
-      dnd5e-spellpoints.ItemConfig"}} {{ name }}" aria-label="{{localize " dnd5e-spellpoints.ItemConfig"}} {{name}}"><i
-        class="fas fa-cog"></i></a>
+    <a class="config-button spellPoints" 
+      data-action="spellPoints" 
+      data-tooltip="{{localize "dnd5e-spellpoints.ItemConfig"}} {{ name }}" 
+      aria-label="{{localize "dnd5e-spellpoints.ItemConfig"}} {{name}}">
+      <i class="fas fa-cog"></i></a>
     {{/if}}
   </div>
   <div class="meter sectioned sp-points" data-item-id="{{_id}}" data-entry-id="{{_id}}" data-item-name="{{name}}">
@@ -23,9 +25,10 @@
   <div class="meter-group">
     <div class="label roboto-condensed-upper"><span>{{name}}</span>
       {{#if editable}}
-      <a class="config-button spellPoints" data-action="spellPoints" data-tooltip="{{localize "
-        dnd5e-spellpoints.ItemConfig"}} {{ name }}" aria-label="{{localize " dnd5e-spellpoints.ItemConfig"}}
-        {{name}}"><i class="fas fa-cog"></i></a>
+      <a class="config-button spellPoints" 
+      data-action="spellPoints" 
+      data-tooltip="{{localize "dnd5e-spellpoints.ItemConfig"}} {{ name }}" 
+      aria-label="{{localize "dnd5e-spellpoints.ItemConfig"}} {{name}}"><i class="fas fa-cog"></i></a>
       {{/if}}
     </div>
     <div class="meter sectioned sp-points" data-item-id="{{_id}}" data-entry-id="{{_id}}" data-item-name="{{name}}">

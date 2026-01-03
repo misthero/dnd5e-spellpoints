@@ -1,14 +1,15 @@
-2025/03/03-23:32:29.306 33f0 Recovering log #227
-2025/03/03-23:32:29.328 33f0 Delete type=0 #227
-2025/03/03-23:32:29.328 33f0 Delete type=3 #225
-2025/03/03-23:38:34.770 20f8 Level-0 table #232: started
-2025/03/03-23:38:34.774 20f8 Level-0 table #232: 5823 bytes OK
-2025/03/03-23:38:34.785 20f8 Delete type=0 #230
-2025/03/03-23:38:34.785 20f8 Manual compaction at level-0 from '!items!LUSjG8364p7LFY1u' @ 72057594037927935 : 1 .. '!items!LUSjG8364p7LFY1u' @ 0 : 0; will stop at '!items!LUSjG8364p7LFY1u' @ 32 : 1
-2025/03/03-23:38:34.785 20f8 Compacting 1@0 + 1@1 files
-2025/03/03-23:38:34.797 20f8 Generated table #233@0: 1 keys, 2968 bytes
-2025/03/03-23:38:34.797 20f8 Compacted 1@0 + 1@1 files => 2968 bytes
-2025/03/03-23:38:34.808 20f8 compacted to: files[ 0 1 0 0 0 0 0 ]
-2025/03/03-23:38:34.808 20f8 Delete type=2 #160
-2025/03/03-23:38:34.808 20f8 Delete type=2 #232
-2025/03/03-23:38:34.819 20f8 Manual compaction at level-0 from '!items!LUSjG8364p7LFY1u' @ 32 : 1 .. '!items!LUSjG8364p7LFY1u' @ 0 : 0; will stop at (end)
+2026/01/03-14:48:55.847 57a0 Recovering log #264
+2026/01/03-14:48:55.872 57a0 Delete type=0 #264
+2026/01/03-14:48:55.873 57a0 Delete type=3 #263
+2026/01/03-22:21:21.421 4fc0 Level-0 table #268: started
+2026/01/03-22:21:21.425 4fc0 Level-0 table #268: 12923 bytes OK
+2026/01/03-22:21:21.431 4fc0 Delete type=0 #266
+2026/01/03-22:21:21.455 4fc0 Manual compaction at level-0 from '!items!30ZCn2CYFkBuZnoh' @ 72057594037927935 : 1 .. '!items.effects!H4GTBdz7c5SwwZho.xRO3aQ5dixjXBoYJ' @ 0 : 0; will stop at '!items!LUSjG8364p7LFY1u' @ 34 : 1
+2026/01/03-22:21:21.455 4fc0 Compacting 2@0 + 1@1 files
+2026/01/03-22:21:21.462 4fc0 Generated table #269@0: 4 keys, 5137 bytes
+2026/01/03-22:21:21.462 4fc0 Compacted 2@0 + 1@1 files => 5137 bytes
+2026/01/03-22:21:21.472 4fc0 compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/01/03-22:21:21.472 4fc0 Delete type=2 #233
+2026/01/03-22:21:21.472 4fc0 Delete type=2 #245
+2026/01/03-22:21:21.473 4fc0 Delete type=2 #268
+2026/01/03-22:21:21.488 4fc0 Manual compaction at level-0 from '!items!LUSjG8364p7LFY1u' @ 34 : 1 .. '!items.effects!H4GTBdz7c5SwwZho.xRO3aQ5dixjXBoYJ' @ 0 : 0; will stop at (end)

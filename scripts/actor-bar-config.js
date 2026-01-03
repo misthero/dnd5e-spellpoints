@@ -76,17 +76,31 @@ export class ActorSpellPointsConfig extends dnd5e.applications.actor.BaseConfigS
     const item = this.document;
     const FormDataExtended = new foundry.applications.ux.FormDataExtended(form);
     const data = foundry.utils.expandObject(FormDataExtended.object);
+
+    // Store original values
+    const originalUses = foundry.utils.duplicate(item.system.uses);
+
     // Calculate spent based on max and value
     data.uses.spent = data.uses.max - data.uses.value;
 
-    // Merge the submitted data with the existing uses
-    submitData = foundry.utils.mergeObject(submitData?.system?.uses ?? {}, data.uses);
+    // Build delta object with only changed properties
+    const deltaUses = {};
 
-    // Merge the changes with the item's system.uses
+    // Only include uses.max if it changed
+    if (data.uses.max !== originalUses.max) {
+      deltaUses.max = data.uses.max;
+    }
+
+    // Only include uses.spent if uses.value changed (which triggers spent recalculation)
+    if (data.uses.value !== originalUses.value) {
+      deltaUses.spent = data.uses.spent;
+    }
+
+    // Merge the changes with the item's system.uses for local state
     const changedUses = foundry.utils.mergeObject(item.system.uses, data.uses);
 
-    // Await the super's _processSubmitData and then re-render
-    await super._processSubmitData(event, form, { [`system.uses`]: changedUses });
+    // Await the super's _processSubmitData with only changed properties
+    await super._processSubmitData(event, form, Object.keys(deltaUses).length > 0 ? { [`system.uses`]: deltaUses } : {});
     this.document.system.uses = changedUses;
     // Refresh the data context and re-render the sheet
     this.render();
