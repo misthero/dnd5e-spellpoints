@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.2.30]
+
+- Fixed binding spellpoints to a resource (primary, seconday, tertiary); This is just for tracking spellpoints where the item tracking is not supported by the system.
+- Updates UI template for tooltip/label consistency and fixes config button markup.
+- Added 2 new items to the module compendium as an example, a ring that increase the maximum spellpoints and a potion that restore spellpoints.
+
 ## [3.2.20]
 
 - New feature: bind the spellpoint item to an actor resource (primary, seconday, tertiary);
