@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.2.35]
+
+- Refined spellpoints.js to improve active effect modifier handling, clamping, and resource mirroring logic.
+- Updated README with clearer instructions for using active effects and added documentation for global resource tracking.
+
 ## [3.2.30]
 
 - Fixed binding spellpoints to a resource (primary, seconday, tertiary); This is just for tracking spellpoints where the item tracking is not supported by the system.
