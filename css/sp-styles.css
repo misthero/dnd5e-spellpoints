@@ -7,16 +7,16 @@
 
 .spError {
   text-align: center;
-  color: #b50e0e;
+  color: #d7c047;
   padding: 5px;
   background: #0001;
   border-radius: 3px;
   -webkit-font-smoothing: subpixel-antialiased;
-  border: 1px solid;
   margin: 5px 0;
   font-weight: 500;
   letter-spacing: 0.6px;
   box-shadow: 0 1px 1px #0003;
+  background: #ad2828;
 }
 
 .spEnable {

@@ -4,7 +4,7 @@
 
 [![Forge Installs][forge-installs]][forge-link] ![Foundry Version](https://img.shields.io/endpoint?label=Foundry%20VTT%20versions:&url=https://foundryshields.com/version?url=https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json)
 
-[![ko-fi](https://img.shields.io/badge/ko--fi-Support%20Me-red?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/misthero)
+[![ko-fi](https://img.shields.io/badge/ko--fi-Support%20Me-red?style=flat-square&logo=ko-fi)](https://ko-fi.com/misthero)
 
 #### FoundryVTT module for using  Spell Point in D&D5e.
 
@@ -129,7 +129,7 @@ ___
 
 To enable active effects for the spellpoints item, use the attribute key `dnd5espellpoints`. This key serves as an alias for the spellpoints item on the actor.
 
-Additionally, set the **Change Mode** to `Custom`. By default, the provided value will override the property. To modify the property instead, prepend:
+Additionally, if you set the **Change Mode** to `Custom`, prepend:
 
 - `+` to add the value
 - `-` to subtract the value
@@ -139,12 +139,16 @@ Additionally, set the **Change Mode** to `Custom`. By default, the provided valu
 
 | Attribute Key                              | Change Mode | Value                         | Expected Result                         |
 |:--------------------------------------------|:------------|:------------------------------|:----------------------------------------|
-| `dnd5espellpoints.system.uses.max`         | Custom      | `5`                           | Set the maximum uses to 5               |
-| `dnd5espellpoints.system.uses.max`         | Custom      | `+5`                          | Increase the maximum uses by 5          |
+| `dnd5espellpoints.system.uses.max`         | Add          | `5`                           | Set the maximum uses to 5               |
+| `dnd5espellpoints.system.uses.max`         | Custom      | `+(@details.level *2)`          | Increase the maximum uses by character level times 2          |
 | `dnd5espellpoints.system.uses.max`         | Custom      | `-5`                          | Decrease the maximum uses by 5          |
-| `dnd5espellpoints.system.uses.max`         | Custom      | `*5`                          | Multiply the maximum uses by 5          |
+| `dnd5espellpoints.system.uses.max`         | Multiply      | `5`                          | Multiply the maximum uses by 5          |
 
 You can also use formulas in the Value field. For example, `+floor(@abilities.cha.value/4)` adds the Charisma modifier to the spellpoints total.
+
+## Global Resource tracking
+
+If you need to see the spellpoints bar or values in other modules, or in combat tracker or other places where the consumable item is not supported by default, you can choose to bind the spellpoints values to one of the actor resources (primary, secondary, tertiary). Those are hidden by default. In the module settings choose the resource that would track spellpoints. You cannot edit that resource values, it will always mirror the Spellpoint Item uses. Also the resource will always be set as favorite by the dnd5e system when it's being utilized and is not possible to remove it from there.
 
 ___
 ### Macro Helpers
