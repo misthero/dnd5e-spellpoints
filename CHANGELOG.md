@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.2.36]
+
+- Fix custom mode calculations and resource checks
+
 ## [3.2.35]
 
 - Refined spellpoints.js to improve active effect modifier handling, clamping, and resource mirroring logic.

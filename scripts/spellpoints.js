@@ -339,13 +339,7 @@ export class SpellPoints {
       // Apply the operation
       switch (change.mode) {
         case 0: // CUSTOM (applyOperator)
-          if (operator) {
-            // If an operator is found, apply it
-            workingUses[usesKey] = applyOperator(modValue, operator, currentValue);
-          } else {
-            // If no operator, replace the value directly
-            workingUses[usesKey] = currentValue + modValue;
-          }
+          workingUses[usesKey] = originalUses[usesKey] + modValue;
           break;
         case 1: // MULTIPLY
           workingUses[usesKey] = currentValue * modValue;
@@ -1144,73 +1138,6 @@ export class SpellPoints {
   }
 
   /**
-   * Recalculates modifiers for a specific uses property by applying active effects
-   * @param {Item} item - The spell points item
-   * @param {string} property - The property to recalculate ('max', 'value', or 'spent')
-   * @param {number} baseValue - The new base value for this property
-   * @return {number} The modifier delta for this property
-   */
-  static calculatePropertyModifier(item, property, baseValue) {
-    const actor = item.parent;
-
-    // If actor has no appliedEffects, return zero modifier
-    if (!actor?.appliedEffects || !Array.isArray(actor.appliedEffects)) {
-      return 0;
-    }
-
-    // Gather all changes from appliedEffects that target this specific property
-    let changes = [];
-    for (const effect of actor.appliedEffects) {
-      if (!effect?.changes || !Array.isArray(effect.changes)) continue;
-      for (const change of effect.changes) {
-        if (typeof change.key === "string" && change.key === `dnd5espellpoints.system.uses.${property}`) {
-          changes.push({
-            ...change,
-            priority: change.priority ?? 0
-          });
-        }
-      }
-    }
-
-    // Sort changes by priority ascending (lowest first)
-    changes.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
-
-    // Start with the base value and apply all changes
-    let workingValue = baseValue;
-
-    // Apply each change in order
-    for (const change of changes) {
-      let currentValue = workingValue;
-
-      // Evaluate the formula
-      let modValue = 0;
-      try {
-        modValue = Roll.create(change.value, actor).evaluateSync({ strict: false }).total;
-      } catch (e) {
-        continue; // skip if formula fails
-      }
-
-      // Apply the operation
-      switch (change.mode) {
-        case 0: // CUSTOM (replace)
-          workingValue = modValue;
-          break;
-        case 1: // MULTIPLY
-          workingValue = currentValue * modValue;
-          break;
-        case 2: // ADD
-          workingValue = currentValue + modValue;
-          break;
-        default:
-          break;
-      }
-    }
-
-    // Return the modifier (difference from base)
-    return workingValue - baseValue;
-  }
-
-  /**
    * Reverses previously applied modifiers from a base value for a specific property.
    * This is used when a property (like max) is manually edited to re-anchor effects
    * to the new baseline value.
@@ -1388,6 +1315,9 @@ export class SpellPoints {
   static maybeUpdateTrackedResource(item, max, value) {
     const trackedResource = SpellPoints.settings.spResourceBind;
     const actor = item.parent;
+    if (!trackedResource || trackedResource === "" || !actor) {
+      return;
+    }
     // Define the possible resources
     const resources = ["primary", "secondary", "tertiary"];
 
