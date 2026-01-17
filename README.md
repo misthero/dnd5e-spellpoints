@@ -5,7 +5,16 @@
 [![Forge Installs][forge-installs]][forge-link] ![Foundry Version](https://img.shields.io/endpoint?label=Foundry%20VTT%20versions:&url=https://foundryshields.com/version?url=https://raw.githubusercontent.com/misthero/dnd5e-spellpoints/main/module.json)
 
 ## Buy me a coffee:
-[![ko-fi](https://img.shields.io/badge/ko--fi-Support%20Me-red?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/misthero)
+<!-- [![ko-fi](https://img.shields.io/badge/ko--fi-Support%20Me-red?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/misthero) -->
+<a href="https://ko-fi.com/misthero" target="blank">
+  <img
+    src="https://img.shields.io/badge/ko--fi-Support%20Me-red?style=for-the-badge&logo=ko-fi"
+    alt="Buy me a coffee"
+    width="300"
+  />
+</a>
+
+___
 
 #### Foundry VTT module for using  Spell Point in D&D5e.
 
