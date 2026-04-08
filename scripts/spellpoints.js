@@ -1520,13 +1520,36 @@ export class SpellPoints {
   }
 
   static async handleSPBarValueChange(item, event, html, max) {
-    let newValue = parseInt($(event.target).val());
-    if (isNaN(newValue) || newValue < 0) {
+    const inputValue = $(event.target).val().trim();
+    const currentValue = item.system.uses.value;
+
+    let newValue;
+
+    // Check if input starts with + or -
+    if (inputValue.startsWith('+') || inputValue.startsWith('-')) {
+      // Relative change: add or subtract from current value
+      const relativeChange = parseInt(inputValue);
+      if (isNaN(relativeChange)) {
+        newValue = currentValue; // Keep current value if invalid
+      } else {
+        newValue = currentValue + relativeChange;
+      }
+    } else {
+      // Absolute value: set directly
+      newValue = parseInt(inputValue);
+      if (isNaN(newValue)) {
+        newValue = currentValue; // Keep current value if invalid
+      }
+    }
+
+    // Clamp value between 0 and max
+    if (newValue < 0) {
       newValue = 0;
     }
     if (newValue > max) {
       newValue = max;
     }
+
     let spent = max - newValue;
     await SpellPoints.updateSpellPointItem(item, newValue, null, spent);
     let label = $('.progress.sp-points .label', html);

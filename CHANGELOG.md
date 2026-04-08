@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.2.40]
+
+- Support relative changes in spell point bar input
+
 ## [3.2.36]
 
 - Fix custom mode calculations and resource checks
