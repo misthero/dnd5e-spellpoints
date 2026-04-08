@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.00]
+
+- Foundry v14 compatibility
+
 ## [3.2.40]
 
 - Support relative changes in spell point bar input
