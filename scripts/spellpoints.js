@@ -495,7 +495,7 @@ export class SpellPoints {
     }
 
     /** find the spell level just cast */
-    const spellLvl = consumeConfig.isCantrip ? 0 : options.data.system.spellLevel;
+    const spellLvl = consumeConfig.isCantrip ? 0 : isset(options?.data?.flags?.dnd5e?.use?.spellLevel) ? options.data.flags.dnd5e.use.spellLevel : options.data.system.spellLevel;
 
     const currentUses = spellPointItem.system.uses;
     let remainingUses = {

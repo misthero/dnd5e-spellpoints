@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.01]
+
+- Revert minimum compatiblity
+
 ## [3.3.00]
 
 - Foundry v14 compatibility
