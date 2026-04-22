@@ -38,8 +38,7 @@ export class ActorSpellPointsConfig extends dnd5e.applications.actor.BaseConfigS
     context = await super._preparePartContext(partId, context, options);
     const actor = this.document.parent;
 
-    context.uses = this.document.system.uses;
-    context.uses.value = context.uses.max - context.uses.spent;
+    context.uses = foundry.utils.duplicate(this.document.system.uses);
     context.img = this.document.img;
     context.name = this.document.name;
     context.recovery = game.system.config.limitedUsePeriods;

@@ -47,6 +47,11 @@ function applyOperator(value1, operator, value2) {
   }
 }
 
+function toFiniteNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
 export class SpellPoints {
   static get settings() {
     return foundry.utils.mergeObject(this.defaultSettings, game.settings.get(SP_MODULE_NAME, 'settings'), { insertKeys: true, insertValues: true });
@@ -259,34 +264,54 @@ export class SpellPoints {
       return;
     }
 
-    // Build update object with only non-null properties
-    const updateObj = {};
+    const currentUses = item.system.uses ?? {};
+    const nextUses = {
+      max: max !== null ? max : currentUses.max,
+      value: value !== null ? value : currentUses.value,
+      spent: spent !== null ? spent : currentUses.spent
+    };
 
-    if (max !== null) {
-      updateObj[`system.uses.max`] = max;
+    const preference = (spent !== null && value === null) ? "spent" : "value";
+    const normalizedUses = SpellPoints.normalizeUses(nextUses, preference);
+
+    const hasChanges = ["max", "value", "spent"].some((key) => normalizedUses[key] !== currentUses[key]);
+    if (!hasChanges) {
+      return;
     }
 
-    if (value !== null) {
-      updateObj[`system.uses.value`] = value;
-      updateObj[`system.uses.spent`] = max !== null ? max - value : item.system.uses.max - value;
-    }
-
-    if (spent !== null) {
-      updateObj[`system.uses.spent`] = spent;
-      updateObj[`system.uses.value`] = spent >= item.system.uses.max ? 0 : item.system.uses.max - spent;
-    }
-
-    // Only perform update if there's something to update
-    if (Object.keys(updateObj).length > 0) {
-      item.update(updateObj);
-    }
+    item.update({
+      "system.uses.max": normalizedUses.max,
+      "system.uses.value": normalizedUses.value,
+      "system.uses.spent": normalizedUses.spent
+    });
   }
 
-  static getActiveEffectsModifiers(item) {
-    // Clone the original uses object to avoid mutating the item
-    let originalUses = foundry.utils.duplicate(item.system.uses);
+  static normalizeUses(uses, preference = "value") {
+    const normalizedMax = Math.max(0, Math.trunc(toFiniteNumber(uses?.max, 0)));
+    let normalizedValue = toFiniteNumber(uses?.value, normalizedMax);
+    let normalizedSpent = toFiniteNumber(uses?.spent, normalizedMax - normalizedValue);
 
-    console.log(`Original uses:`, originalUses);
+    if (preference === "spent") {
+      normalizedSpent = Math.max(0, Math.min(Math.trunc(normalizedSpent), normalizedMax));
+      normalizedValue = normalizedMax - normalizedSpent;
+    } else {
+      normalizedValue = Math.max(0, Math.min(Math.trunc(normalizedValue), normalizedMax));
+      normalizedSpent = normalizedMax - normalizedValue;
+    }
+
+    return {
+      max: normalizedMax,
+      value: normalizedValue,
+      spent: normalizedSpent
+    };
+  }
+
+  static getActiveEffectsModifiers(item, baseUses = null) {
+    // Clone the original uses object to avoid mutating the item
+    // PHASE 2 FIX: Use provided baseUses for effect calculation; otherwise fall back to item.system.uses
+    let originalUses = baseUses ? foundry.utils.duplicate(baseUses) : foundry.utils.duplicate(item.system.uses);
+
+    console.log(`Original uses for effect calculation:`, originalUses);
     const actor = item.parent;
 
     // If actor has no appliedEffects, return zero modifiers
@@ -297,6 +322,8 @@ export class SpellPoints {
     // Gather all changes from appliedEffects that target dnd5espellpoints
     let changes = [];
     for (const effect of actor.appliedEffects) {
+      // dnd5e-compatible applicability: ignore effects that are disabled or suppressed
+      if (effect?.disabled || effect?.isSuppressed) continue;
       if (!effect?.changes || !Array.isArray(effect.changes)) continue;
       for (const change of effect.changes) {
         if (typeof change.key === "string" && change.key.startsWith("dnd5espellpoints.")) {
@@ -528,7 +555,7 @@ export class SpellPoints {
 
     const currentUses = spellPointItem.system.uses;
     let remainingUses = {
-      'value': currentUses.max - currentUses.spent,
+      'value': currentUses.value,
       'spent': currentUses.spent,
     }
 
@@ -642,14 +669,63 @@ export class SpellPoints {
     return [item, consumeConfig, options];
   }
 
-  static updateActiveEffect(spells, actor) {
+  static async updateActiveEffect(spells, actor) {
+    if (!actor) {
+      return;
+    }
+
     const item = SpellPoints.getSpellPointsItem(actor);
     if (!item) {
       //console.warn("SpellPoints.updateActiveEffect: No spell points item found for actor", actor);
       return;
     }
-    //Hooks.call("preUpdateItem", item, { update: 'activeEffects' });
-    item.update({});
+
+    // Only force an item refresh when active-effect modifiers actually changed.
+    // This avoids infinite update loops from repeated prepare/render cycles.
+    const previousModifiers = actor?.flags?.[SP_MODULE_NAME]?.modifiers || { max: 0, value: 0, spent: 0 };
+    const effectBaseUses = {
+      max: item.system.uses.max - (previousModifiers.max ?? 0),
+      value: item.system.uses.value - (previousModifiers.value ?? 0),
+      spent: item.system.uses.spent - (previousModifiers.spent ?? 0)
+    };
+    const currentModifiers = SpellPoints.getActiveEffectsModifiers(item, effectBaseUses);
+
+    const modifiersChanged = ["max", "value", "spent"].some((key) => {
+      const prev = previousModifiers[key] ?? 0;
+      const curr = currentModifiers[key] ?? 0;
+      return prev !== curr;
+    });
+
+    // Also force a refresh when the stored sentUses has drifted from the actual item state.
+    // This recovers from corrupted state (e.g. item.max=27 but sentUses.max=32 and modifiers={max:5}
+    // → effectBaseUses.max=22, currentMod=5=previousMod → modifiersChanged=false → stuck forever).
+    const previousSentUses = actor?.flags?.[SP_MODULE_NAME]?.sentUses;
+    const itemStateConsistent = !previousSentUses || ["max", "value", "spent"].every(
+      (key) => previousSentUses[key] === item.system.uses[key]
+    );
+
+    if (!modifiersChanged && itemStateConsistent) {
+      return;
+    }
+
+    await item.update({});
+  }
+
+  static async onActiveEffectChange(effect) {
+    const parent = effect?.parent;
+    if (!parent) {
+      return;
+    }
+
+    const actor = parent.documentName === "Actor"
+      ? parent
+      : (parent.actor || parent.parent);
+
+    if (!actor) {
+      return;
+    }
+
+    await SpellPoints.updateActiveEffect(null, actor);
   }
 
   /*
@@ -748,7 +824,7 @@ export class SpellPoints {
     let optionLevel = 'none';
     let cost = 0;
 
-    let actualSpellPoints = spellPointItem.system.uses.max - spellPointItem.system.uses.spent;
+    let actualSpellPoints = spellPointItem.system.uses.value;
 
     /** Replace list of spell slots with list of spell point costs **/
     if (usageConfig.consume.spellPoints && !usageConfig?.isCantrip) {
@@ -1053,10 +1129,38 @@ export class SpellPoints {
   }
 
   static async spOnUpdateItem(item, update, action, id) {
+    // Refresh spellpoint active-effect modifiers when item suppression state may change
+    // (equipped / attuned / attunement requirement transitions).
+    await SpellPoints.maybeRefreshSpellPointsFromSuppressionState(item, update);
+
     if (item.type !== 'class') {
       return;
     }
     return SpellPoints.classItemUpdateSpellPoints(item, update, action, id);
+  }
+
+  static isSuppressionAffectingItemUpdate(update) {
+    if (!update) return false;
+    return foundry.utils.hasProperty(update, "system.equipped")
+      || foundry.utils.hasProperty(update, "system.attuned")
+      || foundry.utils.hasProperty(update, "system.attunement");
+  }
+
+  static async maybeRefreshSpellPointsFromSuppressionState(item, update) {
+    if (!SpellPoints.isSuppressionAffectingItemUpdate(update)) {
+      return;
+    }
+
+    const actor = item?.parent;
+    if (!actor || !SpellPoints.isActorCharacter(actor)) {
+      return;
+    }
+
+    if (!SpellPoints.userHasActorOwnership(actor)) {
+      return;
+    }
+
+    await SpellPoints.updateActiveEffect(null, actor);
   }
 
   /**
@@ -1167,39 +1271,33 @@ export class SpellPoints {
   }
 
   /**
-   * Reverses previously applied modifiers from a base value for a specific property.
-   * This is used when a property (like max) is manually edited to re-anchor effects
-   * to the new baseline value.
-   *
-   * @param {number} baseValue - The new base value for the property
-   * @param {number} previousModifier - The previously applied modifier for this property
-   * @returns {number} The base value with previous modifiers reversed
-   */
-  static reverseModifiersForProperty(baseValue, previousModifier) {
-    // Subtract the previous modifier to get the un-modified base
-    // If previousModifier was +5, we subtract 5 to reverse it
-    // If previousModifier was -5, we subtract -5 (add 5) to reverse it
-    return baseValue - previousModifier;
-  }
-
-  /**
    * Applies active effect modifiers to uses values while tracking previous modifiers
    * to avoid duplicate applications. Returns adjusted uses values.
    *
    * Behavior differs based on which property is being modified:
-   * - For max: Previous modifiers are reversed (effect is re-anchored to new baseline)
-   * - For value/spent: Modifiers are delta-applied (effects already considered included)
+   * - For properties flagged in reverseForProperties (currently max on manual edits):
+   *   use current base value and apply current modifier directly.
+   * - For other properties: apply delta between current and previous modifiers.
    *
    * @param {Item} item - The spell points item
    * @param {Object} baseUses - The base uses values (max, value, spent)
    * @param {Object} reverseForProperties - Properties to reverse modifiers for (e.g., { max: true })
+   * @param {Object} effectBaseUses - PHASE 2 FIX: Base uses for effect calculation (defaults to baseUses if not provided)
    * @return {Object} An object containing adjusted uses and current modifiers
    */
-  static applyActiveEffectModifiers(item, baseUses, reverseForProperties = {}) {
+  static applyActiveEffectModifiers(item, baseUses, reverseForProperties = {}, effectBaseUses = null) {
+    // PHASE 2 FIX: Use provided effectBaseUses for effect calculation, otherwise use baseUses
+    if (!effectBaseUses) {
+      effectBaseUses = baseUses;
+    }
+
     // Get current modifiers from active effects
-    const currentModifiers = SpellPoints.getActiveEffectsModifiers(item);
+    // PHASE 2 FIX: Pass effectBaseUses so modifiers calculate against unmodified baseline
+    const currentModifiers = SpellPoints.getActiveEffectsModifiers(item, effectBaseUses);
     // Get previously stored modifiers (or default to zero)
-    const previousModifiers = item.flags?.spellpoints?.modifiers || { max: 0, value: 0, spent: 0 };
+    // Read from actor flags because modifier tracking state is actor-scoped.
+    const actor = item.parent;
+    const previousModifiers = actor?.flags?.[SP_MODULE_NAME]?.modifiers || { max: 0, value: 0, spent: 0 };
 
     // Calculate the delta for each property
     const adjustedUses = { max: baseUses.max, value: baseUses.value, spent: baseUses.spent };
@@ -1209,14 +1307,11 @@ export class SpellPoints {
       const previousMod = previousModifiers[key] ?? 0;
 
       if (reverseForProperties[key]) {
-        // For manually-edited properties (like max): reverse previous modifiers to de-anchor,
-        // then re-apply current modifiers. This treats the manual edit as a new baseline.
-        //adjustedUses[key] = SpellPoints.reverseModifiersForProperty(adjustedUses[key], previousMod);
-        //adjustedUses[key] = adjustedUses[key] + currentMod;
+        // For manually-edited properties (like max): treat the manual value as the new base,
+        // then apply only the current modifier snapshot.
         adjustedUses[key] = baseUses[key] + currentMod;
       } else {
-        // For non-manually-edited properties (like value/spent): apply delta between
-        // current and previous modifiers. This preserves effect inclusion in manual edits.
+        // For non-manually-edited properties: apply modifier delta from previous snapshot.
         const delta = currentMod - previousMod;
         if (delta !== 0) {
           adjustedUses[key] = adjustedUses[key] + delta;
@@ -1237,6 +1332,7 @@ export class SpellPoints {
     if (!SpellPoints.isSpellPointsItem(item)) {
       return;
     }
+
     const clonedItem = foundry.utils.deepClone(item);
     const cloneUpdate = foundry.utils.deepClone(update);
     console.log("preUpdateItem for spell points item", { clonedItem, cloneUpdate, difference, id });
@@ -1245,102 +1341,168 @@ export class SpellPoints {
     let max, value, spent;
     let changed_uses, changed_max, changed_value, changed_spent = false;
 
-    if (update.system?.uses?.max !== undefined && update.system?.uses?.max !== null) {
-      max = parseInt(update.system.uses.max);
+    // Get actor for flag storage
+    const actor = item.parent;
+
+    // PHASE 1 FIX: Recover previous state from ACTOR flags (not item flags)
+    // This avoids triggering item updates just for tracking state
+    // Store the ACTUAL values we sent last time (including effects), not calculated base
+    // This allows accurate change detection on the next update
+    const previousModifiers = actor?.flags?.[SP_MODULE_NAME]?.modifiers || { max: 0, value: 0, spent: 0 };
+    const previousSentUses = actor?.flags?.[SP_MODULE_NAME]?.sentUses || {
+      max: item.system.uses.max,
+      value: item.system.uses.value,
+      spent: item.system.uses.spent
+    };
+
+    console.log("Previous sent uses:", previousSentUses);
+    console.log("Previous modifiers:", previousModifiers);
+
+    // Extract incoming values from update (always present per user confirmation)
+    let incomingMax = update.system?.uses?.max !== undefined && update.system?.uses?.max !== null
+      ? parseInt(update.system.uses.max)
+      : item.system.uses.max;
+    let incomingValue = update.system?.uses?.value !== undefined && update.system?.uses?.value !== null
+      ? parseInt(update.system.uses.value)
+      : item.system.uses.value;
+    let incomingSpent = update.system?.uses?.spent !== undefined && update.system?.uses?.spent !== null
+      ? parseInt(update.system.uses.spent)
+      : item.system.uses.spent;
+
+    // PHASE 1 FIX: Detect TRUE changes by comparing against previous base values (not modified current)
+    // This prevents re-applying effects when user only changes spent but form sends all fields
+    if (incomingMax !== previousSentUses.max) {
+      max = incomingMax;
       changed_uses = true;
       changed_max = true;
+      console.log(`Max changed from previous ${previousSentUses.max} to ${incomingMax}`);
     } else {
-      max = item.system.uses.max
+      max = incomingMax;
+      console.log(`Max unchanged (previous: ${previousSentUses.max}, incoming: ${incomingMax})`);
     }
 
-    if (update.system?.uses?.value !== undefined && update.system?.uses?.value !== null) {
-      value = parseInt(update.system.uses.value);
+    if (incomingValue !== previousSentUses.value) {
+      value = incomingValue;
       changed_uses = true;
       changed_value = true;
+      console.log(`Value changed from previous ${previousSentUses.value} to ${incomingValue}`);
     } else {
-      value = item.system.uses.value
+      value = incomingValue;
+      console.log(`Value unchanged (previous: ${previousSentUses.value}, incoming: ${incomingValue})`);
     }
 
-    if (update.system?.uses?.spent !== undefined && update.system?.uses?.spent !== null) {
-      spent = parseInt(update.system.uses.spent);
+    if (incomingSpent !== previousSentUses.spent) {
+      spent = incomingSpent;
       changed_uses = true;
       changed_spent = true;
+      console.log(`Spent changed from previous ${previousSentUses.spent} to ${incomingSpent}`);
     } else {
-      spent = item.system.uses.spent
+      spent = incomingSpent;
+      console.log(`Spent unchanged (previous: ${previousSentUses.spent}, incoming: ${incomingSpent})`);
     }
 
     // Apply active effect modifiers and get adjusted values
+    // PHASE 2 FIX: Pass baseUses so effects calculate against unmodified baseline, not modified current
     const baseUses = { max, value, spent };
     const { adjusted: adjustedUses, currentModifiers } = SpellPoints.applyActiveEffectModifiers(
       item,
       baseUses,
-      { max: changed_max } // reverse modifiers only for max if it was manually changed
+      { max: changed_max }, // reverse modifiers only for max if it was manually changed
+      baseUses // PHASE 2 FIX: Pass base uses for effect calculation
     );
 
-    // After applying effects to max, ensure value is clamped to the new max
-    let finalMax = adjustedUses.max;
-    let finalValue = adjustedUses.value;
-    let finalSpent = adjustedUses.spent;
+    const effectChangedMax = adjustedUses.max !== item.system.uses.max;
+    const effectChangedValue = adjustedUses.value !== item.system.uses.value;
+    const effectChangedSpent = adjustedUses.spent !== item.system.uses.spent;
 
-    // If max changed (by effect or manual edit), clamp value to stay within bounds
-    if (finalValue > finalMax) {
-      finalValue = finalMax;
-    }
-
-    // Recalculate spent based on the final max and value ONLY if spent wasn't explicitly changed
-    // If spent was explicitly updated (e.g., during rest), respect that value
-    if (!changed_spent) {
-      finalSpent = finalMax - finalValue;
-    } else {
-      // spent was explicitly changed, so update value to match
-      finalValue = finalMax - finalSpent;
-    }
-
-    // Ensure update object has system.uses structure
-    if (!update.system) {
-      update.system = {};
-    }
-    if (!update.system.uses) {
-      update.system.uses = {};
+    let normalizationPreference = "value";
+    if (changed_value) {
+      normalizationPreference = "value";
+    } else if (changed_max) {
+      // max change takes priority over derived-spent changes: when updateSpellPointItem
+      // normalizes a max-only write it also emits a new spent value, which looks like
+      // changed_spent but is just a derivation — we must not let it override the intent.
+      normalizationPreference = "value";
+    } else if (changed_spent) {
+      // only true spent-only edits (no max change involved) use spent preference
+      normalizationPreference = "spent";
+    } else if (effectChangedSpent) {
+      normalizationPreference = "spent";
+    } else if (effectChangedValue) {
+      normalizationPreference = "value";
+    } else if (effectChangedMax) {
+      normalizationPreference = "value";
     }
 
-    // Apply adjusted values to the update object
-    if (changed_max || finalMax !== item.system.uses.max) {
-      update.system.uses.max = finalMax;
-    }
-    if (changed_value || finalValue !== item.system.uses.value) {
-      update.system.uses.value = finalValue;
-    }
-    if (changed_spent || finalSpent !== item.system.uses.spent) {
-      update.system.uses.spent = finalSpent;
-    }
+    const usesChanges = SpellPoints.normalizeUses(adjustedUses, normalizationPreference);
+    // Compare against BOTH the current item state AND the incoming values.
+    // The incoming update may undo a previously-applied effect (e.g. "calculate max" writes
+    // formula max=27 while ring is equipped, so adjusted=32 == current item=32 → no item diff,
+    // but the incoming would corrupt the state to 27 if we let it through uncorrected).
+    const incomingUses = { max: incomingMax, value: incomingValue, spent: incomingSpent };
+    const hasUsesChanges = ["max", "value", "spent"].some((key) =>
+      usesChanges[key] !== item.system.uses[key] || usesChanges[key] !== incomingUses[key]
+    );
 
-    // Store current modifiers for next preupdate
-    update.flags = foundry.utils.mergeObject(update?.flags || {}, {
-      spellpoints: {
-        modifiers: currentModifiers
+    // Only set system.uses in update if we have changes
+    if (hasUsesChanges) {
+      if (!update.system) {
+        update.system = {};
       }
-    });
+      update.system.uses = {
+        max: usesChanges.max,
+        value: usesChanges.value,
+        spent: usesChanges.spent
+      };
 
-    if (!isset(item.flags?.spellpoints?.config)) {
-      // get global module settings for defaults
-      const def = SpellPoints.settings;
-      const formulas = SpellPoints.formulas;
-      // store current item configuration
-      let conf = isset(item.flags?.spellpoints?.config) ? item.flags?.spellpoints?.config : {};
+      // Store modifiers/baseUses in ACTOR flags (not item flags) to avoid item re-updates
+      // This prevents unnecessary item updates when just calculating effects
+      const safeCurrentModifiers = {
+        max: typeof currentModifiers.max === 'number' ? currentModifiers.max : 0,
+        value: typeof currentModifiers.value === 'number' ? currentModifiers.value : 0,
+        spent: typeof currentModifiers.spent === 'number' ? currentModifiers.spent : 0
+      };
 
-      conf = foundry.utils.mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
-      const preset = conf.spFormula;
+      const newSentUses = {
+        max: usesChanges.max,
+        value: usesChanges.value,
+        spent: usesChanges.spent
+      };
 
-      conf.isCustom = formulas[preset].isCustom;
+      // Store to actor flags asynchronously to avoid recursion
+      if (actor) {
+        actor.setFlag(SP_MODULE_NAME, 'modifiers', safeCurrentModifiers);
+        actor.setFlag(SP_MODULE_NAME, 'sentUses', newSentUses);
+        console.log("Storing new sent uses in actor flags:", newSentUses);
+      }
 
-      update.flags.spellpoints = foundry.utils.mergeObject(update.flags.spellpoints, {
-        [`config`]: item.flags?.spellpoints?.override ? conf : {},
-        [`override`]: item.flags?.spellpoints?.override
-      });
+      // Only initialize config if it doesn't exist (one-time setup) - stored in item
+      if (!isset(item.flags?.spellpoints?.config)) {
+        const def = SpellPoints.settings;
+        const formulas = SpellPoints.formulas;
+        let conf = {};
+
+        conf = foundry.utils.mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
+        const preset = conf.spFormula;
+
+        conf.isCustom = formulas[preset].isCustom;
+
+        update.flags = foundry.utils.mergeObject(update?.flags || {}, {
+          spellpoints: {
+            [`config`]: item.flags?.spellpoints?.override ? conf : {},
+            [`override`]: item.flags?.spellpoints?.override
+          }
+        });
+      }
+    } else {
+      console.log("No uses changes - skipping flag update to avoid unnecessary item re-update");
     }
 
-    SpellPoints.maybeUpdateTrackedResource(item, adjustedUses.max, adjustedUses.value);
+    // Only call maybeUpdateTrackedResource if we actually changed uses
+    if (hasUsesChanges) {
+      SpellPoints.maybeUpdateTrackedResource(item, usesChanges.max, usesChanges.value);
+    }
+
     return [item, update, difference, id];
   }
   /* update the tracked resource if needed */
@@ -1469,8 +1631,7 @@ export class SpellPoints {
       //const computedValues = await SpellPoints.getComputedValues(SpellPointsItem, actor);
       //console.log("alterCharacterSheet Spell Points Computed Values:", computedValues);
       const max = SpellPointsItem.system.uses.max;
-      const spent = SpellPointsItem.system.uses.spent;
-      const value = max - spent;
+      const value = SpellPointsItem.system.uses.value;
 
       let percent = value / max * 100 > 100 ? 100 : value / max * 100;
       const template_data = {

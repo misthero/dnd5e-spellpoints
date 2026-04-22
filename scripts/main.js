@@ -118,7 +118,9 @@ Hooks.on("updateActor", SpellPoints.spOnUpdateActor);
 Hooks.on("createItem", SpellPoints.spOnCreateItem);
 Hooks.on("preDeleteItem", SpellPoints.spPreDeleteItem);
 Hooks.on("preUpdateItem", SpellPoints.spPreUpdateItem);
-Hooks.on("dnd5e.prepareSpellSlots", SpellPoints.updateActiveEffect);
+Hooks.on("createActiveEffect", SpellPoints.onActiveEffectChange);
+Hooks.on("updateActiveEffect", SpellPoints.onActiveEffectChange);
+Hooks.on("deleteActiveEffect", SpellPoints.onActiveEffectChange);
 
 Hooks.on("renderActorSheet5eCharacter2", (app, html, data) => {
   SpellPoints.alterCharacterSheet(app, html, data, 'v2');
