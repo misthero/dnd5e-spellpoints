@@ -15,6 +15,7 @@ function isEmpty(obj) {
  * @returns {string|null} The operator if found, null if no operator
  */
 function extractOperator(str) {
+  if (typeof str !== 'string' && typeof str === 'number') return '+'; // Default to addition for numeric values
   // List of valid operators to check
   const operators = ['+', '-', '*', '/', '%'];
 
@@ -284,6 +285,8 @@ export class SpellPoints {
   static getActiveEffectsModifiers(item) {
     // Clone the original uses object to avoid mutating the item
     let originalUses = foundry.utils.duplicate(item.system.uses);
+
+    console.log(`Original uses:`, originalUses);
     const actor = item.parent;
 
     // If actor has no appliedEffects, return zero modifiers
@@ -316,35 +319,57 @@ export class SpellPoints {
 
     // Apply each change in order
     for (const change of changes) {
+      console.log(`Processing change:`, change);
       // Extract the path after "dnd5espellpoints."
       const path = change.key.slice("dnd5espellpoints.".length);
       // Only allow changes to system.uses properties
       if (!path.startsWith("system.uses.")) continue;
       const usesKey = path.split(".")[2]; // e.g., "max", "value", "spent"
+      console.log(`Applying change to ${usesKey}:`, change);
+      console.log(`workingUses`, workingUses);
       if (!workingUses.hasOwnProperty(usesKey)) continue;
 
       // Get the current value
       let currentValue = workingUses[usesKey];
 
+      console.log(`Current value for ${usesKey}:`, currentValue);
+
       // Evaluate the formula (may be a number or a rollable string)
       let modValue = 0;
+      const rawValue = change.value;
       const operator = extractOperator(change.value);
+      console.log(`Extracted operator:`, operator, `from change value:`, change.value);
       try {
-        //modValue = await SpellPoints.withActorData(change.value, actor);
-        modValue = Roll.create(change.value, actor.getRollData()).evaluateSync({ strict: false }).total;
+        if (typeof rawValue === "number") {
+          modValue = rawValue;
+        } else if (typeof rawValue === "string") {
+          const formula = rawValue.trim();
+          if (formula.length === 0) continue;
+          modValue = Roll.create(formula, actor.getRollData()).evaluateSync({ strict: false }).total;
+        } else {
+          continue;
+        }
       } catch (e) {
+        console.warn(`Failed to evaluate formula: ${change.value} for actor: ${actor.name}`, e);
         continue; // skip if formula fails
       }
 
+      console.log(`Evaluated modValue:`, modValue, `with operator:`, operator);
+
+      const changeType = change?.mode ? change.mode : change.type; // dnd v5.3+ uses "type", before was "mode"
+      console.log(`Applying change: mode=${changeType}, key=${usesKey}, modValue=${modValue}`);
       // Apply the operation
-      switch (change.mode) {
+      switch (changeType) {
         case 0: // CUSTOM (applyOperator)
+        case 'custom':
           workingUses[usesKey] = originalUses[usesKey] + modValue;
           break;
         case 1: // MULTIPLY
+        case 'multiply':
           workingUses[usesKey] = currentValue * modValue;
           break;
         case 2: // ADD
+        case 'add':
           workingUses[usesKey] = currentValue + modValue;
           break;
         // Ignore other modes
@@ -352,6 +377,8 @@ export class SpellPoints {
           break;
       }
     }
+
+    console.log(`Final working uses after applying effects:`, workingUses);
 
     // Calculate the modifiers (delta between workingUses and originalUses)
     for (const key of ["max", "value", "spent"]) {
@@ -361,6 +388,8 @@ export class SpellPoints {
         modifiedUses[key] = 0;
       }
     }
+
+    console.log(`Final modified uses:`, modifiedUses);
 
     return modifiedUses;
   }
@@ -1208,6 +1237,9 @@ export class SpellPoints {
     if (!SpellPoints.isSpellPointsItem(item)) {
       return;
     }
+    const clonedItem = foundry.utils.deepClone(item);
+    const cloneUpdate = foundry.utils.deepClone(update);
+    console.log("preUpdateItem for spell points item", { clonedItem, cloneUpdate, difference, id });
 
     const storeUpdate = foundry.utils.deepClone(update);
     let max, value, spent;
@@ -1621,6 +1653,8 @@ export class SpellPoints {
           [`override`]: template_item.flags?.spellpoints?.override
         };
       }
+
+
 
       template_item.flags.spellpoints.editable = data.editable && (game.user.isGM || SpellPoints.settings?.spGmOnly == false);
 
