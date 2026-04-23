@@ -155,8 +155,3 @@ Hooks.on("dnd5e.preActivityConsumption", (item, consume, options, update) => {
 Hooks.on("renderItemSheet5e", async (app, html, data) => {
   SpellPoints.renderSpellPointsItem(app, html, data);
 })
-
-
-Hooks.on("dnd5e.prepareLeveledSlots", async (slots, actor, modified) => {
-  SpellPoints.prepareLeveledSlots(slots, actor, modified);
-})

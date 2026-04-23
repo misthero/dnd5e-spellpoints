@@ -5,10 +5,6 @@ function isset(variable) {
   return (typeof variable !== 'undefined');
 }
 
-function isEmpty(obj) {
-  return Object.keys(obj).length === 0;
-}
-
 /**
  * Extracts the mathematical operator from the start of a string
  * @param {string} str - The input string to check
@@ -185,10 +181,7 @@ export class SpellPoints {
   }
 
   static isActorCharacter(actor) {
-    // Get the actor type once
-    const type = foundry.utils.getProperty(actor, "type");
-    // Return true if type is "character" or "npc"
-    return type === "character" || type === "npc";
+    return actor?.type === "character" || actor?.type === "npc";
   }
 
   static getActorFlagSpellPointItem(actor) {
@@ -203,7 +196,7 @@ export class SpellPoints {
   }
 
   static userHasActorOwnership(actor) {
-    return actor.permission == 3;
+    return actor.testUserPermission(game.user, "OWNER");
   }
 
   /**
@@ -239,16 +232,12 @@ export class SpellPoints {
       //console.warn("SpellPoints.getSpellPointsItem: No actor provided.");
       return false;
     }
-    let items = foundry.utils.getProperty(actor, "items");
+    let items = actor.items;
     const item_id = SpellPoints.getActorFlagSpellPointItem(actor);
     let foundItem = item_id ? items.get(item_id) : false;
-    if (!foundItem && item_id && items[item_id]) {
-      foundItem = items[item_id];
-    }
     if (!foundItem) {
-      let features = items.filter(i => i.type == 'feat' || (i.type == 'class' && i.type.subtype == 'sp'));
       // get the item with source custom label = Spell Points
-      let sp = features.filter(s => s.system.source.custom == this.settings.spResource);
+      let sp = actor.itemTypes.feat.filter(s => s.system.source.custom == this.settings.spResource);
 
       if (typeof sp == 'undefined') {
         return false;
@@ -259,7 +248,7 @@ export class SpellPoints {
     return foundItem;
   }
 
-  static async updateSpellPointItem(item, value = null, max = null, spent = null) {
+  static async updateSpellPointItem(item, value = null, max = null, spent = null, options = {}) {
     if (!item) {
       return;
     }
@@ -283,7 +272,7 @@ export class SpellPoints {
       "system.uses.max": normalizedUses.max,
       "system.uses.value": normalizedUses.value,
       "system.uses.spent": normalizedUses.spent
-    });
+    }, options);
   }
 
   static normalizeUses(uses, preference = "value") {
@@ -309,21 +298,21 @@ export class SpellPoints {
   static getActiveEffectsModifiers(item, baseUses = null) {
     // Clone the original uses object to avoid mutating the item
     // PHASE 2 FIX: Use provided baseUses for effect calculation; otherwise fall back to item.system.uses
-    let originalUses = baseUses ? foundry.utils.duplicate(baseUses) : foundry.utils.duplicate(item.system.uses);
+    let originalUses = baseUses ? foundry.utils.deepClone(baseUses) : foundry.utils.deepClone(item.system.uses);
 
-    console.log(`Original uses for effect calculation:`, originalUses);
     const actor = item.parent;
 
-    // If actor has no appliedEffects, return zero modifiers
-    if (!actor?.appliedEffects || !Array.isArray(actor.appliedEffects)) {
+    // If actor is not available, return zero modifiers
+    if (!actor) {
       return { max: 0, value: 0, spent: 0 };
     }
 
     // Gather all changes from appliedEffects that target dnd5espellpoints
     let changes = [];
-    for (const effect of actor.appliedEffects) {
-      // dnd5e-compatible applicability: ignore effects that are disabled or suppressed
-      if (effect?.disabled || effect?.isSuppressed) continue;
+    for (const effect of actor.allApplicableEffects()) {
+      // allApplicableEffects() does NOT filter disabled effects (disabled ≠ suppressed in Foundry V14).
+      // This mirrors the approach used in dnd5e's own _prepareActiveEffectAttributions.
+      if (effect.disabled || effect.isSuppressed) continue;
       if (!effect?.changes || !Array.isArray(effect.changes)) continue;
       for (const change of effect.changes) {
         if (typeof change.key === "string" && change.key.startsWith("dnd5espellpoints.")) {
@@ -342,49 +331,34 @@ export class SpellPoints {
     // Start with zero modifiers
     let modifiedUses = { max: 0, value: 0, spent: 0 };
     // Track a working copy of uses to apply changes for delta calculation
-    let workingUses = foundry.utils.duplicate(originalUses);
+    let workingUses = foundry.utils.deepClone(originalUses);
 
     // Apply each change in order
     for (const change of changes) {
-      console.log(`Processing change:`, change);
       // Extract the path after "dnd5espellpoints."
       const path = change.key.slice("dnd5espellpoints.".length);
       // Only allow changes to system.uses properties
       if (!path.startsWith("system.uses.")) continue;
       const usesKey = path.split(".")[2]; // e.g., "max", "value", "spent"
-      console.log(`Applying change to ${usesKey}:`, change);
-      console.log(`workingUses`, workingUses);
       if (!workingUses.hasOwnProperty(usesKey)) continue;
 
       // Get the current value
       let currentValue = workingUses[usesKey];
 
-      console.log(`Current value for ${usesKey}:`, currentValue);
-
       // Evaluate the formula (may be a number or a rollable string)
       let modValue = 0;
       const rawValue = change.value;
-      const operator = extractOperator(change.value);
-      console.log(`Extracted operator:`, operator, `from change value:`, change.value);
-      try {
-        if (typeof rawValue === "number") {
-          modValue = rawValue;
-        } else if (typeof rawValue === "string") {
-          const formula = rawValue.trim();
-          if (formula.length === 0) continue;
-          modValue = Roll.create(formula, actor.getRollData()).evaluateSync({ strict: false }).total;
-        } else {
-          continue;
-        }
-      } catch (e) {
-        console.warn(`Failed to evaluate formula: ${change.value} for actor: ${actor.name}`, e);
-        continue; // skip if formula fails
+      if (typeof rawValue === "number") {
+        modValue = rawValue;
+      } else if (typeof rawValue === "string") {
+        const formula = rawValue.trim();
+        if (formula.length === 0) continue;
+        modValue = dnd5e.utils.simplifyBonus(formula, actor.getRollData());
+      } else {
+        continue;
       }
 
-      console.log(`Evaluated modValue:`, modValue, `with operator:`, operator);
-
-      const changeType = change?.mode ? change.mode : change.type; // dnd v5.3+ uses "type", before was "mode"
-      console.log(`Applying change: mode=${changeType}, key=${usesKey}, modValue=${modValue}`);
+      const changeType = change.mode ?? change.type; // dnd v5.3+ uses "type", before was "mode"; ?? handles mode=0 (CUSTOM)
       // Apply the operation
       switch (changeType) {
         case 0: // CUSTOM (applyOperator)
@@ -405,8 +379,6 @@ export class SpellPoints {
       }
     }
 
-    console.log(`Final working uses after applying effects:`, workingUses);
-
     // Calculate the modifiers (delta between workingUses and originalUses)
     for (const key of ["max", "value", "spent"]) {
       if (typeof workingUses[key] === "number" && typeof originalUses[key] === "number") {
@@ -415,8 +387,6 @@ export class SpellPoints {
         modifiedUses[key] = 0;
       }
     }
-
-    console.log(`Final modified uses:`, modifiedUses);
 
     return modifiedUses;
   }
@@ -1014,12 +984,12 @@ export class SpellPoints {
     // check for multiclasses
     const actorClasses = actor.classes;
 
-    if (actorClasses.length == 0 && !spellcastingNpc) {
+    if (foundry.utils.isEmpty(actorClasses) && !spellcastingNpc) {
       // no classes, no spellcasting
       return 0;
     }
 
-    if (spellcastingNpc && actorClasses.length == 0) {
+    if (spellcastingNpc && foundry.utils.isEmpty(actorClasses)) {
       // no classes, but spellcasting npc
       if (leveledProgression) {
         return parseInt(await this.withActorData(settings.leveledProgressionFormula[spellcastingNpcLevel], actor)) || 0;
@@ -1035,17 +1005,9 @@ export class SpellPoints {
       spellcastingLevels[key] = [];
     });
 
-    Object.keys(actorClasses).forEach(c => {
-      const actorClass = actorClasses[c];
-      /* progression: pact; full; half; third; artificier; none; **/
-      let progression = actorClass.system.spellcasting.progression;
-      if (progression == 'none') {
-        // check subclasses
-        let subclass = actorClass.subclass;
-        if (subclass && subclass?.system && subclass?.system?.spellcasting) {
-          progression = subclass.system.spellcasting.progression;
-        }
-      }
+    Object.values(actorClasses).forEach(actorClass => {
+      /* Use Item5e.spellcasting getter — already resolves subclass overrides */
+      const progression = actorClass.spellcasting?.progression ?? 'none';
 
       let level = actorClass.system.levels;
 
@@ -1234,10 +1196,20 @@ export class SpellPoints {
       await SpellPoints._calculateSpellPointsFixed(classItem, updates, actor, settings)
 
     if (SpellPointsMax !== NaN) {
-      const newItemSpent = SpellPointsMax < spellPointsItem.system.uses.value ? 0 : SpellPointsMax - spellPointsItem.system.uses.value;
-      const newItemValue = SpellPointsMax < spellPointsItem.system.uses.value ? SpellPointsMax : spellPointsItem.system.uses.value;
+      // Add the current stored active-effect max modifier to the raw formula result so that
+      // updateSpellPointItem sees a real change even when the formula base matches the old
+      // effective max. Example: level 5→6 (base 27→32) while a ring (+5) is equipped —
+      // old effective max is 32, new formula is 32, so without this offset updateSpellPointItem
+      // short-circuits (normalizedMax === currentMax) and the max never reaches 37.
+      const storedModifiers = actor?.flags?.[SP_MODULE_NAME]?.modifiers ?? { max: 0, value: 0, spent: 0 };
+      const effectiveSpellPointsMax = SpellPointsMax + (storedModifiers.max ?? 0);
 
-      await SpellPoints.updateSpellPointItem(spellPointsItem, null, SpellPointsMax, null);
+      // Signal spPreUpdateItem (via Foundry's options object) to use the delta path instead of
+      // the reverse/manual-edit path for max. effectiveSpellPointsMax already incorporates the
+      // active-effect offset; re-applying effects on top would double-count the modifier.
+      // Using options is reliable — unlike a static flag, it flows synchronously through the
+      // Foundry update pipeline and is present in the preUpdateItem hook's third argument.
+      await SpellPoints.updateSpellPointItem(spellPointsItem, null, effectiveSpellPointsMax, null, { dnd5espellpoints_formulaUpdate: true });
 
       // update the spell points item
       //await spellPointsItem.update(updates);
@@ -1255,11 +1227,6 @@ export class SpellPoints {
       }
     }
     return updates;
-  }
-
-  /** hook computeLeveledProgression  */
-  static levelProgression(slots, actor, classItem, progression) {
-
   }
 
   /** preDeleteItem */
@@ -1333,11 +1300,6 @@ export class SpellPoints {
       return;
     }
 
-    const clonedItem = foundry.utils.deepClone(item);
-    const cloneUpdate = foundry.utils.deepClone(update);
-    console.log("preUpdateItem for spell points item", { clonedItem, cloneUpdate, difference, id });
-
-    const storeUpdate = foundry.utils.deepClone(update);
     let max, value, spent;
     let changed_uses, changed_max, changed_value, changed_spent = false;
 
@@ -1354,9 +1316,6 @@ export class SpellPoints {
       value: item.system.uses.value,
       spent: item.system.uses.spent
     };
-
-    console.log("Previous sent uses:", previousSentUses);
-    console.log("Previous modifiers:", previousModifiers);
 
     // Extract incoming values from update (always present per user confirmation)
     let incomingMax = update.system?.uses?.max !== undefined && update.system?.uses?.max !== null
@@ -1375,39 +1334,40 @@ export class SpellPoints {
       max = incomingMax;
       changed_uses = true;
       changed_max = true;
-      console.log(`Max changed from previous ${previousSentUses.max} to ${incomingMax}`);
     } else {
       max = incomingMax;
-      console.log(`Max unchanged (previous: ${previousSentUses.max}, incoming: ${incomingMax})`);
     }
 
     if (incomingValue !== previousSentUses.value) {
       value = incomingValue;
       changed_uses = true;
       changed_value = true;
-      console.log(`Value changed from previous ${previousSentUses.value} to ${incomingValue}`);
     } else {
       value = incomingValue;
-      console.log(`Value unchanged (previous: ${previousSentUses.value}, incoming: ${incomingValue})`);
     }
 
     if (incomingSpent !== previousSentUses.spent) {
       spent = incomingSpent;
       changed_uses = true;
       changed_spent = true;
-      console.log(`Spent changed from previous ${previousSentUses.spent} to ${incomingSpent}`);
     } else {
       spent = incomingSpent;
-      console.log(`Spent unchanged (previous: ${previousSentUses.spent}, incoming: ${incomingSpent})`);
     }
 
     // Apply active effect modifiers and get adjusted values
     // PHASE 2 FIX: Pass baseUses so effects calculate against unmodified baseline, not modified current
     const baseUses = { max, value, spent };
+    // When this update was triggered by updateSpellPointsMax the incoming max already incorporates
+    // the active-effect offset (formulaMax + storedModifiers.max). Use the delta path so the
+    // effect is NOT applied a second time on top of the already-adjusted incoming value.
+    // Read from the Foundry options object (third hook arg = 'difference') — this is reliable
+    // because options flow synchronously through the update pipeline, unlike a static flag
+    // which gets reset before the preUpdateItem hook fires (item.update() is not awaited).
+    const isFormulaUpdate = difference?.dnd5espellpoints_formulaUpdate === true;
     const { adjusted: adjustedUses, currentModifiers } = SpellPoints.applyActiveEffectModifiers(
       item,
       baseUses,
-      { max: changed_max }, // reverse modifiers only for max if it was manually changed
+      { max: changed_max && !isFormulaUpdate }, // reverse only for manual max edits, not formula recalculation
       baseUses // PHASE 2 FIX: Pass base uses for effect calculation
     );
 
@@ -1473,7 +1433,6 @@ export class SpellPoints {
       if (actor) {
         actor.setFlag(SP_MODULE_NAME, 'modifiers', safeCurrentModifiers);
         actor.setFlag(SP_MODULE_NAME, 'sentUses', newSentUses);
-        console.log("Storing new sent uses in actor flags:", newSentUses);
       }
 
       // Only initialize config if it doesn't exist (one-time setup) - stored in item
@@ -1494,8 +1453,6 @@ export class SpellPoints {
           }
         });
       }
-    } else {
-      console.log("No uses changes - skipping flag update to avoid unnecessary item re-update");
     }
 
     // Only call maybeUpdateTrackedResource if we actually changed uses
