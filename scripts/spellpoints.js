@@ -191,6 +191,51 @@ export class SpellPoints {
     return actor.testUserPermission(game.user, "OWNER");
   }
 
+  static normalizeSpellLevel(level) {
+    const numeric = Number(level);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+
+    const normalized = Math.trunc(numeric);
+    return normalized >= 0 ? normalized : null;
+  }
+
+  static getSlotLevel(actor, slotKeyOrLevel) {
+    if (slotKeyOrLevel === null || typeof slotKeyOrLevel === "undefined") {
+      return null;
+    }
+
+    const directLevel = SpellPoints.normalizeSpellLevel(slotKeyOrLevel);
+    if (directLevel !== null) {
+      return directLevel;
+    }
+
+    const slotKey = `${slotKeyOrLevel}`;
+    const slot = actor?.system?.spells?.[slotKey];
+
+    const slotLevel = SpellPoints.normalizeSpellLevel(slot?.level);
+    if (slotLevel !== null) {
+      return slotLevel;
+    }
+
+    const legacySpellSlotMatch = /^spell(\d+)$/i.exec(slotKey);
+    if (legacySpellSlotMatch) {
+      return SpellPoints.normalizeSpellLevel(legacySpellSlotMatch[1]);
+    }
+
+    return null;
+  }
+
+  static getSpellPointCostFormula(settings, slotLevel) {
+    if (slotLevel === null || typeof slotLevel === "undefined") {
+      return 0;
+    }
+
+    const costs = settings?.spellPointsCosts ?? {};
+    return costs[slotLevel] ?? costs[`${slotLevel}`] ?? 0;
+  }
+
   /**
    * Evaluates the given formula with the given actors data. Uses FoundryVTT's Roll
    * to make this evaluation.
@@ -199,6 +244,10 @@ export class SpellPoints {
    * @return {number} The result of the formula.
    */
   static async withActorData(formula, actor) {
+    if (formula === null || typeof formula === 'undefined') {
+      return 0;
+    }
+
     formula = formula.toString().replace(/\n/g, " ");
     if (!formula || typeof formula !== 'string' || formula.length === 0) {
       return 0;
@@ -462,8 +511,12 @@ export class SpellPoints {
     const moduleSettings = this.settings
     let settings = moduleSettings;
 
-    if (spellPointItem.flags?.spellpoints?.override) {
-      settings = spellPointItem.flags?.spellpoints?.config ?? settings;
+    if (spellPointItem.flags?.spellpoints?.override && spellPointItem.flags?.spellpoints?.config) {
+      settings = foundry.utils.mergeObject(
+        foundry.utils.deepClone(moduleSettings),
+        spellPointItem.flags.spellpoints.config,
+        { recursive: true, overwrite: true }
+      );
     }
 
     const parentItem = item?.parent?.parent;
@@ -485,7 +538,24 @@ export class SpellPoints {
       return {};
     }
 
-    const spellLvl = consumeConfig.isCantrip ? 0 : isset(options?.data?.flags?.dnd5e?.use?.spellLevel) ? options.data.flags.dnd5e.use.spellLevel : options.data.system.spellLevel;
+    let spellLvl = consumeConfig.isCantrip
+      ? 0
+      : isset(options?.data?.flags?.dnd5e?.use?.spellLevel)
+        ? options?.data?.flags?.dnd5e?.use?.spellLevel
+        : options?.data?.system?.spellLevel;
+
+    spellLvl = SpellPoints.normalizeSpellLevel(spellLvl);
+
+    if (spellLvl === null && !consumeConfig.isCantrip) {
+      const selectedSlot = consumeConfig?.spell?.slot
+        ?? options?.data?.flags?.dnd5e?.use?.spellSlot
+        ?? options?.data?.system?.spell?.slot;
+      spellLvl = SpellPoints.getSlotLevel(actor, selectedSlot);
+    }
+
+    if (spellLvl === null) {
+      spellLvl = SpellPoints.normalizeSpellLevel(parentItem?.system?.level) ?? 0;
+    }
 
     const currentUses = spellPointItem.system.uses;
     let remainingUses = {
@@ -495,7 +565,8 @@ export class SpellPoints {
 
     let actualSpellPoints = remainingUses.value;
 
-    const spellPointCost = await this.withActorData(settings.spellPointsCosts[spellLvl], actor);
+    const spellPointCostFormula = SpellPoints.getSpellPointCostFormula(settings, spellLvl);
+    const spellPointCost = await this.withActorData(spellPointCostFormula, actor);
 
     let SpeakTo = [];
     if (moduleSettings.chatMessagePrivate) {
@@ -668,8 +739,12 @@ export class SpellPoints {
     const isCantrip = activity.item.system.level === 0;
     if (isCantrip) {
       let settings = this.settings;
-      if (spellPointItem.flags?.spellpoints?.override) {
-        settings = spellPointItem.flags?.spellpoints?.config !== 'undefined' ? spellPointItem.flags?.spellpoints.config : settings;
+      if (spellPointItem.flags?.spellpoints?.override && spellPointItem.flags?.spellpoints?.config) {
+        settings = foundry.utils.mergeObject(
+          foundry.utils.deepClone(this.settings),
+          spellPointItem.flags.spellpoints.config,
+          { recursive: true, overwrite: true }
+        );
       }
       if (settings.spellPointsCosts[0] == 0) {
         return [activity, usageConfig, dialogConfig, messageConfig];
@@ -724,17 +799,19 @@ export class SpellPoints {
     let actor = foundry.utils.getProperty(dialog, "item.actor");
 
     const spell = dialog.item.system;
-    const preparation = spell.preparation.mode; //prepared,pact,always,atwill,innate
-
     const baseSpellLvl = spell.level;
 
     const spellPointItem = usageConfig.spellPointsItem;
 
-    if (spellPointItem && spellPointItem.flags?.spellpoints?.override) {
-      settings = isset(spellPointItem.flags?.spellpoints?.config) ? spellPointItem.flags?.spellpoints?.config : settings;
+    if (spellPointItem && spellPointItem.flags?.spellpoints?.override && spellPointItem.flags?.spellpoints?.config) {
+      settings = foundry.utils.mergeObject(
+        foundry.utils.deepClone(settings),
+        spellPointItem.flags.spellpoints.config,
+        { recursive: true, overwrite: true }
+      );
     }
 
-    let optionLevel = 'none';
+    let optionLevel = null;
     let cost = 0;
 
     let actualSpellPoints = spellPointItem.system.uses.value;
@@ -748,13 +825,13 @@ export class SpellPoints {
           continue;
         }
 
-        if (optionValue === 'pact') {
-          optionLevel = actor.system.spells.pact.level;
-        } else {
-          optionLevel = optionValue.replace('spell', '');
+        optionLevel = SpellPoints.getSlotLevel(actor, optionValue);
+        if (optionLevel === null) {
+          continue;
         }
 
-        cost = await SpellPoints.withActorData(settings.spellPointsCosts[optionLevel], actor);
+        const costFormula = SpellPoints.getSpellPointCostFormula(settings, optionLevel);
+        cost = await SpellPoints.withActorData(costFormula, actor);
 
         if (settings.spFormula === 'DMG' && optionValue === 'pact') {
           // do nothing
@@ -770,10 +847,12 @@ export class SpellPoints {
       }
     }
 
-    let choosenSpellLevel = usageConfig.spell.slot.replace('spell', '');
+    let choosenSpellLevel = usageConfig.isCantrip
+      ? 0
+      : SpellPoints.getSlotLevel(actor, usageConfig?.spell?.slot);
 
-    if (choosenSpellLevel === 'pact') {
-      choosenSpellLevel = actor.system.spells.pact.level;
+    if (choosenSpellLevel === null) {
+      choosenSpellLevel = SpellPoints.normalizeSpellLevel(baseSpellLvl) ?? 0;
     }
 
     let consumeSection = $('section[data-application-part="consumption"] fieldset', $(html));
@@ -797,11 +876,8 @@ export class SpellPoints {
 
     let spellPointCost = 0;
 
-    if (preparation === 'pact') {
-      spellPointCost = cost;
-    } else {
-      spellPointCost = await SpellPoints.withActorData(settings.spellPointsCosts[choosenSpellLevel], actor);
-    }
+    const selectedCostFormula = SpellPoints.getSpellPointCostFormula(settings, choosenSpellLevel);
+    spellPointCost = await SpellPoints.withActorData(selectedCostFormula, actor);
 
     const missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - spellPointCost < 0);
     const messageNotEnough = game.i18n.format(SP_MODULE_NAME + ".youNotEnough", { SpellPoints: spellPointItem.name });
@@ -862,20 +938,21 @@ export class SpellPoints {
 
     let hasSpellSlots = false;
     let spellPointsFromSlots = 0;
-    for (let [slotLvlTxt, slot] of Object.entries(actor.system.spells)) {
-      let slotLvl;
-      if (slotLvlTxt === 'spell0') {
-        slotLvl = 0;
-      } else {
-        slotLvl = slot.level;
-      }
+    for (let [slotKey, slot] of Object.entries(actor.system.spells)) {
+      const slotLvl = SpellPoints.getSlotLevel(actor, slotKey);
 
       if (!slotLvl || slotLvl == 0) {
         continue;
       }
 
-      spellPointsFromSlots += slot.max * await SpellPoints.withActorData(settings.spellPointsCosts[slotLvl], actor);
-      if (slot.max > 0) {
+      const slotMax = toFiniteNumber(slot?.max, 0);
+      if (slotMax <= 0) {
+        continue;
+      }
+
+      const costFormula = SpellPoints.getSpellPointCostFormula(settings, slotLvl);
+      spellPointsFromSlots += slotMax * await SpellPoints.withActorData(costFormula, actor);
+      if (slotMax > 0) {
         hasSpellSlots = true;
       }
     }
@@ -1207,11 +1284,66 @@ export class SpellPoints {
     };
   }
 
+  static maybeApplyFormulaPresetOnConfigChange(item, update) {
+    const incomingConfig = update?.flags?.spellpoints?.config;
+    if (!incomingConfig) {
+      return;
+    }
+
+    const formulas = SpellPoints.formulas;
+    const newFormula = incomingConfig.spFormula;
+    if (!newFormula || !formulas[newFormula]) {
+      return;
+    }
+
+    const currentConfig = item?.flags?.spellpoints?.config ?? {};
+    const currentFormula = currentConfig.spFormula ?? SpellPoints.settings.spFormula;
+    if (newFormula === currentFormula) {
+      return;
+    }
+
+    const presetDefaults = foundry.utils.deepClone(formulas[newFormula]);
+    const mergedConfig = foundry.utils.mergeObject(
+      foundry.utils.deepClone(currentConfig),
+      presetDefaults,
+      { overwrite: true, recursive: true, insertKeys: true, insertValues: true }
+    );
+
+    // Keep non-formula-driven incoming fields from the same submit (e.g. variant toggles),
+    // but force formula-driven data to come from the newly-selected preset.
+    const formulaDrivenKeys = new Set([
+      "isCustom",
+      "spCustomFormulaBase",
+      "spCustomFormulaSlotMultiplier",
+      "spUseLeveled",
+      "spellPointsByLevel",
+      "spellPointsCosts",
+      "leveledProgressionFormula"
+    ]);
+
+    for (const [key, value] of Object.entries(incomingConfig)) {
+      if (key === "previousFormula" || formulaDrivenKeys.has(key)) {
+        continue;
+      }
+      mergedConfig[key] = value;
+    }
+
+    mergedConfig.spFormula = newFormula;
+    mergedConfig.previousFormula = newFormula;
+    mergedConfig.isCustom = formulas[newFormula].isCustom;
+
+    update.flags ??= {};
+    update.flags.spellpoints ??= {};
+    update.flags.spellpoints.config = mergedConfig;
+  }
+
   /** preUpdateItem hook */
   static spPreUpdateItem(item, update, difference, id) {
     if (!SpellPoints.isSpellPointsItem(item)) {
       return;
     }
+
+    SpellPoints.maybeApplyFormulaPresetOnConfigChange(item, update);
 
     let max, value, spent;
     let changed_uses, changed_max, changed_value, changed_spent = false;
