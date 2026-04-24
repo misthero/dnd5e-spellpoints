@@ -85,9 +85,28 @@ export class SpellPointsForm extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     // Filter out spell levels not in CONFIG.DND5E.spellLevels
-    const spellProgression = CONFIG.DND5E.spellProgression;
+    const spellProgression = CONFIG.DND5E.spellProgression ?? {};
     if (data.spellProgression) {
       data.spellProgression = foundry.utils.mergeObject(data.spellProgression, spellProgression, { insertKeys: true, insertValues: true });
+
+      for (const [type, values] of Object.entries(data.spellProgression)) {
+        const cfg = spellProgression[type];
+        const fallbackLabel = (typeof cfg === "string") ? cfg : (cfg?.label ?? type);
+        const currentLabel = values?.label;
+
+        let normalizedLabel = fallbackLabel;
+        if (typeof currentLabel === "string") {
+          normalizedLabel = currentLabel;
+        } else if (currentLabel && (typeof currentLabel === "object") && (typeof currentLabel.label === "string")) {
+          normalizedLabel = currentLabel.label;
+        }
+
+        if (data.spellProgression[type] && (typeof data.spellProgression[type] === "object")) {
+          data.spellProgression[type].label = normalizedLabel;
+        } else {
+          data.spellProgression[type] = { value: 0, label: normalizedLabel };
+        }
+      }
     }
 
     this.reset = false;
@@ -145,6 +164,14 @@ export class SpellPointsForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const spellLevels = CONFIG.DND5E.spellLevels;
     if (settings.spellPointsCosts) {
       settings.spellPointsCosts = SpellPointsForm.filterSpellLevelKeys(settings.spellPointsCosts, spellLevels);
+    }
+
+    const formulaErrors = SpellPoints.collectFormulaValidationErrors(settings);
+    if (formulaErrors.length) {
+      SpellPoints.notifyFormulaValidationErrors(formulaErrors, {
+        sourceLabel: game.i18n.localize(SP_MODULE_NAME + ".form-title")
+      });
+      return;
     }
 
     await game.settings.set(SP_MODULE_NAME, 'settings', settings).then(() => {

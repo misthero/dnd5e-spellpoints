@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## [3.3.10]
+
+### Bugfixes
+
+- Fixed actor bar config mutating `system.uses` directly — now duplicates the object before use.
+- Fixed spell point current value being computed as `max - spent` in multiple places; now reads `system.uses.value` directly.
+- Fixed active effect CUSTOM mode (`change.mode = 0`) being incorrectly skipped due to falsy evaluation.
+- Fixed double-application of active effect modifiers when recalculating formula-based max on level up.
+- Fixed `update.flags` being clobbered during config initialization in `preUpdateItem`.
+
+### Improvements
+
+- Active effect modifier state is now tracked in actor flags (`modifiers`, `sentUses`) instead of item flags, preventing infinite update loops.
+- Change detection in `preUpdateItem` now compares against last-sent values rather than current item state, avoiding spurious effect re-applications.
+- Added `normalizeUses()` to clamp and reconcile `max`/`value`/`spent` with configurable preference.
+- Formula evaluation for active effects now uses `dnd5e.utils.simplifyBonus()` instead of `Roll.create().evaluateSync()`.
+- Effect iteration now uses `actor.allApplicableEffects()` (V14-compatible), correctly skipping disabled/suppressed effects.
+- Formula-triggered max recalculation passes a `dnd5espellpoints_formulaUpdate` option to suppress reverse-modifier logic in `preUpdateItem`.
+- Changing formula preset in item config now auto-merges preset defaults (`maybeApplyFormulaPresetOnConfigChange`).
+- Settings form now normalizes spell progression labels for custom progressions registered via `CONFIG.DND5E.spellcasting`.
+
+### Validation
+
+- Invalid formulas now block saving (global settings and per-item config) and display a detailed error notification.
+
+### Hooks
+
+- Replaced `dnd5e.prepareSpellSlots` with `createActiveEffect` / `updateActiveEffect` / `deleteActiveEffect` hooks.
+- Removed dead `dnd5e.prepareLeveledSlots` hook.
+
 ## [3.3.01]
 
 - Revert minimum compatiblity

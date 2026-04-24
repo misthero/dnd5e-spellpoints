@@ -96,5 +96,8 @@
   "dnd5e-spellpoints.settingSaved": "Einstellungen gespeichert!",
   "dnd5e-spellpoints.spResourceBind": "Verknüpfen Sie das Zauberpunkte-Element mit einer Akteursressource.",
   "dnd5e-spellpoints.spResourceBindNote": "Wählen Sie eine Ressource zum Verknüpfen aus oder lassen Sie das Feld leer, um die Verknüpfen zu deaktivieren. Jedes Mal, wenn das Zauberpunkte-Element aktualisiert wird, wird auch die verknüpfte Ressource auf dem Charakterbogen aktualisiert. Jedes Mal, wenn die Ressource aktualisiert wird, wird auch das Zauberpunkte-Element aktualisiert.",
-  "dnd5e-spellpoints.spResourceBindWarn": "Warnung: Das Verknüpfen mit einer Ressource überschreibt die Ressourcenwerte bei jedem Akteur mit dem Zauberpunkte-Element. Außerdem wird die verknüpfte Ressource in der Favoritenliste des Charakterbogens angezeigt. Dies kann nicht verhindert werden."
+  "dnd5e-spellpoints.spResourceBindWarn": "Warnung: Das Verknüpfen mit einer Ressource überschreibt die Ressourcenwerte bei jedem Akteur mit dem Zauberpunkte-Element. Außerdem wird die verknüpfte Ressource in der Favoritenliste des Charakterbogens angezeigt. Dies kann nicht verhindert werden.",
+  "dnd5e-spellpoints.formulaValidationBlocked": "Speichern nicht möglich: {count} ungültige Formel(n) gefunden. {details}",
+  "dnd5e-spellpoints.formulaValidationEntry": "[{field}] \"{formula}\" -> {reason}",
+  "dnd5e-spellpoints.formulaRuntimeFallback": "Ungültige Formel \"{formula}\". 0 wird als sicherer Ersatzwert verwendet. ({reason})"
 }

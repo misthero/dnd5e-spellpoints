@@ -5,24 +5,18 @@ function isset(variable) {
   return (typeof variable !== 'undefined');
 }
 
-function isEmpty(obj) {
-  return Object.keys(obj).length === 0;
-}
-
 /**
  * Extracts the mathematical operator from the start of a string
  * @param {string} str - The input string to check
  * @returns {string|null} The operator if found, null if no operator
  */
 function extractOperator(str) {
-  // List of valid operators to check
+  if (typeof str === 'number') return '+'; // Default to addition for numeric values
   const operators = ['+', '-', '*', '/', '%'];
 
-  // Remove leading whitespace and get first character
   const trimmed = str.trim();
   const firstChar = trimmed.charAt(0);
 
-  // Return the operator if found, null otherwise
   return operators.includes(firstChar) ? firstChar : null;
 }
 
@@ -46,6 +40,11 @@ function applyOperator(value1, operator, value2) {
   }
 }
 
+function toFiniteNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
 export class SpellPoints {
   static get settings() {
     return foundry.utils.mergeObject(this.defaultSettings, game.settings.get(SP_MODULE_NAME, 'settings'), { insertKeys: true, insertValues: true });
@@ -58,7 +57,6 @@ export class SpellPoints {
 
     let dndSpellProgression = CONFIG.DND5E.spellProgression;
 
-    // Define default values for each progression type
     const progressionValues = {
       full: 1,
       half: 2,
@@ -68,7 +66,6 @@ export class SpellPoints {
       none: 0,
     };
 
-    // Build spellcastingTypes dynamically from spellProgression
     const spellProgression = {};
     for (const [key, label] of Object.entries(dndSpellProgression)) {
       spellProgression[key] = {
@@ -111,7 +108,6 @@ export class SpellPoints {
     const maxlevel = CONFIG.DND5E.maxLevel;
     const slotLevels = CONFIG.DND5E.spellLevels;
 
-    // Helper to build a level table up to maxlevel, only including valid keys
     function buildLevelTable(table) {
       const built = {};
       for (let lvl = 1; lvl <= maxlevel; lvl++) {
@@ -120,7 +116,6 @@ export class SpellPoints {
       return built;
     }
 
-    // Helper to build spellPointsCosts to match current spellLevels, only including valid keys
     function buildSpellPointsCosts(costs) {
       const built = {};
       for (const lvl of Object.keys(slotLevels)) {
@@ -129,7 +124,6 @@ export class SpellPoints {
       return built;
     }
 
-    // Prepare extended tables for custom formulas
     const leveledProgression = buildLevelTable(this.defaultSettings.leveledProgressionFormula);
     const spellPointsByLevel = buildLevelTable(this.defaultSettings.spellPointsByLevel);
     const spellPointsCosts = buildSpellPointsCosts(this.defaultSettings.spellPointsCosts);
@@ -179,10 +173,7 @@ export class SpellPoints {
   }
 
   static isActorCharacter(actor) {
-    // Get the actor type once
-    const type = foundry.utils.getProperty(actor, "type");
-    // Return true if type is "character" or "npc"
-    return type === "character" || type === "npc";
+    return actor?.type === "character" || actor?.type === "npc";
   }
 
   static getActorFlagSpellPointItem(actor) {
@@ -197,7 +188,173 @@ export class SpellPoints {
   }
 
   static userHasActorOwnership(actor) {
-    return actor.permission == 3;
+    return actor.testUserPermission(game.user, "OWNER");
+  }
+
+  static normalizeSpellLevel(level) {
+    const numeric = Number(level);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+
+    const normalized = Math.trunc(numeric);
+    return normalized >= 0 ? normalized : null;
+  }
+
+  static getSlotLevel(actor, slotKeyOrLevel) {
+    if (slotKeyOrLevel === null || typeof slotKeyOrLevel === "undefined") {
+      return null;
+    }
+
+    const directLevel = SpellPoints.normalizeSpellLevel(slotKeyOrLevel);
+    if (directLevel !== null) {
+      return directLevel;
+    }
+
+    const slotKey = `${slotKeyOrLevel}`;
+    const slot = actor?.system?.spells?.[slotKey];
+
+    const slotLevel = SpellPoints.normalizeSpellLevel(slot?.level);
+    if (slotLevel !== null) {
+      return slotLevel;
+    }
+
+    const legacySpellSlotMatch = /^spell(\d+)$/i.exec(slotKey);
+    if (legacySpellSlotMatch) {
+      return SpellPoints.normalizeSpellLevel(legacySpellSlotMatch[1]);
+    }
+
+    return null;
+  }
+
+  static getSpellPointCostFormula(settings, slotLevel) {
+    if (slotLevel === null || typeof slotLevel === "undefined") {
+      return 0;
+    }
+
+    const costs = settings?.spellPointsCosts ?? {};
+    return costs[slotLevel] ?? costs[`${slotLevel}`] ?? 0;
+  }
+
+  static normalizeFormulaValue(formula) {
+    if (formula === null || typeof formula === "undefined") {
+      return "";
+    }
+
+    return formula.toString().replace(/\n/g, " ").trim();
+  }
+
+  static validateFormulaValue(formula) {
+    const normalized = SpellPoints.normalizeFormulaValue(formula);
+    if (!normalized) {
+      return { valid: true, normalized };
+    }
+
+    try {
+      const parseResult = Roll.validate(normalized);
+      if (parseResult === false) {
+        throw new Error("Formula failed syntax validation");
+      }
+    } catch (error) {
+      return {
+        valid: false,
+        normalized,
+        reason: error?.message ?? "Formula failed syntax validation"
+      };
+    }
+
+    try {
+      const dryRunFormula = normalized.replace(/@([a-z.0-9_-]+)/gi, "1");
+      const dryRun = new Roll(dryRunFormula);
+      dryRun.evaluateSync({ strict: false });
+    } catch (error) {
+      return {
+        valid: false,
+        normalized,
+        reason: error?.message ?? "Formula failed deterministic validation"
+      };
+    }
+
+    return { valid: true, normalized };
+  }
+
+  static collectFormulaValidationErrors(settings) {
+    if (!settings || (typeof settings !== "object")) {
+      return [];
+    }
+
+    const errors = [];
+    const pushIfInvalid = (path, formula) => {
+      const result = SpellPoints.validateFormulaValue(formula);
+      if (!result.valid) {
+        errors.push({
+          path,
+          formula: SpellPoints.normalizeFormulaValue(formula),
+          reason: result.reason
+        });
+      }
+    };
+
+    pushIfInvalid("spCustomFormulaBase", settings.spCustomFormulaBase);
+    pushIfInvalid("spCustomFormulaSlotMultiplier", settings.spCustomFormulaSlotMultiplier);
+    pushIfInvalid("spLifeCost", settings.spLifeCost);
+
+    for (const [level, formula] of Object.entries(settings.spellPointsCosts ?? {})) {
+      pushIfInvalid(`spellPointsCosts.${level}`, formula);
+    }
+
+    for (const [level, formula] of Object.entries(settings.leveledProgressionFormula ?? {})) {
+      pushIfInvalid(`leveledProgressionFormula.${level}`, formula);
+    }
+
+    return errors;
+  }
+
+  static notifyFormulaValidationErrors(errors, { sourceLabel = "" } = {}) {
+    if (!errors?.length) {
+      return;
+    }
+
+    const details = errors.slice(0, 3).map((entry) => {
+      return game.i18n.format(SP_MODULE_NAME + ".formulaValidationEntry", {
+        field: entry.path,
+        formula: entry.formula,
+        reason: entry.reason
+      });
+    }).join(" | ");
+
+    const baseMessage = game.i18n.format(SP_MODULE_NAME + ".formulaValidationBlocked", {
+      count: errors.length,
+      details
+    });
+
+    const message = sourceLabel ? `${sourceLabel}: ${baseMessage}` : baseMessage;
+    ui.notifications.error(message);
+  }
+
+  static runtimeFormulaWarnings = new Set();
+
+  static notifyRuntimeFormulaError(formula, error) {
+    const normalized = SpellPoints.normalizeFormulaValue(formula);
+    const reason = error?.message ?? "Unknown formula error";
+    const cacheKey = `${normalized}::${reason}`;
+
+    if (SpellPoints.runtimeFormulaWarnings.has(cacheKey)) {
+      return;
+    }
+
+    SpellPoints.runtimeFormulaWarnings.add(cacheKey);
+
+    console.error(`[${SP_MODULE_NAME}] Formula evaluation failed`, {
+      formula: normalized,
+      reason,
+      error
+    });
+
+    ui.notifications.error(game.i18n.format(SP_MODULE_NAME + ".formulaRuntimeFallback", {
+      formula: normalized,
+      reason
+    }));
   }
 
   /**
@@ -208,14 +365,30 @@ export class SpellPoints {
    * @return {number} The result of the formula.
    */
   static async withActorData(formula, actor) {
-    formula = formula.toString().replace(/\n/g, " ");
-    if (!formula || typeof formula !== 'string' || formula.length == 0) {
+    if (formula === null || typeof formula === 'undefined') {
       return 0;
     }
-    let dataObject = actor.getRollData();
-    dataObject.flags = actor.flags;
-    const r = await Roll.create(formula.toString(), dataObject).evaluate();
-    return r.total;
+
+    formula = SpellPoints.normalizeFormulaValue(formula);
+    if (!formula || typeof formula !== 'string' || formula.length === 0) {
+      return 0;
+    }
+
+    const validation = SpellPoints.validateFormulaValue(formula);
+    if (!validation.valid) {
+      SpellPoints.notifyRuntimeFormulaError(formula, new Error(validation.reason));
+      return 0;
+    }
+
+    try {
+      let dataObject = actor.getRollData();
+      dataObject.flags = actor.flags;
+      const r = await Roll.create(formula.toString(), dataObject).evaluate();
+      return r.total;
+    } catch (error) {
+      SpellPoints.notifyRuntimeFormulaError(formula, error);
+      return 0;
+    }
   }
 
   /**
@@ -233,18 +406,13 @@ export class SpellPoints {
       //console.warn("SpellPoints.getSpellPointsItem: No actor provided.");
       return false;
     }
-    let items = foundry.utils.getProperty(actor, "items");
+    let items = actor.items;
     const item_id = SpellPoints.getActorFlagSpellPointItem(actor);
     let foundItem = item_id ? items.get(item_id) : false;
-    if (!foundItem && item_id && items[item_id]) {
-      foundItem = items[item_id];
-    }
     if (!foundItem) {
-      let features = items.filter(i => i.type == 'feat' || (i.type == 'class' && i.type.subtype == 'sp'));
-      // get the item with source custom label = Spell Points
-      let sp = features.filter(s => s.system.source.custom == this.settings.spResource);
+      let sp = actor.itemTypes.feat.filter(s => s.system.source.custom === this.settings.spResource);
 
-      if (typeof sp == 'undefined') {
+      if (typeof sp === 'undefined') {
         return false;
       } else {
         foundItem = sp[0];
@@ -253,51 +421,70 @@ export class SpellPoints {
     return foundItem;
   }
 
-  static async updateSpellPointItem(item, value = null, max = null, spent = null) {
+  static async updateSpellPointItem(item, value = null, max = null, spent = null, options = {}) {
     if (!item) {
       return;
     }
 
-    // Build update object with only non-null properties
-    const updateObj = {};
+    const currentUses = item.system.uses ?? {};
+    const nextUses = {
+      max: max !== null ? max : currentUses.max,
+      value: value !== null ? value : currentUses.value,
+      spent: spent !== null ? spent : currentUses.spent
+    };
 
-    if (max !== null) {
-      updateObj[`system.uses.max`] = max;
+    const preference = (spent !== null && value === null) ? "spent" : "value";
+    const normalizedUses = SpellPoints.normalizeUses(nextUses, preference);
+
+    const hasChanges = ["max", "value", "spent"].some((key) => normalizedUses[key] !== currentUses[key]);
+    if (!hasChanges) {
+      return;
     }
 
-    if (value !== null) {
-      updateObj[`system.uses.value`] = value;
-      updateObj[`system.uses.spent`] = max !== null ? max - value : item.system.uses.max - value;
-    }
-
-    if (spent !== null) {
-      updateObj[`system.uses.spent`] = spent;
-      updateObj[`system.uses.value`] = spent >= item.system.uses.max ? 0 : item.system.uses.max - spent;
-    }
-
-    // Only perform update if there's something to update
-    if (Object.keys(updateObj).length > 0) {
-      item.update(updateObj);
-    }
+    item.update({
+      "system.uses.max": normalizedUses.max,
+      "system.uses.value": normalizedUses.value,
+      "system.uses.spent": normalizedUses.spent
+    }, options);
   }
 
-  static getActiveEffectsModifiers(item) {
-    // Clone the original uses object to avoid mutating the item
-    let originalUses = foundry.utils.duplicate(item.system.uses);
+  static normalizeUses(uses, preference = "value") {
+    const normalizedMax = Math.max(0, Math.trunc(toFiniteNumber(uses?.max, 0)));
+    let normalizedValue = toFiniteNumber(uses?.value, normalizedMax);
+    let normalizedSpent = toFiniteNumber(uses?.spent, normalizedMax - normalizedValue);
+
+    if (preference === "spent") {
+      normalizedSpent = Math.max(0, Math.min(Math.trunc(normalizedSpent), normalizedMax));
+      normalizedValue = normalizedMax - normalizedSpent;
+    } else {
+      normalizedValue = Math.max(0, Math.min(Math.trunc(normalizedValue), normalizedMax));
+      normalizedSpent = normalizedMax - normalizedValue;
+    }
+
+    return {
+      max: normalizedMax,
+      value: normalizedValue,
+      spent: normalizedSpent
+    };
+  }
+
+  static getActiveEffectsModifiers(item, baseUses = null) {
+    let originalUses = baseUses ? foundry.utils.deepClone(baseUses) : foundry.utils.deepClone(item.system.uses);
+
     const actor = item.parent;
 
-    // If actor has no appliedEffects, return zero modifiers
-    if (!actor?.appliedEffects || !Array.isArray(actor.appliedEffects)) {
+    if (!actor) {
       return { max: 0, value: 0, spent: 0 };
     }
 
-    // Gather all changes from appliedEffects that target dnd5espellpoints
     let changes = [];
-    for (const effect of actor.appliedEffects) {
+    for (const effect of actor.allApplicableEffects()) {
+      // allApplicableEffects() does NOT filter disabled effects (disabled ≠ suppressed in Foundry V14).
+      // This mirrors the approach used in dnd5e's own _prepareActiveEffectAttributions.
+      if (effect.disabled || effect.isSuppressed) continue;
       if (!effect?.changes || !Array.isArray(effect.changes)) continue;
       for (const change of effect.changes) {
         if (typeof change.key === "string" && change.key.startsWith("dnd5espellpoints.")) {
-          // Attach priority for sorting (null = lowest)
           changes.push({
             ...change,
             priority: change.priority ?? 0
@@ -306,54 +493,50 @@ export class SpellPoints {
       }
     }
 
-    // Sort changes by priority ascending (lowest first)
     changes.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
-    // Start with zero modifiers
     let modifiedUses = { max: 0, value: 0, spent: 0 };
-    // Track a working copy of uses to apply changes for delta calculation
-    let workingUses = foundry.utils.duplicate(originalUses);
+    let workingUses = foundry.utils.deepClone(originalUses);
 
-    // Apply each change in order
     for (const change of changes) {
-      // Extract the path after "dnd5espellpoints."
       const path = change.key.slice("dnd5espellpoints.".length);
-      // Only allow changes to system.uses properties
       if (!path.startsWith("system.uses.")) continue;
-      const usesKey = path.split(".")[2]; // e.g., "max", "value", "spent"
+      const usesKey = path.split(".")[2];
       if (!workingUses.hasOwnProperty(usesKey)) continue;
 
-      // Get the current value
       let currentValue = workingUses[usesKey];
 
-      // Evaluate the formula (may be a number or a rollable string)
       let modValue = 0;
-      const operator = extractOperator(change.value);
-      try {
-        //modValue = await SpellPoints.withActorData(change.value, actor);
-        modValue = Roll.create(change.value, actor.getRollData()).evaluateSync({ strict: false }).total;
-      } catch (e) {
-        continue; // skip if formula fails
+      const rawValue = change.value;
+      if (typeof rawValue === "number") {
+        modValue = rawValue;
+      } else if (typeof rawValue === "string") {
+        const formula = rawValue.trim();
+        if (formula.length === 0) continue;
+        modValue = dnd5e.utils.simplifyBonus(formula, actor.getRollData());
+      } else {
+        continue;
       }
 
-      // Apply the operation
-      switch (change.mode) {
+      const changeType = change.mode ?? change.type; // dnd v5.3+ uses "type", before was "mode"; ?? handles mode=0 (CUSTOM)
+      switch (changeType) {
         case 0: // CUSTOM (applyOperator)
+        case 'custom':
           workingUses[usesKey] = originalUses[usesKey] + modValue;
           break;
         case 1: // MULTIPLY
+        case 'multiply':
           workingUses[usesKey] = currentValue * modValue;
           break;
         case 2: // ADD
+        case 'add':
           workingUses[usesKey] = currentValue + modValue;
           break;
-        // Ignore other modes
         default:
           break;
       }
     }
 
-    // Calculate the modifiers (delta between workingUses and originalUses)
     for (const key of ["max", "value", "spent"]) {
       if (typeof workingUses[key] === "number" && typeof originalUses[key] === "number") {
         modifiedUses[key] = workingUses[key] - originalUses[key];
@@ -386,12 +569,10 @@ export class SpellPoints {
     let spellPointItem = SpellPoints.getSpellPointsItem(actor);
     if (!spellPointItem) return;
 
-    // Prepare update object
     let newValues = { max: null, value: null, spent: null };
 
     let currentMax = await SpellPoints.withActorData(spellPointItem.system.uses.max, actor);
 
-    // If max is provided, update max
     if (typeof max !== "undefined" && max !== null && max !== false && max !== "") {
       const maxOperator = extractOperator(max);
       const maxValue = await SpellPoints.withActorData(max, actor);
@@ -405,7 +586,6 @@ export class SpellPoints {
 
     let currentUses = spellPointItem.system.uses.value;
 
-    // If uses is provided, validate and update value and spent
     if (typeof uses !== "undefined" && uses !== null && uses !== false && uses !== "") {
       const usesOperator = extractOperator(uses);
       const usesValue = await SpellPoints.withActorData(uses, actor);
@@ -414,19 +594,17 @@ export class SpellPoints {
       } else {
         currentUses = usesValue;
       }
-      // Clamp the value between 0 and max
       currentUses = Math.max(0, Math.min(currentUses, currentMax));
       newValues.value = currentUses;
       newValues.spent = currentMax - currentUses;
     }
 
-    // Only update if there is something to change
     if (Object.values(newValues).some(v => v !== null)) {
       SpellPoints.updateSpellPointItem(spellPointItem, newValues.value, newValues.max, newValues.spent);
     }
   }
 
-  /** DEPRECATED: check what resource is spellpoints on this actor **/
+  /** @deprecated Legacy resource lookup by configured spell point label. */
   static getSpellPointsResource(actor) {
     let _resources = foundry.utils.getProperty(actor, "system.resources");
     for (let r in _resources) {
@@ -458,7 +636,6 @@ export class SpellPoints {
     }
 
     const actor = item.actor;
-    /** do nothing if module is not active **/
     if (!SpellPoints.isActorCharacter(actor))
       return [item, consumeConfig, options];
 
@@ -467,16 +644,17 @@ export class SpellPoints {
     const moduleSettings = this.settings
     let settings = moduleSettings;
 
-    if (spellPointItem.flags?.spellpoints?.override) {
-      settings = spellPointItem.flags?.spellpoints?.config ?? settings;
+    if (spellPointItem.flags?.spellpoints?.override && spellPointItem.flags?.spellpoints?.config) {
+      settings = foundry.utils.mergeObject(
+        foundry.utils.deepClone(moduleSettings),
+        spellPointItem.flags.spellpoints.config,
+        { recursive: true, overwrite: true }
+      );
     }
-
-    /** check if this is a spell casting **/
-    /** dnd v4 this is not an item hook but an activation hook */
 
     const parentItem = item?.parent?.parent;
 
-    if (typeof parentItem == 'undefined' || parentItem?.type != 'spell')
+    if (typeof parentItem === 'undefined' || parentItem?.type !== 'spell')
       return [item, consumeConfig, options];
 
     if (consumeConfig.consume.spellSlot) {
@@ -489,26 +667,40 @@ export class SpellPoints {
       consumeConfig.hasConsumption = false; // prevent slot consumption
     }
 
-    /** not found any resource for spellpoints ? **/
     if (!spellPointItem) {
       return {};
     }
 
-    /** find the spell level just cast */
-    const spellLvl = consumeConfig.isCantrip ? 0 : isset(options?.data?.flags?.dnd5e?.use?.spellLevel) ? options.data.flags.dnd5e.use.spellLevel : options.data.system.spellLevel;
+    let spellLvl = consumeConfig.isCantrip
+      ? 0
+      : isset(options?.data?.flags?.dnd5e?.use?.spellLevel)
+        ? options?.data?.flags?.dnd5e?.use?.spellLevel
+        : options?.data?.system?.spellLevel;
+
+    spellLvl = SpellPoints.normalizeSpellLevel(spellLvl);
+
+    if (spellLvl === null && !consumeConfig.isCantrip) {
+      const selectedSlot = consumeConfig?.spell?.slot
+        ?? options?.data?.flags?.dnd5e?.use?.spellSlot
+        ?? options?.data?.system?.spell?.slot;
+      spellLvl = SpellPoints.getSlotLevel(actor, selectedSlot);
+    }
+
+    if (spellLvl === null) {
+      spellLvl = SpellPoints.normalizeSpellLevel(parentItem?.system?.level) ?? 0;
+    }
 
     const currentUses = spellPointItem.system.uses;
     let remainingUses = {
-      'value': currentUses.max - currentUses.spent,
+      'value': currentUses.value,
       'spent': currentUses.spent,
     }
 
     let actualSpellPoints = remainingUses.value;
 
-    /* get spell cost in spellpoints */
-    const spellPointCost = await this.withActorData(settings.spellPointsCosts[spellLvl], actor);
+    const spellPointCostFormula = SpellPoints.getSpellPointCostFormula(settings, spellLvl);
+    const spellPointCost = await this.withActorData(spellPointCostFormula, actor);
 
-    /** check if message should be visible to all or just player+gm */
     let SpeakTo = [];
     if (moduleSettings.chatMessagePrivate) {
       SpeakTo = game.users.filter(u => u.isGM);
@@ -520,12 +712,7 @@ export class SpellPoints {
         'resources': {}
       }
     };
-
-
-    // actor.update(updateActor);
-    /** update spellpoints **/
     if (actualSpellPoints - spellPointCost >= 0) {
-      /* character has enough spellpoints */
       remainingUses.spent += spellPointCost;
 
       ChatMessage.create({
@@ -543,7 +730,6 @@ export class SpellPoints {
         whisper: SpeakTo
       });
     } else if (actualSpellPoints - spellPointCost < 0) {
-      /** check if actor can cast using HP **/
       if (settings.spEnableVariant) {
         // spell point resource is 0 but character can still cast.
         remainingUses.spent = currentUses.max;
@@ -558,7 +744,6 @@ export class SpellPoints {
         const newMaxHP = hpMaxFull + newTempMaxHP;
 
         if (hpMaxFull + newTempMaxHP <= 0) { //character is permanently dead
-          // 3 death saves failed and 0 hp
           updateActor.system.attributes = { 'death': { 'failure': 3 }, 'hp': { 'tempmax': -hpMaxFull, 'value': 0 } };
           ChatMessage.create({
             content: "<i style='color:red;'>" + game.i18n.format(SP_MODULE_NAME + ".castedLifeDead", { ActorName: actor.name }) + "</i>",
@@ -613,22 +798,67 @@ export class SpellPoints {
     return [item, consumeConfig, options];
   }
 
-  static updateActiveEffect(spells, actor) {
+  static async updateActiveEffect(spells, actor) {
+    if (!actor) {
+      return;
+    }
+
     const item = SpellPoints.getSpellPointsItem(actor);
     if (!item) {
       //console.warn("SpellPoints.updateActiveEffect: No spell points item found for actor", actor);
       return;
     }
-    //Hooks.call("preUpdateItem", item, { update: 'activeEffects' });
-    item.update({});
+
+    // Only force an item refresh when active-effect modifiers actually changed.
+    // This avoids infinite update loops from repeated prepare/render cycles.
+    const previousModifiers = actor?.flags?.[SP_MODULE_NAME]?.modifiers || { max: 0, value: 0, spent: 0 };
+    const effectBaseUses = {
+      max: item.system.uses.max - (previousModifiers.max ?? 0),
+      value: item.system.uses.value - (previousModifiers.value ?? 0),
+      spent: item.system.uses.spent - (previousModifiers.spent ?? 0)
+    };
+    const currentModifiers = SpellPoints.getActiveEffectsModifiers(item, effectBaseUses);
+
+    const modifiersChanged = ["max", "value", "spent"].some((key) => {
+      const prev = previousModifiers[key] ?? 0;
+      const curr = currentModifiers[key] ?? 0;
+      return prev !== curr;
+    });
+
+    // Also force a refresh when the stored sentUses has drifted from the actual item state.
+    // This recovers from corrupted state (e.g. item.max=27 but sentUses.max=32 and modifiers={max:5}
+    // → effectBaseUses.max=22, currentMod=5=previousMod → modifiersChanged=false → stuck forever).
+    const previousSentUses = actor?.flags?.[SP_MODULE_NAME]?.sentUses;
+    const itemStateConsistent = !previousSentUses || ["max", "value", "spent"].every(
+      (key) => previousSentUses[key] === item.system.uses[key]
+    );
+
+    if (!modifiersChanged && itemStateConsistent) {
+      return;
+    }
+
+    await item.update({});
   }
 
-  /*
-   * prepare the spellpoints configuration.
-   */
+  static async onActiveEffectChange(effect) {
+    const parent = effect?.parent;
+    if (!parent) {
+      return;
+    }
+
+    const actor = parent.documentName === "Actor"
+      ? parent
+      : (parent.actor || parent.parent);
+
+    if (!actor) {
+      return;
+    }
+
+    await SpellPoints.updateActiveEffect(null, actor);
+  }
+
   static async checkPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     if (!activity.isSpell) {
-      // exit if not a spell 
       return [activity, usageConfig, dialogConfig, messageConfig];
     }
 
@@ -636,16 +866,18 @@ export class SpellPoints {
     const spellPointItem = SpellPoints.getSpellPointsItem(actor);
 
     if (!this.isActorCharacter(actor) || !spellPointItem) {
-      // exit if the actor is not a character or if the actor has no spell point resource
       return [activity, usageConfig, dialogConfig, messageConfig];
     }
 
     const isCantrip = activity.item.system.level === 0;
     if (isCantrip) {
-      // check if cantrip spells costs spellpoints
       let settings = this.settings;
-      if (spellPointItem.flags?.spellpoints?.override) {
-        settings = spellPointItem.flags?.spellpoints?.config !== 'undefined' ? spellPointItem.flags?.spellpoints.config : settings;
+      if (spellPointItem.flags?.spellpoints?.override && spellPointItem.flags?.spellpoints?.config) {
+        settings = foundry.utils.mergeObject(
+          foundry.utils.deepClone(this.settings),
+          spellPointItem.flags.spellpoints.config,
+          { recursive: true, overwrite: true }
+        );
       }
       if (settings.spellPointsCosts[0] == 0) {
         return [activity, usageConfig, dialogConfig, messageConfig];
@@ -658,17 +890,14 @@ export class SpellPoints {
       usageConfig.isCantrip = false;
     }
 
-    // is a spell, is a character, and has a spell point resource
     usageConfig.consume.canUseSpellpoints = true;
     usageConfig.spellPointsItem = spellPointItem;
 
-    // add custom classes to the dialog
     if (!dialogConfig.applicationClass.DEFAULT_OPTIONS.classes.includes('spellpoints-cast')) {
       dialogConfig.applicationClass.DEFAULT_OPTIONS.classes.push('spellpoints-cast');
     }
 
     if (!isCantrip && !usageConfig.consume.spellSlot) {
-      // set consume spellPoints to false and exit if not consuming a spell slot
       usageConfig.consume.spellPoints = false;
       return [activity, usageConfig, dialogConfig, messageConfig];
     }
@@ -700,46 +929,44 @@ export class SpellPoints {
     // Declare settings as a separate variable because jQuery overrides `this` when in an each() block
     let settings = this.settings;
 
-    /** check if actor is a player character **/
     let actor = foundry.utils.getProperty(dialog, "item.actor");
 
     const spell = dialog.item.system;
-    const preparation = spell.preparation.mode; //prepared,pact,always,atwill,innate
-
-    // spell level can change later if casting it with a greater slot, baseSpellLvl is the default
     const baseSpellLvl = spell.level;
 
-    /** get spellpoints **/
     const spellPointItem = usageConfig.spellPointsItem;
 
-    if (spellPointItem && spellPointItem.flags?.spellpoints?.override) {
-      settings = isset(spellPointItem.flags?.spellpoints?.config) ? spellPointItem.flags?.spellpoints?.config : settings;
+    if (spellPointItem && spellPointItem.flags?.spellpoints?.override && spellPointItem.flags?.spellpoints?.config) {
+      settings = foundry.utils.mergeObject(
+        foundry.utils.deepClone(settings),
+        spellPointItem.flags.spellpoints.config,
+        { recursive: true, overwrite: true }
+      );
     }
 
-    let optionLevel = 'none';
+    let optionLevel = null;
     let cost = 0;
 
-    let actualSpellPoints = spellPointItem.system.uses.max - spellPointItem.system.uses.spent;
+    let actualSpellPoints = spellPointItem.system.uses.value;
 
-    /** Replace list of spell slots with list of spell point costs **/
     if (usageConfig.consume.spellPoints && !usageConfig?.isCantrip) {
       const options = $('select[name="spell.slot"] option', $(html));
       for (const option of Array.from(options)) {
         let $option = $(option);
         let optionValue = $option.val();
-        if (!optionValue || optionValue == '') {
+        if (!optionValue || optionValue === '') {
           continue;
         }
 
-        if (optionValue == 'pact') {
-          optionLevel = actor.system.spells.pact.level;
-        } else {
-          optionLevel = optionValue.replace('spell', '');
+        optionLevel = SpellPoints.getSlotLevel(actor, optionValue);
+        if (optionLevel === null) {
+          continue;
         }
 
-        cost = await SpellPoints.withActorData(settings.spellPointsCosts[optionLevel], actor);
+        const costFormula = SpellPoints.getSpellPointCostFormula(settings, optionLevel);
+        cost = await SpellPoints.withActorData(costFormula, actor);
 
-        if (settings.spFormula == 'DMG' && optionValue == 'pact') {
+        if (settings.spFormula === 'DMG' && optionValue === 'pact') {
           // do nothing
         } else {
           const spCostText = game.i18n.format(SP_MODULE_NAME + ".spellCost", { amount: cost + '/' + actualSpellPoints, SpellPoints: spellPointItem.name });
@@ -753,10 +980,12 @@ export class SpellPoints {
       }
     }
 
-    let choosenSpellLevel = usageConfig.spell.slot.replace('spell', '');
+    let choosenSpellLevel = usageConfig.isCantrip
+      ? 0
+      : SpellPoints.getSlotLevel(actor, usageConfig?.spell?.slot);
 
-    if (choosenSpellLevel == 'pact') {
-      choosenSpellLevel = actor.system.spells.pact.level;
+    if (choosenSpellLevel === null) {
+      choosenSpellLevel = SpellPoints.normalizeSpellLevel(baseSpellLvl) ?? 0;
     }
 
     let consumeSection = $('section[data-application-part="consumption"] fieldset', $(html));
@@ -778,14 +1007,10 @@ export class SpellPoints {
 
     consumeSection.append(SpellPointsInput);
 
-    /** Calculate spell point cost and warn user if they have none left */
     let spellPointCost = 0;
 
-    if (preparation == 'pact') {
-      spellPointCost = cost;
-    } else {
-      spellPointCost = await SpellPoints.withActorData(settings.spellPointsCosts[choosenSpellLevel], actor);
-    }
+    const selectedCostFormula = SpellPoints.getSpellPointCostFormula(settings, choosenSpellLevel);
+    spellPointCost = await SpellPoints.withActorData(selectedCostFormula, actor);
 
     const missing_points = (typeof actualSpellPoints === 'undefined' || actualSpellPoints - spellPointCost < 0);
     const messageNotEnough = game.i18n.format(SP_MODULE_NAME + ".youNotEnough", { SpellPoints: spellPointItem.name });
@@ -801,7 +1026,6 @@ export class SpellPoints {
 
     $(html).on('click', '.copy', function (e) {
       e.preventDefault();
-      /** if not consumeSlot we ignore cost, go on and cast or if variant active **/
       if (!$('dnd5e-checkbox[name="consume.spellSlot"]', $(html)).prop('checked') || settings.spEnableVariant) {
         $('.original', $(html)).trigger("click");
       } else if ($('select[name="spell.slot"]', $(html)).length > 0) {
@@ -847,20 +1071,21 @@ export class SpellPoints {
 
     let hasSpellSlots = false;
     let spellPointsFromSlots = 0;
-    for (let [slotLvlTxt, slot] of Object.entries(actor.system.spells)) {
-      let slotLvl;
-      if (slotLvlTxt == 'spell0') {
-        slotLvl = 0;
-      } else {
-        slotLvl = slot.level;
-      }
+    for (let [slotKey, slot] of Object.entries(actor.system.spells)) {
+      const slotLvl = SpellPoints.getSlotLevel(actor, slotKey);
 
       if (!slotLvl || slotLvl == 0) {
         continue;
       }
 
-      spellPointsFromSlots += slot.max * await SpellPoints.withActorData(settings.spellPointsCosts[slotLvl], actor);
-      if (slot.max > 0) {
+      const slotMax = toFiniteNumber(slot?.max, 0);
+      if (slotMax <= 0) {
+        continue;
+      }
+
+      const costFormula = SpellPoints.getSpellPointCostFormula(settings, slotLvl);
+      spellPointsFromSlots += slotMax * await SpellPoints.withActorData(costFormula, actor);
+      if (slotMax > 0) {
         hasSpellSlots = true;
       }
     }
@@ -883,7 +1108,6 @@ export class SpellPoints {
    * @return {number} The calculated maximum spell points.
    */
   static async _calculateSpellPointsFixed(classItem, updates, actor, settings) {
-    /* not an update? **/
     let changedClassLevel = null;
     let changedClassID = null;
     let levelUpdated = false;
@@ -896,7 +1120,6 @@ export class SpellPoints {
     }
 
     let spellcastingNpc, spellcastingNpcLevel = false;
-    //check if actor is a npc with spellcasting
     if (actor.type === 'npc') {
       if (actor.system?.attributes?.spell.level > 0) {
         spellcastingNpc = true;
@@ -906,16 +1129,13 @@ export class SpellPoints {
       }
     }
 
-    // check for multiclasses
     const actorClasses = actor.classes;
 
-    if (actorClasses.length == 0 && !spellcastingNpc) {
-      // no classes, no spellcasting
+    if (foundry.utils.isEmpty(actorClasses) && !spellcastingNpc) {
       return 0;
     }
 
-    if (spellcastingNpc && actorClasses.length == 0) {
-      // no classes, but spellcasting npc
+    if (spellcastingNpc && foundry.utils.isEmpty(actorClasses)) {
       if (leveledProgression) {
         return parseInt(await this.withActorData(settings.leveledProgressionFormula[spellcastingNpcLevel], actor)) || 0;
       } else {
@@ -930,22 +1150,13 @@ export class SpellPoints {
       spellcastingLevels[key] = [];
     });
 
-    Object.keys(actorClasses).forEach(c => {
-      const actorClass = actorClasses[c];
-      /* progression: pact; full; half; third; artificier; none; **/
-      let progression = actorClass.system.spellcasting.progression;
-      if (progression == 'none') {
-        // check subclasses
-        let subclass = actorClass.subclass;
-        if (subclass && subclass?.system && subclass?.system?.spellcasting) {
-          progression = subclass.system.spellcasting.progression;
-        }
-      }
+    Object.values(actorClasses).forEach(actorClass => {
+      /* Use Item5e.spellcasting getter — already resolves subclass overrides */
+      const progression = actorClass.spellcasting?.progression ?? 'none';
 
       let level = actorClass.system.levels;
 
-      // get updated class new level
-      if (levelUpdated && actorClass._id == changedClassID)
+      if (levelUpdated && actorClass._id === changedClassID)
         level = changedClassLevel;
 
       if (spellcastingLevels[progression] != undefined) {
@@ -954,24 +1165,19 @@ export class SpellPoints {
       }
     })
 
-    // --- Dynamically sum all progressions from CONFIG.DND5E.spellProgression ---
     let totalSpellcastingLevel = 0;
     const divisorSource = (settings.spFormula === 'DMG')
       ? SpellPoints.defaultSettings.spellProgression
       : settings.spellProgression;
 
-    // Loop through all progression keys present in the config
     for (const key of Object.keys(divisorSource)) {
-      // Skip 'none' progression or any progression with divisor 0
       if (key === 'none') continue;
       if (key === 'pact' && settings.spFormula === 'DMG') continue; // Exclude pact for DMG
       const rawDivisor = Number(divisorSource[key]?.value);
       if (!rawDivisor) continue; // skip if 0 or NaN
       const divisor = rawDivisor;
 
-      // Get all class levels for this progression
       const levels = spellcastingLevels[key] || [];
-      // For 'artificer', always round up; for others, round down unless single-class
       let sum = 0;
       if (key === 'artificer') {
         sum = levels.reduce((acc, lvl) => acc + (divisor === 1 ? lvl : Math.ceil(lvl / divisor)), 0);
@@ -1024,14 +1230,42 @@ export class SpellPoints {
   }
 
   static async spOnUpdateItem(item, update, action, id) {
+    // Refresh spellpoint active-effect modifiers when item suppression state may change
+    // (equipped / attuned / attunement requirement transitions).
+    await SpellPoints.maybeRefreshSpellPointsFromSuppressionState(item, update);
+
     if (item.type !== 'class') {
       return;
     }
     return SpellPoints.classItemUpdateSpellPoints(item, update, action, id);
   }
 
+  static isSuppressionAffectingItemUpdate(update) {
+    if (!update) return false;
+    return foundry.utils.hasProperty(update, "system.equipped")
+      || foundry.utils.hasProperty(update, "system.attuned")
+      || foundry.utils.hasProperty(update, "system.attunement");
+  }
+
+  static async maybeRefreshSpellPointsFromSuppressionState(item, update) {
+    if (!SpellPoints.isSuppressionAffectingItemUpdate(update)) {
+      return;
+    }
+
+    const actor = item?.parent;
+    if (!actor || !SpellPoints.isActorCharacter(actor)) {
+      return;
+    }
+
+    if (!SpellPoints.userHasActorOwnership(actor)) {
+      return;
+    }
+
+    await SpellPoints.updateActiveEffect(null, actor);
+  }
+
   /**
-   * ** on updateItem hook applied only if changing a class item **
+    * Handles class-item updates from the `updateItem` hook.
    * If the module is active, the actor is a character, and the actor has a spell point resource, then
    * update the spell point resource's maximum value
    * @param item - The item that was updated.
@@ -1040,19 +1274,17 @@ export class SpellPoints {
    * @returns True
    */
   static async classItemUpdateSpellPoints(classItem, update, action, id) {
-    /* updating or dropping a class item */
+    // Handles class-item updates and class-item drops.
 
     const actor = classItem.parent;
 
     if (!SpellPoints.isActorCharacter(actor))
       return [classItem, update, action, id];
 
-    // if current user is not the owner of the actor, do nothing
     if (!SpellPoints.userHasActorOwnership(actor)) {
       return [classItem, update, action, id];
     }
 
-    // are we changing the levels?
     if (!foundry.utils.getProperty(update.system, 'levels'))
       return [classItem, update, action, id];
 
@@ -1073,10 +1305,8 @@ export class SpellPoints {
     const actorName = actor.name;
 
     if (!spellPointsItem) {
-      // get the spell points item from the actor
       spellPointsItem = SpellPoints.getSpellPointsItem(actor);
       if (!spellPointsItem) {
-        // spell points item not found? 
         return;
       }
     }
@@ -1095,19 +1325,24 @@ export class SpellPoints {
     const isCustom = settings.isCustom;
     const spUseLeveled = settings.spUseLeveled;
 
-    // choose the correct formula based on settings
     const SpellPointsMax = isCustom && !spUseLeveled ?
       await SpellPoints._calculateSpellPointsCustom(actor, settings) :
       await SpellPoints._calculateSpellPointsFixed(classItem, updates, actor, settings)
 
     if (SpellPointsMax !== NaN) {
-      const newItemSpent = SpellPointsMax < spellPointsItem.system.uses.value ? 0 : SpellPointsMax - spellPointsItem.system.uses.value;
-      const newItemValue = SpellPointsMax < spellPointsItem.system.uses.value ? SpellPointsMax : spellPointsItem.system.uses.value;
+      // Add the current stored active-effect max modifier to the raw formula result so that
+      // updateSpellPointItem sees a real change even when the formula base matches the old
+      // effective max. Example: level 5→6 (base 27→32) while a ring (+5) is equipped —
+      // old effective max is 32, new formula is 32, so without this offset updateSpellPointItem
+      const storedModifiers = actor?.flags?.[SP_MODULE_NAME]?.modifiers ?? { max: 0, value: 0, spent: 0 };
+      const effectiveSpellPointsMax = SpellPointsMax + (storedModifiers.max ?? 0);
 
-      await SpellPoints.updateSpellPointItem(spellPointsItem, null, SpellPointsMax, null);
-
-      // update the spell points item
-      //await spellPointsItem.update(updates);
+      // Signal spPreUpdateItem (via Foundry's options object) to use the delta path instead of
+      // the reverse/manual-edit path for max. effectiveSpellPointsMax already incorporates the
+      // active-effect offset; re-applying effects on top would double-count the modifier.
+      // Using options is reliable — unlike a static flag, it flows synchronously through the
+      // Foundry update pipeline and is present in the preUpdateItem hook's third argument.
+      await SpellPoints.updateSpellPointItem(spellPointsItem, null, effectiveSpellPointsMax, null, { dnd5espellpoints_formulaUpdate: true });
 
       if (!game.user.isGM) {
         let SpeakTo = game.users.filter(u => u.isGM);
@@ -1124,33 +1359,12 @@ export class SpellPoints {
     return updates;
   }
 
-  /** hook computeLeveledProgression  */
-  static levelProgression(slots, actor, classItem, progression) {
-
-  }
-
-  /** preDeleteItem */
+  /** Hook handler: `preDeleteItem`. */
   static spPreDeleteItem(item, dialog, id) {
     let actor = item.parent;
-    if (item._id == SpellPoints.getActorFlagSpellPointItem(actor)) {
+    if (item._id === SpellPoints.getActorFlagSpellPointItem(actor)) {
       actor.update({ [`flags.dnd5espellpoints.-=item`]: null });
     }
-  }
-
-  /**
-   * Reverses previously applied modifiers from a base value for a specific property.
-   * This is used when a property (like max) is manually edited to re-anchor effects
-   * to the new baseline value.
-   *
-   * @param {number} baseValue - The new base value for the property
-   * @param {number} previousModifier - The previously applied modifier for this property
-   * @returns {number} The base value with previous modifiers reversed
-   */
-  static reverseModifiersForProperty(baseValue, previousModifier) {
-    // Subtract the previous modifier to get the un-modified base
-    // If previousModifier was +5, we subtract 5 to reverse it
-    // If previousModifier was -5, we subtract -5 (add 5) to reverse it
-    return baseValue - previousModifier;
   }
 
   /**
@@ -1158,21 +1372,26 @@ export class SpellPoints {
    * to avoid duplicate applications. Returns adjusted uses values.
    *
    * Behavior differs based on which property is being modified:
-   * - For max: Previous modifiers are reversed (effect is re-anchored to new baseline)
-   * - For value/spent: Modifiers are delta-applied (effects already considered included)
+   * - For properties flagged in reverseForProperties (currently max on manual edits):
+   *   use current base value and apply current modifier directly.
+   * - For other properties: apply delta between current and previous modifiers.
    *
    * @param {Item} item - The spell points item
    * @param {Object} baseUses - The base uses values (max, value, spent)
    * @param {Object} reverseForProperties - Properties to reverse modifiers for (e.g., { max: true })
+    * @param {Object} effectBaseUses - Base uses for effect calculation (defaults to baseUses if not provided)
    * @return {Object} An object containing adjusted uses and current modifiers
    */
-  static applyActiveEffectModifiers(item, baseUses, reverseForProperties = {}) {
-    // Get current modifiers from active effects
-    const currentModifiers = SpellPoints.getActiveEffectsModifiers(item);
-    // Get previously stored modifiers (or default to zero)
-    const previousModifiers = item.flags?.spellpoints?.modifiers || { max: 0, value: 0, spent: 0 };
+  static applyActiveEffectModifiers(item, baseUses, reverseForProperties = {}, effectBaseUses = null) {
+    // Use provided effectBaseUses for effect calculation, otherwise use baseUses
+    if (!effectBaseUses) {
+      effectBaseUses = baseUses;
+    }
 
-    // Calculate the delta for each property
+    const currentModifiers = SpellPoints.getActiveEffectsModifiers(item, effectBaseUses);
+    const actor = item.parent;
+    const previousModifiers = actor?.flags?.[SP_MODULE_NAME]?.modifiers || { max: 0, value: 0, spent: 0 };
+
     const adjustedUses = { max: baseUses.max, value: baseUses.value, spent: baseUses.spent };
 
     for (const key of ["max", "value", "spent"]) {
@@ -1180,14 +1399,11 @@ export class SpellPoints {
       const previousMod = previousModifiers[key] ?? 0;
 
       if (reverseForProperties[key]) {
-        // For manually-edited properties (like max): reverse previous modifiers to de-anchor,
-        // then re-apply current modifiers. This treats the manual edit as a new baseline.
-        //adjustedUses[key] = SpellPoints.reverseModifiersForProperty(adjustedUses[key], previousMod);
-        //adjustedUses[key] = adjustedUses[key] + currentMod;
+        // For manually-edited properties (like max): treat the manual value as the new base,
+        // then apply only the current modifier snapshot.
         adjustedUses[key] = baseUses[key] + currentMod;
       } else {
-        // For non-manually-edited properties (like value/spent): apply delta between
-        // current and previous modifiers. This preserves effect inclusion in manual edits.
+        // For non-manually-edited properties: apply modifier delta from previous snapshot.
         const delta = currentMod - previousMod;
         if (delta !== 0) {
           adjustedUses[key] = adjustedUses[key] + delta;
@@ -1195,145 +1411,267 @@ export class SpellPoints {
       }
     }
 
-    // Return both adjusted values and current modifiers for storage
     return {
       adjusted: adjustedUses,
       currentModifiers: currentModifiers
     };
   }
 
+  static maybeApplyFormulaPresetOnConfigChange(item, update) {
+    const incomingConfig = update?.flags?.spellpoints?.config;
+    if (!incomingConfig) {
+      return;
+    }
+
+    const formulas = SpellPoints.formulas;
+    const newFormula = incomingConfig.spFormula;
+    if (!newFormula || !formulas[newFormula]) {
+      return;
+    }
+
+    const currentConfig = item?.flags?.spellpoints?.config ?? {};
+    const currentFormula = currentConfig.spFormula ?? SpellPoints.settings.spFormula;
+    if (newFormula === currentFormula) {
+      return;
+    }
+
+    const presetDefaults = foundry.utils.deepClone(formulas[newFormula]);
+    const mergedConfig = foundry.utils.mergeObject(
+      foundry.utils.deepClone(currentConfig),
+      presetDefaults,
+      { overwrite: true, recursive: true, insertKeys: true, insertValues: true }
+    );
+
+    // Keep non-formula-driven incoming fields from the same submit (e.g. variant toggles),
+    // but force formula-driven data to come from the newly-selected preset.
+    const formulaDrivenKeys = new Set([
+      "isCustom",
+      "spCustomFormulaBase",
+      "spCustomFormulaSlotMultiplier",
+      "spUseLeveled",
+      "spellPointsByLevel",
+      "spellPointsCosts",
+      "leveledProgressionFormula"
+    ]);
+
+    for (const [key, value] of Object.entries(incomingConfig)) {
+      if (key === "previousFormula" || formulaDrivenKeys.has(key)) {
+        continue;
+      }
+      mergedConfig[key] = value;
+    }
+
+    mergedConfig.spFormula = newFormula;
+    mergedConfig.previousFormula = newFormula;
+    mergedConfig.isCustom = formulas[newFormula].isCustom;
+
+    update.flags ??= {};
+    update.flags.spellpoints ??= {};
+    update.flags.spellpoints.config = mergedConfig;
+  }
+
   /** preUpdateItem hook */
-  /** check if max uses is less than value */
   static spPreUpdateItem(item, update, difference, id) {
     if (!SpellPoints.isSpellPointsItem(item)) {
       return;
     }
 
-    const storeUpdate = foundry.utils.deepClone(update);
+    SpellPoints.maybeApplyFormulaPresetOnConfigChange(item, update);
+
+    const incomingOverride = foundry.utils.getProperty(update, "flags.spellpoints.override");
+    const effectiveOverride = (typeof incomingOverride === "boolean")
+      ? incomingOverride
+      : (item.flags?.spellpoints?.override === true);
+
+    if (effectiveOverride) {
+      const currentConfig = foundry.utils.deepClone(item.flags?.spellpoints?.config ?? {});
+      const incomingConfig = foundry.utils.deepClone(update?.flags?.spellpoints?.config ?? {});
+      const candidateConfig = foundry.utils.mergeObject(currentConfig, incomingConfig, {
+        overwrite: true,
+        recursive: true,
+        insertKeys: true,
+        insertValues: true
+      });
+
+      const formulaErrors = SpellPoints.collectFormulaValidationErrors(candidateConfig);
+      if (formulaErrors.length) {
+        SpellPoints.notifyFormulaValidationErrors(formulaErrors, { sourceLabel: item.name });
+        return false;
+      }
+    }
+
     let max, value, spent;
     let changed_uses, changed_max, changed_value, changed_spent = false;
 
-    if (update.system?.uses?.max !== undefined && update.system?.uses?.max !== null) {
-      max = parseInt(update.system.uses.max);
+    const actor = item.parent;
+
+    // Recover previous state from ACTOR flags (not item flags)
+    // This avoids triggering item updates just for tracking state
+    // Store the ACTUAL values we sent last time (including effects), not calculated base
+    // This allows change detection on the next update
+    const previousModifiers = actor?.flags?.[SP_MODULE_NAME]?.modifiers || { max: 0, value: 0, spent: 0 };
+    const previousSentUses = actor?.flags?.[SP_MODULE_NAME]?.sentUses || {
+      max: item.system.uses.max,
+      value: item.system.uses.value,
+      spent: item.system.uses.spent
+    };
+
+    // Extract incoming values from update (always present per user confirmation)
+    let incomingMax = update.system?.uses?.max !== undefined && update.system?.uses?.max !== null
+      ? parseInt(update.system.uses.max)
+      : item.system.uses.max;
+    let incomingValue = update.system?.uses?.value !== undefined && update.system?.uses?.value !== null
+      ? parseInt(update.system.uses.value)
+      : item.system.uses.value;
+    let incomingSpent = update.system?.uses?.spent !== undefined && update.system?.uses?.spent !== null
+      ? parseInt(update.system.uses.spent)
+      : item.system.uses.spent;
+
+    // Detect TRUE changes by comparing against previous base values (not modified current)
+    // This prevents re-applying effects when user only changes spent but form sends all fields
+    if (incomingMax !== previousSentUses.max) {
+      max = incomingMax;
       changed_uses = true;
       changed_max = true;
     } else {
-      max = item.system.uses.max
+      max = incomingMax;
     }
 
-    if (update.system?.uses?.value !== undefined && update.system?.uses?.value !== null) {
-      value = parseInt(update.system.uses.value);
+    if (incomingValue !== previousSentUses.value) {
+      value = incomingValue;
       changed_uses = true;
       changed_value = true;
     } else {
-      value = item.system.uses.value
+      value = incomingValue;
     }
 
-    if (update.system?.uses?.spent !== undefined && update.system?.uses?.spent !== null) {
-      spent = parseInt(update.system.uses.spent);
+    if (incomingSpent !== previousSentUses.spent) {
+      spent = incomingSpent;
       changed_uses = true;
       changed_spent = true;
     } else {
-      spent = item.system.uses.spent
+      spent = incomingSpent;
     }
 
     // Apply active effect modifiers and get adjusted values
     const baseUses = { max, value, spent };
+    const isFormulaUpdate = difference?.dnd5espellpoints_formulaUpdate === true;
     const { adjusted: adjustedUses, currentModifiers } = SpellPoints.applyActiveEffectModifiers(
       item,
       baseUses,
-      { max: changed_max } // reverse modifiers only for max if it was manually changed
+      { max: changed_max && !isFormulaUpdate }, // reverse only for manual max edits, not formula recalculation
+      baseUses // pass base uses for effect calculation
     );
 
-    // After applying effects to max, ensure value is clamped to the new max
-    let finalMax = adjustedUses.max;
-    let finalValue = adjustedUses.value;
-    let finalSpent = adjustedUses.spent;
+    const effectChangedMax = adjustedUses.max !== item.system.uses.max;
+    const effectChangedValue = adjustedUses.value !== item.system.uses.value;
+    const effectChangedSpent = adjustedUses.spent !== item.system.uses.spent;
 
-    // If max changed (by effect or manual edit), clamp value to stay within bounds
-    if (finalValue > finalMax) {
-      finalValue = finalMax;
-    }
-
-    // Recalculate spent based on the final max and value ONLY if spent wasn't explicitly changed
-    // If spent was explicitly updated (e.g., during rest), respect that value
-    if (!changed_spent) {
-      finalSpent = finalMax - finalValue;
-    } else {
-      // spent was explicitly changed, so update value to match
-      finalValue = finalMax - finalSpent;
-    }
-
-    // Ensure update object has system.uses structure
-    if (!update.system) {
-      update.system = {};
-    }
-    if (!update.system.uses) {
-      update.system.uses = {};
+    let normalizationPreference = "value";
+    if (changed_value) {
+      normalizationPreference = "value";
+    } else if (changed_max) {
+      // max change takes priority over derived-spent changes: when updateSpellPointItem
+      // normalizes a max-only write it also emits a new spent value, which looks like
+      // changed_spent but is just a derivation — we must not let it override the intent.
+      normalizationPreference = "value";
+    } else if (changed_spent) {
+      // only true spent-only edits (no max change involved) use spent preference
+      normalizationPreference = "spent";
+    } else if (effectChangedSpent) {
+      normalizationPreference = "spent";
+    } else if (effectChangedValue) {
+      normalizationPreference = "value";
+    } else if (effectChangedMax) {
+      normalizationPreference = "value";
     }
 
-    // Apply adjusted values to the update object
-    if (changed_max || finalMax !== item.system.uses.max) {
-      update.system.uses.max = finalMax;
-    }
-    if (changed_value || finalValue !== item.system.uses.value) {
-      update.system.uses.value = finalValue;
-    }
-    if (changed_spent || finalSpent !== item.system.uses.spent) {
-      update.system.uses.spent = finalSpent;
-    }
+    const usesChanges = SpellPoints.normalizeUses(adjustedUses, normalizationPreference);
+    // Compare against BOTH the current item state AND the incoming values.
+    // The incoming update may undo a previously-applied effect (e.g. "calculate max" writes
+    // formula max=27 while ring is equipped, so adjusted=32 == current item=32 → no item diff,
+    // but the incoming would corrupt the state to 27 if we let it through uncorrected).
+    const incomingUses = { max: incomingMax, value: incomingValue, spent: incomingSpent };
+    const hasUsesChanges = ["max", "value", "spent"].some((key) =>
+      usesChanges[key] !== item.system.uses[key] || usesChanges[key] !== incomingUses[key]
+    );
 
-    // Store current modifiers for next preupdate
-    update.flags = foundry.utils.mergeObject(update?.flags || {}, {
-      spellpoints: {
-        modifiers: currentModifiers
+    // Only set system.uses in update if we have changes
+    if (hasUsesChanges) {
+      if (!update.system) {
+        update.system = {};
       }
-    });
+      update.system.uses = {
+        max: usesChanges.max,
+        value: usesChanges.value,
+        spent: usesChanges.spent
+      };
 
-    if (!isset(item.flags?.spellpoints?.config)) {
-      // get global module settings for defaults
-      const def = SpellPoints.settings;
-      const formulas = SpellPoints.formulas;
-      // store current item configuration
-      let conf = isset(item.flags?.spellpoints?.config) ? item.flags?.spellpoints?.config : {};
+      // Store modifiers/baseUses in ACTOR flags (not item flags) to avoid item re-updates
+      // This prevents unnecessary item updates when just calculating effects
+      const safeCurrentModifiers = {
+        max: typeof currentModifiers.max === 'number' ? currentModifiers.max : 0,
+        value: typeof currentModifiers.value === 'number' ? currentModifiers.value : 0,
+        spent: typeof currentModifiers.spent === 'number' ? currentModifiers.spent : 0
+      };
 
-      conf = foundry.utils.mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
-      const preset = conf.spFormula;
+      const newSentUses = {
+        max: usesChanges.max,
+        value: usesChanges.value,
+        spent: usesChanges.spent
+      };
 
-      conf.isCustom = formulas[preset].isCustom;
+      // Store to actor flags asynchronously to avoid recursion
+      if (actor) {
+        actor.setFlag(SP_MODULE_NAME, 'modifiers', safeCurrentModifiers);
+        actor.setFlag(SP_MODULE_NAME, 'sentUses', newSentUses);
+      }
 
-      update.flags.spellpoints = foundry.utils.mergeObject(update.flags.spellpoints, {
-        [`config`]: item.flags?.spellpoints?.override ? conf : {},
-        [`override`]: item.flags?.spellpoints?.override
-      });
+      // Only initialize config if it doesn't exist (one-time setup) - stored in item
+      if (!isset(item.flags?.spellpoints?.config)) {
+        const def = SpellPoints.settings;
+        const formulas = SpellPoints.formulas;
+        let conf = {};
+
+        conf = foundry.utils.mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
+        const preset = conf.spFormula;
+
+        conf.isCustom = formulas[preset].isCustom;
+
+        update.flags = foundry.utils.mergeObject(update?.flags || {}, {
+          spellpoints: {
+            [`config`]: item.flags?.spellpoints?.override ? conf : {},
+            [`override`]: item.flags?.spellpoints?.override
+          }
+        });
+      }
     }
 
-    SpellPoints.maybeUpdateTrackedResource(item, adjustedUses.max, adjustedUses.value);
+    // Only call maybeUpdateTrackedResource if we actually changed uses
+    if (hasUsesChanges) {
+      SpellPoints.maybeUpdateTrackedResource(item, usesChanges.max, usesChanges.value);
+    }
+
     return [item, update, difference, id];
   }
-  /* update the tracked resource if needed */
   static maybeUpdateTrackedResource(item, max, value) {
     const trackedResource = SpellPoints.settings.spResourceBind;
     const actor = item.parent;
     if (!trackedResource || trackedResource === "" || !actor) {
       return;
     }
-    // Define the possible resources
     const resources = ["primary", "secondary", "tertiary"];
 
-    // Get the current values of the tracked resource
     const currentResource = actor.system.resources[trackedResource];
     const currentLabel = currentResource?.label || "";
     const currentMax = currentResource?.max || 0;
     const currentValue = currentResource?.value || 0;
 
-    // Check if the tracked resource already matches the desired values
     const isTrackedResourceUnchanged =
       currentLabel === item.name &&
       currentMax === max &&
       currentValue === value;
 
-    // Check if any other resource has the same label as the tracked resource
     const hasConflictingLabels = resources.some(resource => {
       if (resource !== trackedResource) {
         const resourceLabel = actor.system.resources[resource]?.label;
@@ -1342,13 +1680,11 @@ export class SpellPoints {
       return false;
     });
 
-    // If nothing changed and no conflicts exist, skip the update
     if (isTrackedResourceUnchanged && !hasConflictingLabels) {
       return;
     }
 
     let updateActor = {};
-    // Prepare the update object
     if (!isTrackedResourceUnchanged) {
       updateActor = {
         [`system.resources.${trackedResource}.label`]: item.name,
@@ -1357,7 +1693,6 @@ export class SpellPoints {
       };
     }
 
-    // Clean up conflicting labels in other resources
     resources.forEach(resource => {
       if (resource !== trackedResource) {
         const resourceLabel = actor.system.resources[resource]?.label;
@@ -1367,7 +1702,6 @@ export class SpellPoints {
       }
     });
 
-    // Perform the update
     actor.update(updateActor);
   }
 
@@ -1431,22 +1765,21 @@ export class SpellPoints {
       return;
     }
     const actor = data.actor;
-    const SpellPointsItem = this.getSpellPointsItem(actor);
+    const spellPointsItem = this.getSpellPointsItem(actor);
 
-    if (SpellPointsItem) {
-      //const computedValues = await SpellPoints.getComputedValues(SpellPointsItem, actor);
+    if (spellPointsItem) {
+      //const computedValues = await SpellPoints.getComputedValues(spellPointsItem, actor);
       //console.log("alterCharacterSheet Spell Points Computed Values:", computedValues);
-      const max = SpellPointsItem.system.uses.max;
-      const spent = SpellPointsItem.system.uses.spent;
-      const value = max - spent;
+      const max = spellPointsItem.system.uses.max;
+      const value = spellPointsItem.system.uses.value;
 
       let percent = value / max * 100 > 100 ? 100 : value / max * 100;
       const template_data = {
-        'isV2': type == 'v2',
-        'isNPC': type == 'npc',
+        'isV2': type === 'v2',
+        'isNPC': type === 'npc',
         'editable': data.editable,
-        'name': SpellPointsItem.name,
-        '_id': SpellPointsItem._id,
+        'name': spellPointsItem.name,
+        '_id': spellPointsItem._id,
         'max': max,
         'value': value,
         'percent': percent,
@@ -1466,9 +1799,9 @@ export class SpellPoints {
         // Tidy5e CLASSIC specific handling
         sidebarClasses = '.attributes .side-panel, .tidy-tab.favorites';
         append = false;
-      } else if (type == 'v2') {
+      } else if (type === 'v2') {
         sidebarClasses = '.sidebar .stats > .meter-group:last';
-      } else if (type == 'npc') {
+      } else if (type === 'npc') {
         sidebarClasses = '.sheet-body .sidebar';
         append = false;
       } else {
@@ -1490,7 +1823,7 @@ export class SpellPoints {
         event.preventDefault();
         event.stopPropagation();
 
-        let config = new ActorSpellPointsConfig({ document: SpellPointsItem });
+        let config = new ActorSpellPointsConfig({ document: spellPointsItem });
         config?.render(true);
       });
 
@@ -1507,12 +1840,12 @@ export class SpellPoints {
       $('.progress.sp-points input.sp_value', html)
         .off('blur')
         .on('blur', async (event) => {
-          await SpellPoints.handleSPBarValueChange(SpellPointsItem, event, html, max);
+          await SpellPoints.handleSPBarValueChange(spellPointsItem, event, html, max);
         })
         .off('keydown')
         .on('keydown', async (event) => {
           if (event.key === "Enter") {
-            //await SpellPoints.handleSPBarValueChange(SpellPointsItem, event, html, max);
+            //await SpellPoints.handleSPBarValueChange(spellPointsItem, event, html, max);
             event.target.blur();
           }
         });
@@ -1525,9 +1858,7 @@ export class SpellPoints {
 
     let newValue;
 
-    // Check if input starts with + or -
     if (inputValue.startsWith('+') || inputValue.startsWith('-')) {
-      // Relative change: add or subtract from current value
       const relativeChange = parseInt(inputValue);
       if (isNaN(relativeChange)) {
         newValue = currentValue; // Keep current value if invalid
@@ -1535,14 +1866,12 @@ export class SpellPoints {
         newValue = currentValue + relativeChange;
       }
     } else {
-      // Absolute value: set directly
       newValue = parseInt(inputValue);
       if (isNaN(newValue)) {
         newValue = currentValue; // Keep current value if invalid
       }
     }
 
-    // Clamp value between 0 and max
     if (newValue < 0) {
       newValue = 0;
     }
@@ -1573,7 +1902,6 @@ export class SpellPoints {
     return filtered;
   }
 
-  /* It renders the spell points item config in the item sheet. */
   static async renderSpellPointsItem(app, html, data) {
     const html_obj = $(html);
     const item = data?.item;
@@ -1582,16 +1910,13 @@ export class SpellPoints {
       const itemId = item._id;
 
       $('.item-properties', html_obj).hide();
-      let template_item = data.document; // data object to pass to the template
-      //get global module settings for defaults
+      let template_item = data.document;
       const def = SpellPoints.settings;
       const formulas = SpellPoints.formulas;
-      // store current item configuration
       let conf = isset(template_item.flags?.spellpoints?.config) ? template_item.flags?.spellpoints?.config : {};
 
       conf = foundry.utils.mergeObject(conf, def, { recursive: true, insertKeys: true, insertValues: false, overwrite: false })
 
-      //conf.spFormula = isset(conf?.spFormula) ? conf?.spFormula : def.spFormula;
       const preset = conf.spFormula;
 
       conf.isCustom = isset(conf?.spFormula) ? formulas[preset].isCustom : def.isCustom;
@@ -1622,17 +1947,18 @@ export class SpellPoints {
         };
       }
 
+
+
       template_item.flags.spellpoints.editable = data.editable && (game.user.isGM || SpellPoints.settings?.spGmOnly == false);
 
       template_item.flags.spellpoints.spFormulas = Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]));
-      const template_file = "modules/dnd5e-spellpoints/templates/spell-points-item.hbs"; // file path for the template file, from Data directory
+      const template_file = "modules/dnd5e-spellpoints/templates/spell-points-item.hbs";
 
       foundry.applications.handlebars.renderTemplate(template_file, template_item).then(function (html) {
         html_obj.addClass('spellpoints-item-sheet');
         $('.tab[data-tab="description"] .item-descriptions', html_obj).prepend(html);
         $('.tab.description', html_obj).scrollTop(SpellPoints.scroll);
         SpellPoints.scroll = 0;
-        // save scroll on interactions
         html_obj.on('change', function (e) {
           let scroll = $('.tab.description', html_obj).scrollTop();
           SpellPoints.scroll = scroll;
@@ -1641,10 +1967,8 @@ export class SpellPoints {
 
 
     }
-    //return (app, html, data);
-
   }
   static scroll = 0;
-} /** END SpellPoint Class **/
+} // End SpellPoints class.
 
 
