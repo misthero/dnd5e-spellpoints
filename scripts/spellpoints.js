@@ -236,6 +236,127 @@ export class SpellPoints {
     return costs[slotLevel] ?? costs[`${slotLevel}`] ?? 0;
   }
 
+  static normalizeFormulaValue(formula) {
+    if (formula === null || typeof formula === "undefined") {
+      return "";
+    }
+
+    return formula.toString().replace(/\n/g, " ").trim();
+  }
+
+  static validateFormulaValue(formula) {
+    const normalized = SpellPoints.normalizeFormulaValue(formula);
+    if (!normalized) {
+      return { valid: true, normalized };
+    }
+
+    try {
+      const parseResult = Roll.validate(normalized);
+      if (parseResult === false) {
+        throw new Error("Formula failed syntax validation");
+      }
+    } catch (error) {
+      return {
+        valid: false,
+        normalized,
+        reason: error?.message ?? "Formula failed syntax validation"
+      };
+    }
+
+    try {
+      const dryRunFormula = normalized.replace(/@([a-z.0-9_-]+)/gi, "1");
+      const dryRun = new Roll(dryRunFormula);
+      dryRun.evaluateSync({ strict: false });
+    } catch (error) {
+      return {
+        valid: false,
+        normalized,
+        reason: error?.message ?? "Formula failed deterministic validation"
+      };
+    }
+
+    return { valid: true, normalized };
+  }
+
+  static collectFormulaValidationErrors(settings) {
+    if (!settings || (typeof settings !== "object")) {
+      return [];
+    }
+
+    const errors = [];
+    const pushIfInvalid = (path, formula) => {
+      const result = SpellPoints.validateFormulaValue(formula);
+      if (!result.valid) {
+        errors.push({
+          path,
+          formula: SpellPoints.normalizeFormulaValue(formula),
+          reason: result.reason
+        });
+      }
+    };
+
+    pushIfInvalid("spCustomFormulaBase", settings.spCustomFormulaBase);
+    pushIfInvalid("spCustomFormulaSlotMultiplier", settings.spCustomFormulaSlotMultiplier);
+    pushIfInvalid("spLifeCost", settings.spLifeCost);
+
+    for (const [level, formula] of Object.entries(settings.spellPointsCosts ?? {})) {
+      pushIfInvalid(`spellPointsCosts.${level}`, formula);
+    }
+
+    for (const [level, formula] of Object.entries(settings.leveledProgressionFormula ?? {})) {
+      pushIfInvalid(`leveledProgressionFormula.${level}`, formula);
+    }
+
+    return errors;
+  }
+
+  static notifyFormulaValidationErrors(errors, { sourceLabel = "" } = {}) {
+    if (!errors?.length) {
+      return;
+    }
+
+    const details = errors.slice(0, 3).map((entry) => {
+      return game.i18n.format(SP_MODULE_NAME + ".formulaValidationEntry", {
+        field: entry.path,
+        formula: entry.formula,
+        reason: entry.reason
+      });
+    }).join(" | ");
+
+    const baseMessage = game.i18n.format(SP_MODULE_NAME + ".formulaValidationBlocked", {
+      count: errors.length,
+      details
+    });
+
+    const message = sourceLabel ? `${sourceLabel}: ${baseMessage}` : baseMessage;
+    ui.notifications.error(message);
+  }
+
+  static runtimeFormulaWarnings = new Set();
+
+  static notifyRuntimeFormulaError(formula, error) {
+    const normalized = SpellPoints.normalizeFormulaValue(formula);
+    const reason = error?.message ?? "Unknown formula error";
+    const cacheKey = `${normalized}::${reason}`;
+
+    if (SpellPoints.runtimeFormulaWarnings.has(cacheKey)) {
+      return;
+    }
+
+    SpellPoints.runtimeFormulaWarnings.add(cacheKey);
+
+    console.error(`[${SP_MODULE_NAME}] Formula evaluation failed`, {
+      formula: normalized,
+      reason,
+      error
+    });
+
+    ui.notifications.error(game.i18n.format(SP_MODULE_NAME + ".formulaRuntimeFallback", {
+      formula: normalized,
+      reason
+    }));
+  }
+
   /**
    * Evaluates the given formula with the given actors data. Uses FoundryVTT's Roll
    * to make this evaluation.
@@ -248,14 +369,26 @@ export class SpellPoints {
       return 0;
     }
 
-    formula = formula.toString().replace(/\n/g, " ");
+    formula = SpellPoints.normalizeFormulaValue(formula);
     if (!formula || typeof formula !== 'string' || formula.length === 0) {
       return 0;
     }
-    let dataObject = actor.getRollData();
-    dataObject.flags = actor.flags;
-    const r = await Roll.create(formula.toString(), dataObject).evaluate();
-    return r.total;
+
+    const validation = SpellPoints.validateFormulaValue(formula);
+    if (!validation.valid) {
+      SpellPoints.notifyRuntimeFormulaError(formula, new Error(validation.reason));
+      return 0;
+    }
+
+    try {
+      let dataObject = actor.getRollData();
+      dataObject.flags = actor.flags;
+      const r = await Roll.create(formula.toString(), dataObject).evaluate();
+      return r.total;
+    } catch (error) {
+      SpellPoints.notifyRuntimeFormulaError(formula, error);
+      return 0;
+    }
   }
 
   /**
@@ -1344,6 +1477,28 @@ export class SpellPoints {
     }
 
     SpellPoints.maybeApplyFormulaPresetOnConfigChange(item, update);
+
+    const incomingOverride = foundry.utils.getProperty(update, "flags.spellpoints.override");
+    const effectiveOverride = (typeof incomingOverride === "boolean")
+      ? incomingOverride
+      : (item.flags?.spellpoints?.override === true);
+
+    if (effectiveOverride) {
+      const currentConfig = foundry.utils.deepClone(item.flags?.spellpoints?.config ?? {});
+      const incomingConfig = foundry.utils.deepClone(update?.flags?.spellpoints?.config ?? {});
+      const candidateConfig = foundry.utils.mergeObject(currentConfig, incomingConfig, {
+        overwrite: true,
+        recursive: true,
+        insertKeys: true,
+        insertValues: true
+      });
+
+      const formulaErrors = SpellPoints.collectFormulaValidationErrors(candidateConfig);
+      if (formulaErrors.length) {
+        SpellPoints.notifyFormulaValidationErrors(formulaErrors, { sourceLabel: item.name });
+        return false;
+      }
+    }
 
     let max, value, spent;
     let changed_uses, changed_max, changed_value, changed_spent = false;
