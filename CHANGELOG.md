@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.11]
+
+### Bugfixes
+
+- Fixed dragging item from settings page to actor sheet.
+
 ## [3.3.10]
 
 ### Bugfixes

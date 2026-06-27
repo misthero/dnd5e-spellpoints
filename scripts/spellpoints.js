@@ -17,7 +17,7 @@ function extractOperator(str) {
   const trimmed = str.trim();
   const firstChar = trimmed.charAt(0);
 
-  return operators.includes(firstChar) ? firstChar : null;
+  return operators.includes(firstChar) ? firstChar : null; 
 }
 
 
