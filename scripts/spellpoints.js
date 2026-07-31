@@ -17,7 +17,7 @@ function extractOperator(str) {
   const trimmed = str.trim();
   const firstChar = trimmed.charAt(0);
 
-  return operators.includes(firstChar) ? firstChar : null; 
+  return operators.includes(firstChar) ? firstChar : null;
 }
 
 
@@ -1796,9 +1796,14 @@ export class SpellPoints {
       container.append(rendered_html);
 
       if (app.classList.value.includes('tidy5e-sheet')) {
-        // Tidy5e CLASSIC specific handling
-        sidebarClasses = '.attributes .side-panel, .tidy-tab.favorites';
-        append = false;
+        // Tidy5e layout handling. Classic and modern
+        if (app.classList.contains('classic')) {
+          sidebarClasses = '.attributes .side-panel';
+          append = false;
+        } else {
+          sidebarClasses = '.sidebar .tidy-tab.favorites';
+          append = false;
+        }
       } else if (type === 'v2') {
         sidebarClasses = '.sidebar .stats > .meter-group:last';
       } else if (type === 'npc') {

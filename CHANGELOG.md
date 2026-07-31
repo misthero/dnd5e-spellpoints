@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.12]
+
+### Bugfixes
+
+- Fix Tidy5e sheet detection logic to correctly identify classic and modern versions, ensuring proper insertion of the spell points bar in both layouts.
+
 ## [3.3.11]
 
 ### Bugfixes
