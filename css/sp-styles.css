@@ -116,7 +116,8 @@ div.spell-points-hidden {
 }
 
 .tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter.progress,
-.meter-group.sp-bar .meter.progress, .meter-group.sp-bar .meter .progress {
+.meter-group.sp-bar .meter.progress,
+.meter-group.sp-bar .meter .progress {
   --bar-percentage: 0%;
   --sp-border-width: 0px;
   overflow: hidden;
@@ -137,16 +138,18 @@ div.spell-points-hidden {
 
 .tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter .progress:before,
 .tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter.progress::before,
-.meter-group.sp-bar .meter.progress::before, .meter-group.sp-bar .meter .progress::before {
+.meter-group.sp-bar .meter.progress::before,
+.meter-group.sp-bar .meter .progress::before {
   content: "";
   position: absolute;
-  inline-size: var(--bar-percentage);
+  inline-size: calc(var(--bar-percentage) - 2px);
   box-shadow: inset 0 1px 0 1px var(--dnd5e-highlight-40);
-  /* inset: 1px auto 1px 1px; */
+  inset: 1px auto 1px 1px;
   border-radius: 2px;
-  height: calc(100% - 0px);
-  /* border-right: 0; */
-  border: 1px solid var(--meter-background, #000);
+  height: calc(100% - 2px);
+  border-right: 0;
+  transition: inline-size 0.5s ease-in-out;
+  backface-visibility: hidden;
 }
 
 .meter-group.sp-bar .progress:before {
@@ -246,7 +249,8 @@ form.dnd5e-spellpoints .color_test {
   min-width: min(600px, 100vw);
 }
 
-#spellpoints-form .form-body, #spellpoints-form .form-container {
+#spellpoints-form .form-body,
+#spellpoints-form .form-container {
   height: calc(100% - 3.4rem);
 }
 
@@ -304,7 +308,8 @@ form .form-group .form-fields>input[type="checkbox"][name="consume.spellPoints"]
   margin: 0;
 }
 
-.spellpoints-form .hide, .item-config .hide {
+.spellpoints-form .hide,
+.item-config .hide {
   display: none;
 }
 
@@ -415,45 +420,43 @@ form.dnd5e-spellpoints .color_test,
   flex-direction: column;
 }
 
-
-
 @-webkit-keyframes scroll {
   0% {
-    background-position: 0 0
+    background-position: 0 0;
   }
 
   100% {
-    background-position: -200% 0%
+    background-position: -200% 0%;
   }
 }
 
 @-moz-keyframes scroll {
   0% {
-    background-position: 0 0
+    background-position: 0 0;
   }
 
   100% {
-    background-position: -200% 0%
+    background-position: -200% 0%;
   }
 }
 
 @-o-keyframes scroll {
   0% {
-    background-position: 0 0
+    background-position: 0 0;
   }
 
   100% {
-    background-position: -200% 0%
+    background-position: -200% 0%;
   }
 }
 
 @keyframes scroll {
   0% {
-    background-position: 0 0
+    background-position: 0 0;
   }
 
   100% {
-    background-position: -200% 0%
+    background-position: -200% 0%;
   }
 }
 

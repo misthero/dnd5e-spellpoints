@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.13]
+
+### Bugfixes
+
+- Fix Regression in player actor bar size not visually changing it's size.
+
 ## [3.3.12]
 
 ### Bugfixes
