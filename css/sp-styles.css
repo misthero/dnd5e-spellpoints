@@ -135,17 +135,18 @@ div.spell-points-hidden {
   color: var(--color-text-light-0);
 }
 
-.tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter .progress:before, .tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter.progress::before, .meter-group.sp-bar .meter.progress::before, .meter-group.sp-bar .meter .progress::before {
+.tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter .progress:before,
+.tidy5e-sheet.application:where(.quadrone) .meter-group.sp-bar .meter.progress::before,
+.meter-group.sp-bar .meter.progress::before, .meter-group.sp-bar .meter .progress::before {
   content: "";
   position: absolute;
-  inline-size: calc(var(--bar-percentage) - 2px);
+  inline-size: var(--bar-percentage);
   box-shadow: inset 0 1px 0 1px var(--dnd5e-highlight-40);
   /* inset: 1px auto 1px 1px; */
   border-radius: 2px;
   height: calc(100% - 0px);
   /* border-right: 0; */
   border: 1px solid var(--meter-background, #000);
-  width: 100%;
 }
 
 .meter-group.sp-bar .progress:before {
