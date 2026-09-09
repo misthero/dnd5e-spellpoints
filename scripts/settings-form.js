@@ -62,7 +62,7 @@ export class SpellPointsForm extends HandlebarsApplicationMixin(ApplicationV2) {
       {
         spFormulas: Object.fromEntries(Object.keys(SpellPoints.formulas).map(formula_key => [formula_key, game.i18n.localize(`dnd5e-spellpoints.${formula_key}`)]))
       },
-      this.reset ? foundry.utils.mergeObject(SpellPoints.settings, SpellPoints.defaultSettings, { insertKeys: true, insertValues: true, overwrite: true, recursive: true, performDeletions: true }) : foundry.utils.mergeObject(SpellPoints.settings, { requireSave: false })
+      this.reset ? foundry.utils.mergeObject(SpellPoints.settings, SpellPoints.defaultSettings, { insertKeys: true, insertValues: true, overwrite: true, recursive: true, applyOperators: true }) : foundry.utils.mergeObject(SpellPoints.settings, { requireSave: false })
     );
 
     data.spResource = "Spell Points";
@@ -189,7 +189,7 @@ export class SpellPointsForm extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     if (!confirm) return;
 
-    const defaultSettings = foundry.utils.mergeObject(SpellPoints.settings, SpellPoints.defaultSettings, { insertKeys: true, insertValues: true, overwrite: true, recursive: true, performDeletions: true });
+    const defaultSettings = foundry.utils.mergeObject(SpellPoints.settings, SpellPoints.defaultSettings, { insertKeys: true, insertValues: true, overwrite: true, recursive: true, applyOperators: true });
     game.settings.set(
       SP_MODULE_NAME, 'settings', defaultSettings
     ).then(() => {
