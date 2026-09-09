@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.14]
+
+### v14 cleanups
+
+- Fix deprecation and warnings. Thx to [fcsouza](https://github.com/fcsouza). [PR 169](https://github.com/misthero/dnd5e-spellpoints/pull/169)
+
 ## [3.3.13]
 
 ### Bugfixes
