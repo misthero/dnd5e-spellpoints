@@ -1363,7 +1363,7 @@ export class SpellPoints {
   static spPreDeleteItem(item, dialog, id) {
     let actor = item.parent;
     if (item._id === SpellPoints.getActorFlagSpellPointItem(actor)) {
-      actor.update({ [`flags.dnd5espellpoints.-=item`]: null });
+      actor.update({ [`flags.dnd5espellpoints.item`]: _del });
     }
   }
 
