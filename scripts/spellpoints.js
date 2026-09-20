@@ -57,6 +57,17 @@ export class SpellPoints {
 
     let dndSpellProgression = CONFIG.DND5E.spellProgression;
 
+    if (!dndSpellProgression && CONFIG.DND5E.spellcasting) {
+      dndSpellProgression = { none: { label: "DND5E.SpellNone" } };
+      for (const [type, config] of Object.entries(CONFIG.DND5E.spellcasting)) {
+        for (const [k, v] of Object.entries(config.progression ?? {})) {
+          dndSpellProgression[k] = { ...v, type };
+        }
+      }
+    } else {
+      dndSpellProgression ??= {};
+    }
+
     const progressionValues = {
       full: 1,
       half: 2,
@@ -67,7 +78,8 @@ export class SpellPoints {
     };
 
     const spellProgression = {};
-    for (const [key, label] of Object.entries(dndSpellProgression)) {
+    for (const [key, rawLabel] of Object.entries(dndSpellProgression)) {
+      const label = (typeof rawLabel === "object") ? (rawLabel?.label ?? key) : rawLabel;
       spellProgression[key] = {
         value: progressionValues[key] ?? 0,
         label
@@ -1146,7 +1158,7 @@ export class SpellPoints {
     let spellcastingClassCount = 0;
     let spellcastingLevels = {};
 
-    Object.keys(dnd5e.config.spellProgression).forEach((key) => {
+    Object.keys(dnd5e.config.spellProgression ?? {}).forEach((key) => {
       spellcastingLevels[key] = [];
     });
 
