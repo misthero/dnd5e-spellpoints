@@ -53,7 +53,7 @@ Hooks.on('ready', async (x, y, z) => {
 })
 
 
-Hooks.on('init', () => {
+Hooks.on('i18nInit', () => {
   console.log('SpellPoints init');
   console.log(`SpellPoints module version: ${game.modules.get(SP_MODULE_NAME).version}`);
 

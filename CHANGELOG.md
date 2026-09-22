@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.15]
+
+### dnd5e 6+ compatibility
+
+- Changed init hook to i18nInit
+- Removed "themed" css class from actor bar config popup, it caused the popup to display with a transparent background.
+
 ## [3.3.14]
 
 ### v14 cleanups

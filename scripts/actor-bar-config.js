@@ -8,7 +8,7 @@ export class ActorSpellPointsConfig extends dnd5e.applications.actor.BaseConfigS
   constructor(options) {
     foundry.utils.mergeObject(options ?? {}, {
       classes: [
-        "standard-form", "config-sheet", "themed",
+        "standard-form", "config-sheet",
         "sheet", "dnd5e2", "spellpoints", "application"
       ],
       position: { width: 420 },
