@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.16]
+
+- Spell Points Item recovery default to Long Rest instead of Short Rest.
+
 ## [3.3.15]
 
 ### dnd5e 6+ compatibility
