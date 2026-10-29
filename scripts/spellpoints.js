@@ -901,6 +901,12 @@ export class SpellPoints {
       dialogConfig.applicationClass.DEFAULT_OPTIONS.classes.push('spellpoints-cast');
     }
 
+    if (usageConfig.consume.spellPointsConverted) {
+      // Already converted on an earlier pass (e.g. another module cancelled the
+      // native cast and re-cast with the same config). Keep the current choice.
+      return [activity, usageConfig, dialogConfig, messageConfig];
+    }
+
     if (!isCantrip && !usageConfig.consume?.spellSlot) {
       usageConfig.consume.spellPoints = false;
       return [activity, usageConfig, dialogConfig, messageConfig];
@@ -908,7 +914,7 @@ export class SpellPoints {
 
     usageConfig.consume.spellPoints = true;
     usageConfig.consume.spellSlot = false;
-
+    usageConfig.consume.spellPointsConverted = true;
     return [activity, usageConfig, dialogConfig, messageConfig];
   }
 
