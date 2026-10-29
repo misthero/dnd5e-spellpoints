@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.17]
+
+- Fix Midi-QOL compatibility issue
+
 ## [3.3.16]
 
 - Spell Points Item recovery default to Long Rest instead of Short Rest.

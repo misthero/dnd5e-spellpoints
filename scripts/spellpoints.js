@@ -890,6 +890,10 @@ export class SpellPoints {
       usageConfig.isCantrip = false;
     }
 
+    usageConfig.consume = (usageConfig.consume && typeof usageConfig.consume === "object")
+      ? usageConfig.consume
+      : {};
+
     usageConfig.consume.canUseSpellpoints = true;
     usageConfig.spellPointsItem = spellPointItem;
 
@@ -897,7 +901,7 @@ export class SpellPoints {
       dialogConfig.applicationClass.DEFAULT_OPTIONS.classes.push('spellpoints-cast');
     }
 
-    if (!isCantrip && !usageConfig.consume.spellSlot) {
+    if (!isCantrip && !usageConfig.consume?.spellSlot) {
       usageConfig.consume.spellPoints = false;
       return [activity, usageConfig, dialogConfig, messageConfig];
     }
@@ -994,7 +998,7 @@ export class SpellPoints {
     }
 
     const consumeString = game.i18n.format(SP_MODULE_NAME + ".consumeSpellSlotInput", { SpellPoints: spellPointItem.name });
-    const consumeSpellPoints = usageConfig.consume.spellPoints ? "checked" : '';
+    const consumeSpellPoints = usageConfig.consume?.spellPoints ? "checked" : '';
 
     let SpellPointsInput = `<div class="form-group">
         <label>${consumeString}</label>
